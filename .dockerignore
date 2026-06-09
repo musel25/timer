@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/build
+**/.vite
+**/coverage
+.git
+.env
+*.db
+data/
+*.md
+!DEPLOY.md

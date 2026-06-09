@@ -1,0 +1,31 @@
+services:
+  timer:
+    build: .
+    image: timer:latest
+    container_name: timer
+    restart: unless-stopped
+    # Bound to localhost only — nginx is the public door (see deploy/).
+    ports:
+      - "127.0.0.1:8002:8080"
+    volumes:
+      - timer-data:/data
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - TIMER_DB=/data/timer.db
+      - SESSION_SECRET=${SESSION_SECRET}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:8080/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  timer-data:
