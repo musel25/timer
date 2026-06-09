@@ -92,5 +92,19 @@ export function migrate(): void {
     );
     CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_sessions_user_started ON sessions(user_id, started_at);
+
+    CREATE TABLE IF NOT EXISTS tasks (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      notes TEXT,
+      date TEXT,
+      done INTEGER NOT NULL DEFAULT 0,
+      completed_at INTEGER,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_tasks_user ON tasks(user_id);
+    CREATE INDEX IF NOT EXISTS idx_tasks_user_date ON tasks(user_id, date);
   `);
 }
