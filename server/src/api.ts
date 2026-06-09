@@ -269,7 +269,7 @@ api.patch('/tasks/:id', async (c) => {
   const res = db.update(tasks).set(patch)
     .where(and(eq(tasks.id, id), eq(tasks.userId, uid(c)))).run();
   if (res.changes === 0) return c.json({ error: 'not_found' }, 404);
-  return c.json(db.select().from(tasks).where(eq(tasks.id, id)).get());
+  return c.json(db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, uid(c)))).get());
 });
 
 api.delete('/tasks/:id', (c) => {
