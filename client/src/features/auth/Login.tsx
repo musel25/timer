@@ -26,7 +26,7 @@ export function Login() {
           m.mutate();
         }}
       >
-        <input className="input" type="email" placeholder="Email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input className="input" type="text" placeholder="Username" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
         <input className="input" type="password" placeholder="Password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         {m.isError && <p className="text-sm text-rose-400">Invalid email or password.</p>}
         <button className="btn-accent w-full" type="submit" disabled={m.isPending}>
