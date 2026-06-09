@@ -12,3 +12,4 @@ coverage/
 data/
 .vite/
 .playwright-mcp/
+.superpowers/
