@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
-import { useTasks, useSettings, useSaveTask, useToggleTask } from '../../lib/hooks';
+import { useTasks, useSaveTask, useToggleTask } from '../../lib/hooks';
 import type { Task } from '../../lib/types';
 import { weekDays, todayKey, addDaysKey, keyToDate } from '../../lib/date';
 import { QuickAdd } from './QuickAdd';
@@ -42,28 +42,46 @@ function DraggableTask({ task, onEdit }: { task: Task; onEdit: (t: Task) => void
   );
 }
 
-function DropColumn({ id, children }: { id: string; children: React.ReactNode }) {
+function DropColumn({ id, children, layout = 'space-y-1.5' }: { id: string; children: React.ReactNode; layout?: string }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[40px] space-y-1.5 rounded-lg p-1 transition ${isOver ? 'bg-accent-soft ring-1 ring-accent/40' : ''}`}
+      className={`min-h-[40px] flex-1 rounded-lg p-1 transition ${layout} ${isOver ? 'bg-accent-soft ring-1 ring-accent/40' : ''}`}
     >
       {children}
     </div>
   );
 }
 
+function DayColumn({ dayKey, tasks, onEdit }: { dayKey: string; tasks: Task[]; onEdit: (t: Task) => void }) {
+  const d = keyToDate(dayKey);
+  const isToday = dayKey === todayKey();
+  return (
+    <div className={`card flex flex-col p-2 ${isToday ? 'ring-1 ring-accent/50' : ''}`}>
+      <div className={`mb-1.5 flex items-baseline justify-between px-1 ${isToday ? 'text-accent' : 'text-slate-400'}`}>
+        <span className="text-[10px] font-bold uppercase tracking-wide">{d.toLocaleDateString(undefined, { weekday: 'short' })}</span>
+        <span className="text-sm font-bold">{d.getDate()}</span>
+      </div>
+      <DropColumn id={dayKey}>
+        {tasks.map((t) => <DraggableTask key={t.id} task={t} onEdit={onEdit} />)}
+      </DropColumn>
+      <div className="mt-1.5"><QuickAdd date={dayKey} placeholder="Add task" compact /></div>
+    </div>
+  );
+}
+
 export function WeekBoard() {
   const { data: tasks = [] } = useTasks();
-  const { data: settings } = useSettings();
   const save = useSaveTask();
-  const weekStart = settings?.weekStart ?? 1;
   const [anchor, setAnchor] = useState(todayKey());
   const [editing, setEditing] = useState<Task | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  const days = weekDays(anchor, weekStart);
+  // Always Monday-first here so the layout splits cleanly into Mon–Fri + weekend.
+  const days = weekDays(anchor, 1);
+  const weekdays = days.slice(0, 5);
+  const weekend = days.slice(5, 7);
   const inbox = tasks.filter((t) => t.date === null && !t.done);
   const byDateMap = new Map<string, Task[]>();
   for (const t of tasks) if (t.date) { const arr = byDateMap.get(t.date) ?? []; arr.push(t); byDateMap.set(t.date, arr); }
@@ -90,38 +108,29 @@ export function WeekBoard() {
       </header>
 
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-        {/* Comfortable fixed-width columns; the board scrolls horizontally so
-            titles stay readable instead of wrapping in cramped columns. */}
-        <div className="flex gap-3 overflow-x-auto pb-3">
-          <div className="card flex w-[208px] shrink-0 flex-col p-3">
+        <div className="space-y-3">
+          {/* Row 1 — Monday to Friday */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {weekdays.map((key) => <DayColumn key={key} dayKey={key} tasks={byDate(key)} onEdit={setEditing} />)}
+          </div>
+
+          {/* Row 2 — Weekend (kept to ~2/5 width so columns match the weekday size) */}
+          <div className="grid grid-cols-2 gap-3 lg:w-2/5">
+            {weekend.map((key) => <DayColumn key={key} dayKey={key} tasks={byDate(key)} onEdit={setEditing} />)}
+          </div>
+
+          {/* Row 3 — Inbox */}
+          <div className="card p-3">
             <h2 className="label mb-2 flex items-center justify-between">
               Inbox
               {inbox.length > 0 && <span className="text-slate-500">{inbox.length}</span>}
             </h2>
-            <DropColumn id={INBOX}>
+            <DropColumn id={INBOX} layout="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
               {inbox.map((t) => <DraggableTask key={t.id} task={t} onEdit={setEditing} />)}
-              {inbox.length === 0 && <p className="px-1 py-2 text-xs text-slate-500">Drop undated tasks here.</p>}
+              {inbox.length === 0 && <p className="col-span-full px-1 py-2 text-xs text-slate-500">Drop undated tasks here, or capture below.</p>}
             </DropColumn>
-            <div className="mt-2"><QuickAdd date={null} placeholder="Capture a task…" compact /></div>
+            <div className="mt-2 max-w-xs"><QuickAdd date={null} placeholder="Capture a task…" compact /></div>
           </div>
-
-          {days.map((key) => {
-            const d = keyToDate(key);
-            const isToday = key === todayKey();
-            const list = byDate(key);
-            return (
-              <div key={key} className={`card flex w-[164px] shrink-0 flex-col p-2 ${isToday ? 'ring-1 ring-accent/50' : ''}`}>
-                <div className={`mb-1.5 flex items-baseline justify-between px-1 ${isToday ? 'text-accent' : 'text-slate-400'}`}>
-                  <span className="text-[10px] font-bold uppercase tracking-wide">{d.toLocaleDateString(undefined, { weekday: 'short' })}</span>
-                  <span className="text-sm font-bold">{d.getDate()}</span>
-                </div>
-                <DropColumn id={key}>
-                  {list.map((t) => <DraggableTask key={t.id} task={t} onEdit={setEditing} />)}
-                </DropColumn>
-                <div className="mt-1.5"><QuickAdd date={key} placeholder="Add task" compact /></div>
-              </div>
-            );
-          })}
         </div>
       </DndContext>
 
