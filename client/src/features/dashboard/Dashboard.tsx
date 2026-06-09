@@ -34,15 +34,12 @@ export function Dashboard() {
     <div className="space-y-6">
       <header className="flex items-start justify-between pt-1">
         <div>
-          <div className="text-sm text-slate-400">{today_date}</div>
-          <div className="mt-0.5 text-2xl font-bold">
-            {streak > 0 ? `🔥 ${streak}-day streak` : 'Let’s begin'}
-          </div>
+          <h1 className="text-2xl font-bold">Habits</h1>
           <div className="text-sm text-slate-400">
-            {today.count > 0 ? `Today · ${today.count} done · ${today.minutes} min` : 'Nothing logged yet today'}
+            {today.count > 0 ? `Today · ${today.count} done · ${today.minutes} min` : 'Tap a duration to start a habit'}
           </div>
         </div>
-        <Link to="/settings" className="rounded-full bg-ink-700/60 p-2 text-lg">⚙️</Link>
+        <Link to="/timers" className="rounded-full bg-ink-700 p-2 text-lg">⏱</Link>
       </header>
 
       {ordered.map((group) => {
