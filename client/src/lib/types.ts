@@ -1,7 +1,8 @@
 export type AccentName = 'teal' | 'blue' | 'green' | 'violet' | 'rose' | 'amber';
+export type ThemeName = 'night' | 'day';
 
 export interface Settings {
-  theme: 'dark';
+  theme: ThemeName;
   accent: AccentName;
   sound: boolean;
   voice: boolean;

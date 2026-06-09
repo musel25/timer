@@ -9,26 +9,23 @@ export default {
           DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
           soft: 'rgb(var(--accent) / 0.10)',
         },
-        // `ink-*` = surfaces. Remapped dark->light so existing bg-ink-* classes
-        // become light surfaces with no per-component edits.
-        // ink-900 (was darkest page bg) -> lightest; used as text color only on
-        // accent buttons, where near-white-on-accent is correct.
+        // `ink-*` = surfaces, `slate-*` = text — both CSS-variable driven so the
+        // whole app switches between the Night and Day themes via `data-theme`
+        // (values defined in index.css), the same pattern the accent uses.
         ink: {
-          900: '#fbfbfd', // page background
-          800: '#ffffff', // card / surface
-          700: '#f3f4f7', // subtle fill (chips, sidebar)
-          600: '#e9ebef', // border
-          500: '#a2a8b5', // faint border / disabled
+          900: 'rgb(var(--ink-900) / <alpha-value>)', // page background
+          800: 'rgb(var(--ink-800) / <alpha-value>)', // card / surface
+          700: 'rgb(var(--ink-700) / <alpha-value>)', // subtle fill (chips, sidebar)
+          600: 'rgb(var(--ink-600) / <alpha-value>)', // border
+          500: 'rgb(var(--ink-500) / <alpha-value>)', // faint border / disabled
         },
-        // `slate-*` = text. Remapped to dark-on-light so existing text-slate-*
-        // classes read correctly on a light background.
         slate: {
-          100: '#1b1c22', // primary text
-          200: '#2b2d36',
-          300: '#4b5160',
-          400: '#6b7180', // muted text
-          500: '#9aa0ad', // faint text
-          600: '#a2a8b5',
+          100: 'rgb(var(--slate-100) / <alpha-value>)', // primary text
+          200: 'rgb(var(--slate-200) / <alpha-value>)',
+          300: 'rgb(var(--slate-300) / <alpha-value>)',
+          400: 'rgb(var(--slate-400) / <alpha-value>)', // muted text
+          500: 'rgb(var(--slate-500) / <alpha-value>)', // faint text
+          600: 'rgb(var(--slate-600) / <alpha-value>)',
         },
       },
       fontFamily: {

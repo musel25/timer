@@ -4,8 +4,8 @@ import { users, userSettings, habitGroups, habits, timers } from './schema';
 import { hashPassword, newId } from './auth';
 
 export const DEFAULT_SETTINGS = {
-  theme: 'dark' as const,
-  accent: 'blue' as const, // cobalt — the Daylight default
+  theme: 'night' as const, // default theme
+  accent: 'blue' as const, // cobalt
   sound: true,
   voice: false,
   beeps: true,
