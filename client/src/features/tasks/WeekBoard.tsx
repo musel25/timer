@@ -51,7 +51,9 @@ export function WeekBoard() {
 
   const days = weekDays(anchor, weekStart);
   const inbox = tasks.filter((t) => t.date === null && !t.done);
-  const byDate = (key: string) => tasks.filter((t) => t.date === key).sort((a, b) => Number(a.done) - Number(b.done) || a.sortOrder - b.sortOrder);
+  const byDateMap = new Map<string, Task[]>();
+  for (const t of tasks) if (t.date) { const arr = byDateMap.get(t.date) ?? []; arr.push(t); byDateMap.set(t.date, arr); }
+  const byDate = (key: string) => (byDateMap.get(key) ?? []).slice().sort((a, b) => Number(a.done) - Number(b.done) || a.sortOrder - b.sortOrder);
 
   function onDragEnd(e: DragEndEvent) {
     const taskId = String(e.active.id);

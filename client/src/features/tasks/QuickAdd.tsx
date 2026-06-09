@@ -9,7 +9,7 @@ export function QuickAdd({ date, placeholder = 'Add a task…' }: { date: string
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const t = title.trim();
-    if (!t) return;
+    if (!t || save.isPending) return;
     save.mutate({ title: t, date });
     setTitle('');
   }

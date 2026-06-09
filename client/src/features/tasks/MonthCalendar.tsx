@@ -36,7 +36,7 @@ export function MonthCalendar() {
         <h1 className="text-2xl font-bold">{monthLabel(year, month0)}</h1>
         <div className="flex gap-2">
           <button className="btn-ghost px-3 py-1.5" onClick={() => shift(-1)}>‹</button>
-          <button className="btn-ghost px-3 py-1.5" onClick={() => { setYear(now.getFullYear()); setMonth0(now.getMonth()); setSelected(todayKey()); }}>Today</button>
+          <button className="btn-ghost px-3 py-1.5" onClick={() => { const d = new Date(); setYear(d.getFullYear()); setMonth0(d.getMonth()); setSelected(todayKey()); }}>Today</button>
           <button className="btn-ghost px-3 py-1.5" onClick={() => shift(1)}>›</button>
         </div>
       </header>

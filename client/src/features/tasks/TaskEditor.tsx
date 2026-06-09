@@ -9,11 +9,15 @@ export function TaskEditor({ task, onClose }: { task: Task; onClose: () => void 
   const save = useSaveTask();
   const del = useDeleteTask();
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
-    save.mutate({ id: task.id, title: title.trim(), notes: notes.trim() || null, date: date || null });
-    onClose();
+    try {
+      await save.mutateAsync({ id: task.id, title: title.trim(), notes: notes.trim() || null, date: date || null });
+      onClose();
+    } catch {
+      // keep modal open on error
+    }
   }
 
   return (
@@ -28,7 +32,7 @@ export function TaskEditor({ task, onClose }: { task: Task; onClose: () => void 
         <label className="label">Date</label>
         <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
         <div className="flex items-center justify-between pt-1">
-          <button type="button" className="btn-outline text-rose-500" onClick={() => { del.mutate(task.id); onClose(); }}>Delete</button>
+          <button type="button" className="btn-outline text-rose-500" onClick={async () => { if (!confirm('Delete this task?')) return; try { await del.mutateAsync(task.id); onClose(); } catch { /* keep open */ } }}>Delete</button>
           <div className="flex gap-2">
             <button type="button" className="btn-ghost" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn-accent">Save</button>
