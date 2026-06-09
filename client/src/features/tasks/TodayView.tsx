@@ -21,7 +21,7 @@ export function TodayView() {
   const today = tasks.filter((t) => t.date === tk).sort((a, b) => Number(a.done) - Number(b.done) || a.sortOrder - b.sortOrder);
   const streak = currentStreak(sessions);
   const summary = todaySummary(sessions);
-  const active = habits.filter((h) => !h.archived).slice(0, 6);
+  const active = habits.filter((h) => !h.archived);
   const dateLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 
   function startHabit(habit: Habit, min: number) {

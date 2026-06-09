@@ -12,29 +12,43 @@ const INBOX = 'inbox';
 function DraggableTask({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
   const toggle = useToggleTask();
+  // The whole card is the drag source; the checkbox and title stop pointer
+  // propagation so a tap toggles/edits instead of starting a drag.
   return (
     <div
       ref={setNodeRef}
-      className={`flex items-center gap-2 rounded-lg border border-ink-600 bg-ink-800 px-2 py-1.5 ${isDragging ? 'opacity-40' : ''}`}
+      {...attributes}
+      {...listeners}
+      className={`flex cursor-grab items-start gap-2 rounded-lg border border-ink-600 bg-ink-800 px-2 py-1.5 text-xs shadow-sm transition active:cursor-grabbing ${
+        isDragging ? 'opacity-50' : ''
+      }`}
     >
       <button
+        onPointerDown={(e) => e.stopPropagation()}
         onClick={() => toggle.mutate({ id: task.id, done: !task.done })}
-        className={`h-4 w-4 shrink-0 rounded border-[1.5px] ${task.done ? 'border-transparent bg-accent' : 'border-ink-500'}`}
+        aria-label={task.done ? 'Mark not done' : 'Mark done'}
+        className={`mt-px h-[15px] w-[15px] shrink-0 rounded border-[1.5px] ${task.done ? 'border-transparent bg-accent' : 'border-ink-500 hover:border-accent'}`}
       >
-        {task.done && <span className="block text-center text-[10px] leading-[14px] text-white">✓</span>}
+        {task.done && <span className="block text-center text-[9px] leading-[12px] text-white">✓</span>}
       </button>
-      <button onClick={() => onEdit(task)} className={`min-w-0 flex-1 truncate text-left text-[12.5px] ${task.done ? 'text-slate-500 line-through' : ''}`}>
+      <button
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => onEdit(task)}
+        className={`min-w-0 flex-1 break-words text-left leading-snug ${task.done ? 'text-slate-500 line-through' : 'text-slate-100'}`}
+      >
         {task.title}
       </button>
-      <span {...attributes} {...listeners} className="cursor-grab px-1 text-slate-400" aria-label="Drag">⠿</span>
     </div>
   );
 }
 
-function DropColumn({ id, children, highlight }: { id: string; children: React.ReactNode; highlight?: boolean }) {
+function DropColumn({ id, children }: { id: string; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <div ref={setNodeRef} className={`min-h-[80px] space-y-1.5 rounded-xl p-1.5 transition ${isOver ? 'bg-accent-soft' : highlight ? 'bg-ink-700/60' : ''}`}>
+    <div
+      ref={setNodeRef}
+      className={`min-h-[40px] space-y-1.5 rounded-lg p-1 transition ${isOver ? 'bg-accent-soft ring-1 ring-accent/40' : ''}`}
+    >
       {children}
     </div>
   );
@@ -76,32 +90,38 @@ export function WeekBoard() {
       </header>
 
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-        <div className="grid gap-3 lg:grid-cols-[200px_1fr]">
-          <div className="card p-3">
-            <h2 className="label mb-2">Inbox</h2>
-            <DropColumn id={INBOX} highlight>
+        {/* Comfortable fixed-width columns; the board scrolls horizontally so
+            titles stay readable instead of wrapping in cramped columns. */}
+        <div className="flex gap-3 overflow-x-auto pb-3">
+          <div className="card flex w-[208px] shrink-0 flex-col p-3">
+            <h2 className="label mb-2 flex items-center justify-between">
+              Inbox
+              {inbox.length > 0 && <span className="text-slate-500">{inbox.length}</span>}
+            </h2>
+            <DropColumn id={INBOX}>
               {inbox.map((t) => <DraggableTask key={t.id} task={t} onEdit={setEditing} />)}
+              {inbox.length === 0 && <p className="px-1 py-2 text-xs text-slate-500">Drop undated tasks here.</p>}
             </DropColumn>
-            <div className="mt-2"><QuickAdd date={null} placeholder="Capture…" /></div>
+            <div className="mt-2"><QuickAdd date={null} placeholder="Capture a task…" compact /></div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
-            {days.map((key) => {
-              const d = keyToDate(key);
-              const isToday = key === todayKey();
-              return (
-                <div key={key} className="card p-2">
-                  <div className={`mb-1 px-1 text-xs font-semibold ${isToday ? 'text-accent' : 'text-slate-400'}`}>
-                    {d.toLocaleDateString(undefined, { weekday: 'short' })} {d.getDate()}
-                  </div>
-                  <DropColumn id={key}>
-                    {byDate(key).map((t) => <DraggableTask key={t.id} task={t} onEdit={setEditing} />)}
-                  </DropColumn>
-                  <div className="mt-1"><QuickAdd date={key} placeholder="Add" /></div>
+          {days.map((key) => {
+            const d = keyToDate(key);
+            const isToday = key === todayKey();
+            const list = byDate(key);
+            return (
+              <div key={key} className={`card flex w-[164px] shrink-0 flex-col p-2 ${isToday ? 'ring-1 ring-accent/50' : ''}`}>
+                <div className={`mb-1.5 flex items-baseline justify-between px-1 ${isToday ? 'text-accent' : 'text-slate-400'}`}>
+                  <span className="text-[10px] font-bold uppercase tracking-wide">{d.toLocaleDateString(undefined, { weekday: 'short' })}</span>
+                  <span className="text-sm font-bold">{d.getDate()}</span>
                 </div>
-              );
-            })}
-          </div>
+                <DropColumn id={key}>
+                  {list.map((t) => <DraggableTask key={t.id} task={t} onEdit={setEditing} />)}
+                </DropColumn>
+                <div className="mt-1.5"><QuickAdd date={key} placeholder="Add task" compact /></div>
+              </div>
+            );
+          })}
         </div>
       </DndContext>
 
