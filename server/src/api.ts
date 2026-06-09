@@ -23,7 +23,9 @@ api.get('/health', (c) => c.json({ ok: true }));
 
 /* ---------- auth ---------- */
 api.post('/auth/login', async (c) => {
-  const parsed = z.object({ email: z.string().email(), password: z.string().min(1) }).safeParse(await body(c));
+  // Note: login email is just an identifier we look up — avoid zod's .email()
+  // validator (its regex rejects some valid addresses, e.g. gmail.com).
+  const parsed = z.object({ email: z.string().min(1), password: z.string().min(1) }).safeParse(await body(c));
   if (!parsed.success) return c.json({ error: 'invalid_input' }, 400);
   const email = parsed.data.email.toLowerCase();
   const user = db.select().from(users).where(eq(users.email, email)).get();
