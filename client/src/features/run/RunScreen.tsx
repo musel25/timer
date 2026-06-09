@@ -140,7 +140,7 @@ export function RunScreen({ spec, onClose, onAgain }: { spec: RunSpec; onClose: 
             <CtrlButton onClick={() => engine.addTime(15)} label="+15s" small />
             <button
               onClick={engine.toggle}
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-2xl text-ink-900 shadow-lg active:scale-95"
+              className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-2xl text-[#0b0f14] shadow-lg active:scale-95"
             >
               {engine.status === 'running' ? '⏸' : '▶'}
             </button>
