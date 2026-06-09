@@ -4,7 +4,7 @@ import { and, asc, desc, eq, gte, lte } from 'drizzle-orm';
 import { db } from './db';
 import { habitGroups, habits, sessions, timers, userSettings, users } from './schema';
 import {
-  createSession, currentUserId, destroySession, newId, requireAuth, verifyPassword,
+  createSession, currentUserId, destroySession, hashPassword, newId, requireAuth, verifyPassword,
 } from './auth';
 import { DEFAULT_SETTINGS } from './seed';
 
@@ -44,6 +44,16 @@ api.get('/auth/me', (c) => {
   if (!userId) return c.json({ user: null });
   const user = db.select().from(users).where(eq(users.id, userId)).get();
   return c.json({ user: user ? { id: user.id, email: user.email } : null });
+});
+
+api.use('/auth/change-password', requireAuth);
+api.post('/auth/change-password', async (c) => {
+  const p = z.object({ current: z.string().min(1), next: z.string().min(6) }).safeParse(await body(c));
+  if (!p.success) return c.json({ error: 'invalid_input' }, 400);
+  const user = db.select().from(users).where(eq(users.id, uid(c))).get();
+  if (!user || !verifyPassword(p.data.current, user.passwordHash)) return c.json({ error: 'invalid_credentials' }, 401);
+  db.update(users).set({ passwordHash: hashPassword(p.data.next) }).where(eq(users.id, user.id)).run();
+  return c.json({ ok: true });
 });
 
 /* ---------- everything below requires auth ---------- */

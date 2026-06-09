@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { ACCENTS, applyAccent } from '../../lib/theme';
@@ -61,6 +61,8 @@ export function SettingsPage() {
         <div className="font-medium">{me?.user?.email}</div>
         <button className="btn-outline mt-2 w-full" onClick={signOut}>Sign out</button>
       </section>
+
+      <ChangePassword />
 
       <section>
         <h2 className="label mb-2">Accent</h2>
@@ -138,5 +140,41 @@ export function SettingsPage() {
 
       <p className="pb-4 text-center text-xs text-slate-600">timer.musel.dev</p>
     </div>
+  );
+}
+
+function ChangePassword() {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [state, setState] = useState<'idle' | 'ok' | 'err'>('idle');
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setState('idle');
+    try {
+      await api.post('/auth/change-password', { current, next });
+      setState('ok');
+      setCurrent('');
+      setNext('');
+    } catch {
+      setState('err');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card p-4">
+      <h2 className="label mb-2">Change password</h2>
+      <form className="space-y-2" onSubmit={submit}>
+        <input className="input" type="password" placeholder="Current password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} required />
+        <input className="input" type="password" placeholder="New password (min 6)" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} minLength={6} required />
+        {state === 'ok' && <p className="text-sm text-accent">Password updated.</p>}
+        {state === 'err' && <p className="text-sm text-rose-400">Current password is incorrect.</p>}
+        <button className="btn-outline w-full" type="submit" disabled={busy}>Update password</button>
+      </form>
+    </section>
   );
 }
