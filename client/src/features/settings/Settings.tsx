@@ -1,0 +1,142 @@
+import { useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { api } from '../../lib/api';
+import { ACCENTS, applyAccent } from '../../lib/theme';
+import {
+  useDeleteGroup, useGroups, useMe, useSaveGroup, useSaveSettings, useSettings,
+} from '../../lib/hooks';
+import { Stepper } from '../../components/Stepper';
+
+export function SettingsPage() {
+  const qc = useQueryClient();
+  const { data: me } = useMe();
+  const { data: s } = useSettings();
+  const save = useSaveSettings();
+  const { data: groups = [] } = useGroups();
+  const saveGroup = useSaveGroup();
+  const delGroup = useDeleteGroup();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function signOut() {
+    await api.post('/auth/logout');
+    qc.setQueryData(['me'], { user: null });
+    qc.clear();
+  }
+
+  async function exportData() {
+    const data = await api.get('/export');
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `timer-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function importData(file: File) {
+    const text = await file.text();
+    await api.post('/import', JSON.parse(text));
+    qc.invalidateQueries();
+  }
+
+  const Toggle = ({ k, label }: { k: 'beeps' | 'voice' | 'keepAwake'; label: string }) => (
+    <label className="flex items-center justify-between py-1 text-sm">
+      {label}
+      <input
+        type="checkbox"
+        className="h-5 w-5 accent-accent"
+        checked={!!s?.[k]}
+        onChange={(e) => save.mutate({ [k]: e.target.checked })}
+      />
+    </label>
+  );
+
+  return (
+    <div className="space-y-6">
+      <h1 className="pt-1 text-2xl font-bold">Settings</h1>
+
+      <section className="card space-y-2 p-4">
+        <div className="text-sm text-slate-400">Signed in as</div>
+        <div className="font-medium">{me?.user?.email}</div>
+        <button className="btn-outline mt-2 w-full" onClick={signOut}>Sign out</button>
+      </section>
+
+      <section>
+        <h2 className="label mb-2">Accent</h2>
+        <div className="flex flex-wrap gap-3">
+          {ACCENTS.map((a) => (
+            <button
+              key={a.name}
+              onClick={() => { applyAccent(a.name); save.mutate({ accent: a.name }); }}
+              className={`h-9 w-9 rounded-full border-2 ${s?.accent === a.name ? 'border-white' : 'border-transparent'}`}
+              style={{ backgroundColor: a.rgb }}
+              title={a.label}
+            />
+          ))}
+        </div>
+      </section>
+
+      <section className="card p-4">
+        <h2 className="label mb-2">Sound &amp; screen</h2>
+        <Toggle k="beeps" label="Countdown beeps" />
+        <Toggle k="voice" label="Spoken cues" />
+        <Toggle k="keepAwake" label="Keep screen awake during a run" />
+        <div className="mt-3 border-t border-ink-700 pt-3">
+          <Stepper label="Default prep countdown" value={s?.prepSeconds ?? 5} onChange={(v) => save.mutate({ prepSeconds: v })} min={0} max={30} suffix="s" />
+        </div>
+      </section>
+
+      <section>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="label">Groups</h2>
+          <button
+            className="text-sm text-accent"
+            onClick={async () => {
+              const name = window.prompt('Group name');
+              if (name) saveGroup.mutate({ name, emoji: '📌', sortOrder: groups.length });
+            }}
+          >
+            ＋ Add
+          </button>
+        </div>
+        <div className="space-y-2">
+          {groups.map((g) => (
+            <div key={g.id} className="card flex items-center justify-between p-3 text-sm">
+              <span>{g.emoji} {g.name}</span>
+              <div className="flex gap-3 text-xs text-slate-500">
+                <button
+                  className="hover:text-slate-300"
+                  onClick={() => {
+                    const name = window.prompt('Rename group', g.name);
+                    if (name) saveGroup.mutate({ id: g.id, name });
+                  }}
+                >
+                  Rename
+                </button>
+                <button className="hover:text-rose-400" onClick={() => delGroup.mutate(g.id)}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="card space-y-2 p-4">
+        <h2 className="label">Data</h2>
+        <div className="flex gap-3">
+          <button className="btn-outline flex-1" onClick={exportData}>Export JSON</button>
+          <button className="btn-outline flex-1" onClick={() => fileRef.current?.click()}>Import</button>
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/json"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && importData(e.target.files[0])}
+        />
+      </section>
+
+      <p className="pb-4 text-center text-xs text-slate-600">timer.musel.dev</p>
+    </div>
+  );
+}

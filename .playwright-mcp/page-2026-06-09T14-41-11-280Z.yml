@@ -1,0 +1,154 @@
+- generic [ref=e2]:
+  - generic [ref=e14]:
+    - main [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - generic [ref=e18]:
+            - generic [ref=e19]: Tue, Jun 9
+            - generic [ref=e20]: Let’s begin
+            - generic [ref=e21]: Nothing logged yet today
+          - link "⚙️" [ref=e22] [cursor=pointer]:
+            - /url: /settings
+        - generic [ref=e23]:
+          - heading "☀️ Morning" [level=2] [ref=e24]:
+            - generic [ref=e25]: ☀️
+            - text: Morning
+          - generic [ref=e27]:
+            - generic [ref=e28]:
+              - generic [ref=e29]:
+                - generic [ref=e30]: ⚔️
+                - generic [ref=e31]: LeetCode
+              - link "edit" [ref=e32] [cursor=pointer]:
+                - /url: /habits/1ed1172cbafac8505a4c2b767fa1a0b3
+            - generic [ref=e33]:
+              - button "5" [ref=e34] [cursor=pointer]
+              - button "10" [ref=e35] [cursor=pointer]
+              - button "15" [ref=e36] [cursor=pointer]
+              - button "20" [ref=e37] [cursor=pointer]
+              - button "25" [ref=e38] [cursor=pointer]
+              - button "30" [ref=e39] [cursor=pointer]
+            - generic [ref=e40]: · study / init implementation
+        - generic [ref=e41]:
+          - heading "💼 Work" [level=2] [ref=e42]:
+            - generic [ref=e43]: 💼
+            - text: Work
+          - generic [ref=e44]:
+            - generic [ref=e45]:
+              - generic [ref=e46]:
+                - generic [ref=e47]:
+                  - generic [ref=e48]: 🧮
+                  - generic [ref=e49]: Math Training
+                - link "edit" [ref=e50] [cursor=pointer]:
+                  - /url: /habits/88e52268bce06539b89fa9653e1740b3
+              - generic [ref=e51]:
+                - button "5" [ref=e52] [cursor=pointer]
+                - button "10" [ref=e53] [cursor=pointer]
+                - button "15" [ref=e54] [cursor=pointer]
+                - button "20" [ref=e55] [cursor=pointer]
+            - generic [ref=e56]:
+              - generic [ref=e57]:
+                - generic [ref=e58]:
+                  - generic [ref=e59]: 🧠
+                  - generic [ref=e60]: Anki
+                - link "edit" [ref=e61] [cursor=pointer]:
+                  - /url: /habits/274356a49ba114c76849c1faa58a5c01
+              - generic [ref=e62]:
+                - button "5" [ref=e63] [cursor=pointer]
+                - button "10" [ref=e64] [cursor=pointer]
+                - button "15" [ref=e65] [cursor=pointer]
+                - button "20" [ref=e66] [cursor=pointer]
+            - generic [ref=e67]:
+              - generic [ref=e68]:
+                - generic [ref=e69]:
+                  - generic [ref=e70]: 💻
+                  - generic [ref=e71]: Prog. Read
+                - link "edit" [ref=e72] [cursor=pointer]:
+                  - /url: /habits/e33315aaaf98b5fb2ecd8d9cab266997
+              - generic [ref=e73]:
+                - button "5" [ref=e74] [cursor=pointer]
+                - button "10" [ref=e75] [cursor=pointer]
+                - button "15" [ref=e76] [cursor=pointer]
+                - button "20" [ref=e77] [cursor=pointer]
+            - generic [ref=e78]:
+              - generic [ref=e79]:
+                - generic [ref=e80]:
+                  - generic [ref=e81]: ⚔️
+                  - generic [ref=e82]: LeetCode
+                - link "edit" [ref=e83] [cursor=pointer]:
+                  - /url: /habits/fc0bb0226c1c9f0f2d3302672be9b76a
+              - generic [ref=e84]:
+                - button "5" [ref=e85] [cursor=pointer]
+                - button "10" [ref=e86] [cursor=pointer]
+                - button "15" [ref=e87] [cursor=pointer]
+                - button "20" [ref=e88] [cursor=pointer]
+                - button "25" [ref=e89] [cursor=pointer]
+                - button "30" [ref=e90] [cursor=pointer]
+              - generic [ref=e91]: · review / build from memory
+        - generic [ref=e92]:
+          - heading "🌙 Night" [level=2] [ref=e93]:
+            - generic [ref=e94]: 🌙
+            - text: Night
+          - generic [ref=e95]:
+            - generic [ref=e96]:
+              - generic [ref=e97]:
+                - generic [ref=e98]:
+                  - generic [ref=e99]: ✍️
+                  - generic [ref=e100]: Journaling
+                - link "edit" [ref=e101] [cursor=pointer]:
+                  - /url: /habits/500d71984753c8c2c182668e03b54d9f
+              - generic [ref=e102]:
+                - button "5" [ref=e103] [cursor=pointer]
+                - button "10" [ref=e104] [cursor=pointer]
+                - button "15" [ref=e105] [cursor=pointer]
+                - button "20" [ref=e106] [cursor=pointer]
+              - generic [ref=e107]: · in French
+            - generic [ref=e108]:
+              - generic [ref=e109]:
+                - generic [ref=e110]:
+                  - generic [ref=e111]: 📖
+                  - generic [ref=e112]: Reading
+                - link "edit" [ref=e113] [cursor=pointer]:
+                  - /url: /habits/66968bd9b3bc05e1db3ab02a98b88111
+              - generic [ref=e114]:
+                - button "5" [ref=e115] [cursor=pointer]
+                - button "10" [ref=e116] [cursor=pointer]
+                - button "15" [ref=e117] [cursor=pointer]
+                - button "20" [ref=e118] [cursor=pointer]
+                - button "25" [ref=e119] [cursor=pointer]
+                - button "30" [ref=e120] [cursor=pointer]
+              - generic [ref=e121]: · meaning + pronunciation
+        - generic [ref=e122]:
+          - link "⚡ Quick Timer" [ref=e123] [cursor=pointer]:
+            - /url: /quick
+          - link "＋ Habit" [ref=e124] [cursor=pointer]:
+            - /url: /habits/new
+    - navigation [ref=e125]:
+      - generic [ref=e126]:
+        - link "🏠 Home" [ref=e127] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e128]: 🏠
+          - text: Home
+        - link "⏱ Timers" [ref=e129] [cursor=pointer]:
+          - /url: /timers
+          - generic [ref=e130]: ⏱
+          - text: Timers
+        - link "📊 Progress" [ref=e131] [cursor=pointer]:
+          - /url: /stats
+          - generic [ref=e132]: 📊
+          - text: Progress
+        - link "⚙️ Settings" [ref=e133] [cursor=pointer]:
+          - /url: /settings
+          - generic [ref=e134]: ⚙️
+          - text: Settings
+  - generic [ref=e135]:
+    - generic [ref=e136]:
+      - generic [ref=e137]: LeetCode
+      - button "✕" [ref=e138] [cursor=pointer]
+    - generic [ref=e155]:
+      - generic [ref=e156]: ✓
+      - generic [ref=e157]:
+        - generic [ref=e158]: Done
+        - generic [ref=e159]: 0:41 of focused time logged
+      - generic [ref=e160]:
+        - button "↻ Again" [ref=e161] [cursor=pointer]
+        - button "Done" [ref=e162] [cursor=pointer]

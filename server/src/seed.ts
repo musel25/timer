@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS = {
   voice: false,
   beeps: true,
   keepAwake: true,
+  prepSeconds: 5, // "get ready" countdown before a focus habit starts
   weekStart: 1, // Monday
 };
 
