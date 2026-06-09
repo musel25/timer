@@ -97,7 +97,7 @@ export function WeekBoard() {
                   <DropColumn id={key}>
                     {byDate(key).map((t) => <DraggableTask key={t.id} task={t} onEdit={setEditing} />)}
                   </DropColumn>
-                  <div className="mt-1"><QuickAdd date={key} placeholder="＋" /></div>
+                  <div className="mt-1"><QuickAdd date={key} placeholder="Add" /></div>
                 </div>
               );
             })}
