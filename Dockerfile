@@ -11,6 +11,8 @@ RUN npm install --omit=dev
 
 # ── build: compile the server bundle and the React SPA ───────────────────────
 FROM node:24-bookworm-slim AS build
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 # server
 COPY server/package*.json server/
