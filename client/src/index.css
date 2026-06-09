@@ -6,11 +6,41 @@
   --accent: 58 109 240;
 } /* cobalt */
 [data-accent='teal'] { --accent: 20 184 166; }
-[data-accent='blue'] { --accent: 58 109 240; }   /* cobalt (Daylight default) */
+[data-accent='blue'] { --accent: 58 109 240; }   /* cobalt (default) */
 [data-accent='green'] { --accent: 22 160 107; }
 [data-accent='violet'] { --accent: 124 92 246; }
 [data-accent='rose'] { --accent: 225 45 85; }
 [data-accent='amber'] { --accent: 200 131 26; }
+
+/* ---- Theme tokens (ink = surfaces, slate = text) ----
+   Night is the default (also applied before settings load). */
+:root,
+[data-theme='night'] {
+  --ink-900: 11 15 20;    /* #0b0f14 page background */
+  --ink-800: 17 22 29;    /* #11161d card / surface */
+  --ink-700: 26 33 43;    /* #1a212b subtle fill */
+  --ink-600: 38 48 61;    /* #26303d border */
+  --ink-500: 58 70 86;    /* #3a4656 faint border */
+  --slate-100: 241 245 249; /* near-white primary text */
+  --slate-200: 226 232 240;
+  --slate-300: 203 213 225;
+  --slate-400: 148 163 184; /* muted text */
+  --slate-500: 100 116 139; /* faint text */
+  --slate-600: 71 85 105;
+}
+[data-theme='day'] {
+  --ink-900: 251 251 253; /* #fbfbfd page background */
+  --ink-800: 255 255 255; /* card / surface */
+  --ink-700: 243 244 247; /* #f3f4f7 subtle fill */
+  --ink-600: 233 235 239; /* #e9ebef border */
+  --ink-500: 162 168 181; /* #a2a8b5 faint border */
+  --slate-100: 27 28 34;  /* #1b1c22 primary text */
+  --slate-200: 43 45 54;
+  --slate-300: 75 81 96;
+  --slate-400: 107 113 128; /* #6b7180 muted text */
+  --slate-500: 154 160 173; /* #9aa0ad faint text */
+  --slate-600: 162 168 181;
+}
 
 html, body, #root { height: 100%; }
 html { -webkit-tap-highlight-color: transparent; }

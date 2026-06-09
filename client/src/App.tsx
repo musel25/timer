@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useMe, useSettings } from './lib/hooks';
-import { applyAccent } from './lib/theme';
+import { applyAccent, applyTheme } from './lib/theme';
 import { Login } from './features/auth/Login';
 import { Layout } from './features/Layout';
 import { Dashboard } from './features/dashboard/Dashboard';
@@ -30,6 +30,9 @@ function AuthedApp() {
   useEffect(() => {
     if (settings?.accent) applyAccent(settings.accent);
   }, [settings?.accent]);
+  useEffect(() => {
+    if (settings?.theme) applyTheme(settings.theme);
+  }, [settings?.theme]);
 
   return (
     <Routes>

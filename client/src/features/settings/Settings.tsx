@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
-import { ACCENTS, applyAccent } from '../../lib/theme';
+import { ACCENTS, THEMES, applyAccent, applyTheme } from '../../lib/theme';
 import {
   useDeleteGroup, useGroups, useMe, useSaveGroup, useSaveSettings, useSettings,
 } from '../../lib/hooks';
@@ -63,6 +63,27 @@ export function SettingsPage() {
       </section>
 
       <ChangePassword />
+
+      <section>
+        <h2 className="label mb-2">Theme</h2>
+        <div className="flex gap-2">
+          {THEMES.map((t) => {
+            const activeTheme = s?.theme === 'day' ? 'day' : 'night';
+            const active = activeTheme === t.name;
+            return (
+              <button
+                key={t.name}
+                onClick={() => { applyTheme(t.name); save.mutate({ theme: t.name }); }}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition ${
+                  active ? 'border-accent bg-accent-soft text-accent' : 'border-ink-600 text-slate-300 hover:bg-ink-700'
+                }`}
+              >
+                <span>{t.icon}</span> {t.label}
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       <section>
         <h2 className="label mb-2">Accent</h2>
