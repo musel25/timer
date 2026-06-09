@@ -5,6 +5,10 @@ import { applyAccent } from './lib/theme';
 import { Login } from './features/auth/Login';
 import { Layout } from './features/Layout';
 import { Dashboard } from './features/dashboard/Dashboard';
+import { TodayView } from './features/tasks/TodayView';
+import { WeekBoard } from './features/tasks/WeekBoard';
+import { MonthCalendar } from './features/tasks/MonthCalendar';
+import { Inbox } from './features/tasks/Inbox';
 import { Focus } from './features/focus/Focus';
 import { QuickTimer } from './features/quick/QuickTimer';
 import { TimersLibrary } from './features/timers/TimersLibrary';
@@ -30,9 +34,13 @@ function AuthedApp() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={<TodayView />} />
+        <Route path="/week" element={<WeekBoard />} />
+        <Route path="/month" element={<MonthCalendar />} />
+        <Route path="/inbox" element={<Inbox />} />
         <Route path="/focus" element={<Focus />} />
         <Route path="/quick" element={<QuickTimer />} />
+        <Route path="/habits" element={<Dashboard />} />
         <Route path="/timers" element={<TimersLibrary />} />
         <Route path="/timers/new" element={<TimerEditor />} />
         <Route path="/timers/:id" element={<TimerEditor />} />

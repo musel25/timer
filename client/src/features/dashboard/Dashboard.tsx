@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useHabits, useGroups, useSessions, useSettings } from '../../lib/hooks';
 import type { Habit } from '../../lib/types';
-import { currentStreak, todaySummary } from '../../lib/stats';
+import { todaySummary } from '../../lib/stats';
 import { useRun } from '../run/RunContext';
 
 export function Dashboard() {
@@ -11,7 +11,6 @@ export function Dashboard() {
   const { data: settings } = useSettings();
   const { startRun } = useRun();
 
-  const streak = currentStreak(sessions);
   const today = todaySummary(sessions);
   const active = habits.filter((h) => !h.archived);
 
@@ -28,21 +27,17 @@ export function Dashboard() {
 
   const ordered = [...groups].sort((a, b) => a.sortOrder - b.sortOrder);
   const ungrouped = active.filter((h) => !h.groupId || !groups.some((g) => g.id === h.groupId));
-  const today_date = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 
   return (
     <div className="space-y-6">
       <header className="flex items-start justify-between pt-1">
         <div>
-          <div className="text-sm text-slate-400">{today_date}</div>
-          <div className="mt-0.5 text-2xl font-bold">
-            {streak > 0 ? `🔥 ${streak}-day streak` : 'Let’s begin'}
-          </div>
+          <h1 className="text-2xl font-bold">Habits</h1>
           <div className="text-sm text-slate-400">
-            {today.count > 0 ? `Today · ${today.count} done · ${today.minutes} min` : 'Nothing logged yet today'}
+            {today.count > 0 ? `Today · ${today.count} done · ${today.minutes} min` : 'Tap a duration to start a habit'}
           </div>
         </div>
-        <Link to="/settings" className="rounded-full bg-ink-700/60 p-2 text-lg">⚙️</Link>
+        <Link to="/timers" className="rounded-full bg-ink-700 p-2 text-lg">⏱</Link>
       </header>
 
       {ordered.map((group) => {

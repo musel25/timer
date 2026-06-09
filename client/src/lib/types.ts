@@ -117,3 +117,14 @@ export interface Phase {
   setIndex?: number;
   setCount?: number;
 }
+
+export interface Task {
+  id: string;
+  title: string;
+  notes: string | null;
+  date: string | null; // 'YYYY-MM-DD' local date, or null = Inbox (undated)
+  done: boolean;
+  completedAt: number | null;
+  sortOrder: number;
+  createdAt: number;
+}

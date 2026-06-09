@@ -71,7 +71,7 @@ export function SettingsPage() {
             <button
               key={a.name}
               onClick={() => { applyAccent(a.name); save.mutate({ accent: a.name }); }}
-              className={`h-9 w-9 rounded-full border-2 ${s?.accent === a.name ? 'border-white' : 'border-transparent'}`}
+              className={`h-9 w-9 rounded-full border-2 border-transparent ${s?.accent === a.name ? 'ring-2 ring-accent ring-offset-2 ring-offset-ink-900' : ''}`}
               style={{ backgroundColor: a.rgb }}
               title={a.label}
             />

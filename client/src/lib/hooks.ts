@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
-import type { Habit, HabitGroup, Session, Settings, TimerPreset } from './types';
+import type { Habit, HabitGroup, Session, Settings, Task, TimerPreset } from './types';
 
 export interface Me {
   user: { id: string; email: string } | null;
@@ -79,5 +79,44 @@ export function useSaveSettings() {
   return useMutation({
     mutationFn: (s: Partial<Settings>) => api.patch<Settings>('/settings', s),
     onSuccess: (data) => qc.setQueryData(['settings'], data),
+  });
+}
+
+/* ---- tasks ---- */
+export const useTasks = () => useQuery({ queryKey: ['tasks'], queryFn: () => api.get<Task[]>('/tasks') });
+
+export function useSaveTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (t: Partial<Task> & { id?: string }) =>
+      t.id ? api.patch<Task>(`/tasks/${t.id}`, t) : api.post<Task>('/tasks', t),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+  });
+}
+
+export function useDeleteTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.del(`/tasks/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+  });
+}
+
+/** Optimistic done-toggle: flips the row immediately, rolls back on error. */
+export function useToggleTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, done }: { id: string; done: boolean }) => api.patch<Task>(`/tasks/${id}`, { done }),
+    onMutate: async ({ id, done }) => {
+      await qc.cancelQueries({ queryKey: ['tasks'] });
+      const prev = qc.getQueryData<Task[]>(['tasks']);
+      qc.setQueryData<Task[]>(['tasks'], (old) =>
+        (old ?? []).map((t) => (t.id === id ? { ...t, done, completedAt: done ? Date.now() : null } : t)));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['tasks'], ctx.prev);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
   });
 }

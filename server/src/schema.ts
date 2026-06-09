@@ -73,3 +73,16 @@ export const sessions = sqliteTable('sessions', {
   note: text('note'),
   createdAt: integer('created_at').notNull(),
 });
+
+export const tasks = sqliteTable('tasks', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  title: text('title').notNull(),
+  notes: text('notes'),
+  // local calendar date 'YYYY-MM-DD', or NULL for undated (Inbox)
+  date: text('date'),
+  done: integer('done', { mode: 'boolean' }).notNull().default(false),
+  completedAt: integer('completed_at'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+});

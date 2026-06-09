@@ -5,7 +5,7 @@ import { hashPassword, newId } from './auth';
 
 export const DEFAULT_SETTINGS = {
   theme: 'dark' as const,
-  accent: 'teal' as const,
+  accent: 'blue' as const, // cobalt — the Daylight default
   sound: true,
   voice: false,
   beeps: true,

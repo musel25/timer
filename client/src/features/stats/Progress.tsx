@@ -28,7 +28,7 @@ export function Progress() {
   const maxMin = Math.max(1, ...ranked.map((r) => r.min));
 
   function intensity(min: number): string {
-    if (min <= 0) return 'rgb(38 48 61)';
+    if (min <= 0) return 'rgb(233 235 239)'; // --border (light empty cell)
     const op = min < 10 ? 0.3 : min < 20 ? 0.5 : min < 40 ? 0.75 : 1;
     return `rgb(var(--accent) / ${op})`;
   }
