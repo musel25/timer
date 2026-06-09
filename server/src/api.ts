@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, asc, desc, eq, gte, lte } from 'drizzle-orm';
 import { db } from './db';
-import { habitGroups, habits, sessions, timers, userSettings, users } from './schema';
+import { habitGroups, habits, sessions, tasks, timers, userSettings, users } from './schema';
 import {
   createSession, currentUserId, destroySession, hashPassword, newId, requireAuth, verifyPassword,
 } from './auth';
@@ -65,6 +65,7 @@ api.use('/habit-groups', requireAuth); api.use('/habit-groups/*', requireAuth);
 api.use('/sessions', requireAuth); api.use('/sessions/*', requireAuth);
 api.use('/settings', requireAuth);
 api.use('/export', requireAuth); api.use('/import', requireAuth);
+api.use('/tasks', requireAuth); api.use('/tasks/*', requireAuth);
 
 /* ---------- timers ---------- */
 const timerInput = z.object({
@@ -228,6 +229,54 @@ api.delete('/sessions/:id', (c) => {
   return c.json({ ok: true });
 });
 
+/* ---------- tasks ---------- */
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const taskInput = z.object({
+  title: z.string().min(1),
+  notes: z.string().nullable().optional(),
+  date: z.string().regex(DATE_RE).nullable().optional(),
+  done: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+});
+
+api.get('/tasks', (c) =>
+  c.json(
+    db.select().from(tasks).where(eq(tasks.userId, uid(c)))
+      .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt)).all(),
+  ));
+
+api.post('/tasks', async (c) => {
+  const p = taskInput.safeParse(await body(c));
+  if (!p.success) return c.json({ error: 'invalid_input' }, 400);
+  const now = Date.now();
+  const row = {
+    id: newId(), userId: uid(c), title: p.data.title, notes: p.data.notes ?? null,
+    date: p.data.date ?? null, done: p.data.done ?? false,
+    completedAt: p.data.done ? now : null,
+    sortOrder: p.data.sortOrder ?? now, createdAt: now,
+  };
+  db.insert(tasks).values(row).run();
+  return c.json(row, 201);
+});
+
+api.patch('/tasks/:id', async (c) => {
+  const id = c.req.param('id');
+  const p = taskInput.partial().safeParse(await body(c));
+  if (!p.success) return c.json({ error: 'invalid_input' }, 400);
+  const patch: Record<string, unknown> = { ...p.data };
+  // Keep completedAt in sync when `done` is toggled.
+  if (typeof p.data.done === 'boolean') patch.completedAt = p.data.done ? Date.now() : null;
+  const res = db.update(tasks).set(patch)
+    .where(and(eq(tasks.id, id), eq(tasks.userId, uid(c)))).run();
+  if (res.changes === 0) return c.json({ error: 'not_found' }, 404);
+  return c.json(db.select().from(tasks).where(eq(tasks.id, id)).get());
+});
+
+api.delete('/tasks/:id', (c) => {
+  db.delete(tasks).where(and(eq(tasks.id, c.req.param('id')), eq(tasks.userId, uid(c)))).run();
+  return c.json({ ok: true });
+});
+
 /* ---------- settings ---------- */
 api.get('/settings', (c) => {
   const row = db.select().from(userSettings).where(eq(userSettings.userId, uid(c))).get();
@@ -253,6 +302,7 @@ api.get('/export', (c) => {
     habits: db.select().from(habits).where(eq(habits.userId, u)).all(),
     timers: db.select().from(timers).where(eq(timers.userId, u)).all(),
     sessions: db.select().from(sessions).where(eq(sessions.userId, u)).all(),
+    tasks: db.select().from(tasks).where(eq(tasks.userId, u)).all(),
   });
 });
 
@@ -265,6 +315,7 @@ api.post('/import', async (c) => {
     if (Array.isArray(data.timers)) for (const t of reassign(data.timers)) tx.insert(timers).values(t).onConflictDoNothing().run();
     if (Array.isArray(data.habits)) for (const h of reassign(data.habits)) tx.insert(habits).values(h).onConflictDoNothing().run();
     if (Array.isArray(data.sessions)) for (const s of reassign(data.sessions)) tx.insert(sessions).values(s).onConflictDoNothing().run();
+    if (Array.isArray(data.tasks)) for (const t of reassign(data.tasks)) tx.insert(tasks).values(t).onConflictDoNothing().run();
     if (data.settings) tx.insert(userSettings).values({ userId: u, data: data.settings })
       .onConflictDoUpdate({ target: userSettings.userId, set: { data: data.settings } }).run();
   });
