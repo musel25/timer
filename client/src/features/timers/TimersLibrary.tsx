@@ -20,7 +20,7 @@ export function TimersLibrary() {
 
       {active.length === 0 && <p className="py-8 text-center text-slate-500">No saved timers yet.</p>}
 
-      <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {active.map((t) => (
           <div key={t.id} className="card p-4">
             <div className="flex items-start justify-between gap-3">

@@ -1,4 +1,4 @@
-import type { IntervalConfig, Phase, RunSpec, SimpleConfig } from '../lib/types';
+import type { IntervalConfig, Phase, PomodoroConfig, RunSpec, SimpleConfig } from '../lib/types';
 
 export const PHASE_COLORS = {
   prep: '#f59e0b',
@@ -43,4 +43,39 @@ export function buildPhases(spec: RunSpec): Phase[] {
 /** Total runnable length (excludes the zero-length finish marker). */
 export function totalSeconds(phases: Phase[]): number {
   return phases.reduce((a, p) => a + (p.kind === 'finish' ? 0 : p.seconds), 0);
+}
+
+/** Sum of work-phase seconds (Pomodoro focus time). */
+export function workSeconds(phases: Phase[]): number {
+  return phases.reduce((a, p) => a + (p.kind === 'work' ? p.seconds : 0), 0);
+}
+
+/**
+ * Pomodoro phase list: rounds of work separated by short breaks, with a long
+ * break after every `longEvery` pomodoros. No trailing break after the last work.
+ */
+export function buildPomodoroPhases(cfg: PomodoroConfig, taskLabel: string, prepSeconds = 0): Phase[] {
+  const phases: Phase[] = [];
+  const rounds = Math.max(1, cfg.rounds);
+  if (prepSeconds > 0) phases.push({ kind: 'prep', label: 'Get Ready', seconds: prepSeconds, color: PHASE_COLORS.prep });
+  for (let i = 1; i <= rounds; i++) {
+    phases.push({
+      kind: 'work',
+      label: taskLabel || 'Focus',
+      seconds: Math.round(cfg.work * 60),
+      color: PHASE_COLORS.work,
+      setIndex: i,
+      setCount: rounds,
+    });
+    if (i < rounds) {
+      const isLong = i % Math.max(1, cfg.longEvery) === 0;
+      phases.push(
+        isLong
+          ? { kind: 'cooldown', label: 'Long break', seconds: Math.round(cfg.long * 60), color: PHASE_COLORS.cooldown }
+          : { kind: 'rest', label: 'Short break', seconds: Math.round(cfg.short * 60), color: PHASE_COLORS.rest },
+      );
+    }
+  }
+  phases.push({ kind: 'finish', label: 'Done', seconds: 0, color: PHASE_COLORS.finish });
+  return phases;
 }

@@ -5,6 +5,7 @@ import { applyAccent } from './lib/theme';
 import { Login } from './features/auth/Login';
 import { Layout } from './features/Layout';
 import { Dashboard } from './features/dashboard/Dashboard';
+import { Focus } from './features/focus/Focus';
 import { QuickTimer } from './features/quick/QuickTimer';
 import { TimersLibrary } from './features/timers/TimersLibrary';
 import { TimerEditor } from './features/timers/TimerEditor';
@@ -30,6 +31,7 @@ function AuthedApp() {
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/focus" element={<Focus />} />
         <Route path="/quick" element={<QuickTimer />} />
         <Route path="/timers" element={<TimersLibrary />} />
         <Route path="/timers/new" element={<TimerEditor />} />

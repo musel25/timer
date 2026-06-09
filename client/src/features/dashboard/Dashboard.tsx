@@ -53,7 +53,7 @@ export function Dashboard() {
             <h2 className="label mb-2 flex items-center gap-2">
               <span className="text-base">{group.emoji}</span> {group.name}
             </h2>
-            <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {list.map((h) => (
                 <HabitRow key={h.id} habit={h} doneChips={today.doneChips} onStart={start} />
               ))}
@@ -65,7 +65,7 @@ export function Dashboard() {
       {ungrouped.length > 0 && (
         <section>
           <h2 className="label mb-2">Other</h2>
-          <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {ungrouped.map((h) => (
               <HabitRow key={h.id} habit={h} doneChips={today.doneChips} onStart={start} />
             ))}

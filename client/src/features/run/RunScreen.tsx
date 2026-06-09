@@ -3,7 +3,7 @@ import type { RunSpec } from '../../lib/types';
 import { clock } from '../../lib/time';
 import { useSettings } from '../../lib/hooks';
 import { logSession } from '../../lib/offlineQueue';
-import { buildPhases, totalSeconds } from '../../engine/buildPhases';
+import { buildPhases, totalSeconds, workSeconds } from '../../engine/buildPhases';
 import { useTimerEngine } from '../../engine/useTimerEngine';
 import { unlockAudio } from '../../engine/audio';
 import { releaseWakeLock, reacquireWakeLock, requestWakeLock } from '../../engine/wakeLock';
@@ -13,33 +13,42 @@ const C = 2 * Math.PI * RING;
 
 export function RunScreen({ spec, onClose, onAgain }: { spec: RunSpec; onClose: () => void; onAgain: (s: RunSpec) => void }) {
   const { data: settings } = useSettings();
-  const phases = useMemo(() => buildPhases(spec), [spec]);
+  const phases = useMemo(() => spec.phases ?? buildPhases(spec), [spec]);
+  const focusMode = spec.trackMode === 'focus';
   const planned = useMemo(() => spec.plannedSeconds || totalSeconds(phases), [phases, spec]);
+  const plannedWork = useMemo(() => workSeconds(phases), [phases]);
   const startedAt = useRef(Date.now());
+  const workDoneRef = useRef(0);
   const logged = useRef(false);
   const [muted, setMuted] = useState(false);
+
+  // In focus (Pomodoro) mode we log only completed work time, not breaks.
+  function logRun(completed: boolean, totalElapsed: number) {
+    if (logged.current) return;
+    logged.current = true;
+    void logSession({
+      id: crypto.randomUUID(),
+      habitId: focusMode ? null : (spec.habitId ?? null),
+      timerId: spec.timerId ?? null,
+      label: spec.label,
+      type: spec.type,
+      plannedSeconds: focusMode ? plannedWork : planned,
+      actualSeconds: focusMode ? workDoneRef.current : totalElapsed,
+      completed,
+      startedAt: startedAt.current,
+      endedAt: Date.now(),
+      note: null,
+      createdAt: Date.now(),
+    });
+  }
 
   const engine = useTimerEngine(phases, {
     beeps: !muted && (settings?.beeps ?? true),
     voice: !muted && (settings?.voice ?? false),
-    onFinish: (elapsed, completed) => {
-      if (logged.current) return;
-      logged.current = true;
-      void logSession({
-        id: crypto.randomUUID(),
-        habitId: spec.habitId ?? null,
-        timerId: spec.timerId ?? null,
-        label: spec.label,
-        type: spec.type,
-        plannedSeconds: planned,
-        actualSeconds: elapsed,
-        completed,
-        startedAt: startedAt.current,
-        endedAt: Date.now(),
-        note: null,
-        createdAt: Date.now(),
-      });
+    onPhaseComplete: (p) => {
+      if (focusMode && p.kind === 'work') workDoneRef.current += p.seconds;
     },
+    onFinish: (elapsed, completed) => logRun(completed, elapsed),
   });
 
   // Auto-start + keep the screen awake.
@@ -69,23 +78,7 @@ export function RunScreen({ spec, onClose, onAgain }: { spec: RunSpec; onClose: 
   });
 
   function exit() {
-    if (engine.status !== 'done' && !logged.current) {
-      logged.current = true;
-      void logSession({
-        id: crypto.randomUUID(),
-        habitId: spec.habitId ?? null,
-        timerId: spec.timerId ?? null,
-        label: spec.label,
-        type: spec.type,
-        plannedSeconds: planned,
-        actualSeconds: engine.elapsed,
-        completed: false,
-        startedAt: startedAt.current,
-        endedAt: Date.now(),
-        note: null,
-        createdAt: Date.now(),
-      });
-    }
+    if (engine.status !== 'done') logRun(false, engine.elapsed);
     onClose();
   }
 
@@ -108,7 +101,7 @@ export function RunScreen({ spec, onClose, onAgain }: { spec: RunSpec; onClose: 
           <div className="text-7xl">✓</div>
           <div>
             <div className="text-2xl font-bold">Done</div>
-            <div className="mt-1 text-white/70">{clock(engine.elapsed)} of focused time logged</div>
+            <div className="mt-1 text-white/70">{clock(focusMode ? workDoneRef.current : engine.elapsed)} of focused time logged</div>
           </div>
           <div className="flex gap-3">
             <button className="btn-outline border-white/30 text-white" onClick={() => { onClose(); onAgain(spec); }}>↻ Again</button>

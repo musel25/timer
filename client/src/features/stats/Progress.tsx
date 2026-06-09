@@ -64,7 +64,7 @@ export function Progress() {
 
       <section>
         <h2 className="label mb-2">By habit · this week</h2>
-        <div className="space-y-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           {ranked.map(({ h, min, streak }) => (
             <div key={h.id} className="card p-3">
               <div className="mb-1.5 flex items-center justify-between text-sm">

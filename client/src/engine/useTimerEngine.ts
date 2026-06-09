@@ -8,6 +8,8 @@ export interface EngineOptions {
   beeps: boolean;
   voice: boolean;
   onFinish: (elapsedSeconds: number, completed: boolean) => void;
+  /** Fired for each phase that finishes by counting down naturally (not via skip). */
+  onPhaseComplete?: (phase: Phase) => void;
 }
 
 export interface EngineState {
@@ -81,6 +83,7 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
     const ph = phasesRef.current;
     while (remRef.current <= 0 && idxRef.current < ph.length - 1) {
       const carry = -remRef.current;
+      optsRef.current.onPhaseComplete?.(ph[idxRef.current]);
       idxRef.current += 1;
       beepSecRef.current = -1;
       const next = ph[idxRef.current];

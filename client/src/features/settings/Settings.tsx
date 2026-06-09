@@ -53,7 +53,7 @@ export function SettingsPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-xl space-y-6">
       <h1 className="pt-1 text-2xl font-bold">Settings</h1>
 
       <section className="card space-y-2 p-4">

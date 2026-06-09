@@ -48,7 +48,7 @@ export function QuickTimer() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-xl space-y-6">
       <h1 className="pt-1 text-2xl font-bold">Quick Timer</h1>
 
       <div className="card space-y-4 p-4">

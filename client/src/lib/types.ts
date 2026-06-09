@@ -9,6 +9,15 @@ export interface Settings {
   keepAwake: boolean;
   prepSeconds: number; // "get ready" countdown before a focus habit starts
   weekStart: number; // 0=Sun, 1=Mon
+  pomodoro: PomodoroConfig;
+}
+
+export interface PomodoroConfig {
+  work: number; // minutes
+  short: number; // minutes
+  long: number; // minutes
+  longEvery: number; // long break after this many pomodoros
+  rounds: number; // pomodoros per session
 }
 
 export interface HabitGroup {
@@ -92,6 +101,10 @@ export interface RunSpec {
   habitId?: string | null;
   timerId?: string | null;
   plannedSeconds: number;
+  /** Pre-built phase list (used by Pomodoro); overrides buildPhases when present. */
+  phases?: Phase[];
+  /** 'focus' logs only completed work time (Pomodoro); 'whole' logs total elapsed. */
+  trackMode?: 'whole' | 'focus';
 }
 
 export type PhaseKind = 'prep' | 'work' | 'rest' | 'cooldown' | 'finish';

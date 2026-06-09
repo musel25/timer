@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS = {
   keepAwake: true,
   prepSeconds: 5, // "get ready" countdown before a focus habit starts
   weekStart: 1, // Monday
+  pomodoro: { work: 25, short: 5, long: 20, longEvery: 4, rounds: 4 },
 };
 
 /** Seed the single account + default habits on first boot (closed signup). */

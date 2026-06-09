@@ -66,7 +66,7 @@ export function TimerEditor() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-xl space-y-5">
       <h1 className="pt-1 text-2xl font-bold">{existing ? 'Edit timer' : 'New timer'}</h1>
 
       <input className="input" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
