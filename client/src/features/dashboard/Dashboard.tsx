@@ -73,7 +73,7 @@ export function Dashboard() {
       )}
 
       <div className="grid grid-cols-2 gap-3 pt-2">
-        <Link to="/quick" className="btn-accent">⚡ Quick Timer</Link>
+        <Link to="/timer" className="btn-accent">⚡ Timer</Link>
         <Link to="/habits/new" className="btn-ghost">＋ Habit</Link>
       </div>
     </div>

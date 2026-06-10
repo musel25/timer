@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useTasks, useHabits, useSessions, useSettings, useSaveTask, useSaveHabit } from '../../lib/hooks';
 import type { Habit, Task } from '../../lib/types';
 import { currentStreak, todaySummary } from '../../lib/stats';
@@ -129,11 +128,6 @@ export function TodayView() {
           )}
         </section>
       )}
-
-      <div className="grid grid-cols-2 gap-3">
-        <Link to="/focus" className="btn-accent">🍅 Focus</Link>
-        <Link to="/quick" className="btn-ghost">⚡ Quick Timer</Link>
-      </div>
 
       {editing && <TaskEditor task={editing} onClose={() => setEditing(null)} />}
     </div>

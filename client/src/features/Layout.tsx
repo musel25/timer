@@ -13,7 +13,7 @@ const groups: { title: string; tabs: { to: string; label: string; icon: string; 
   {
     title: 'Tools',
     tabs: [
-      { to: '/focus', label: 'Focus', icon: '🍅' },
+      { to: '/timer', label: 'Timer', icon: '🍅' },
       { to: '/habits', label: 'Habits', icon: '↻' },
       { to: '/stats', label: 'Progress', icon: '📊' },
       { to: '/settings', label: 'Settings', icon: '⚙️' },
@@ -25,7 +25,7 @@ const groups: { title: string; tabs: { to: string; label: string; icon: string; 
 const mobileTabs = [
   { to: '/', label: 'Today', icon: '★', end: true },
   { to: '/week', label: 'Week', icon: '🗓' },
-  { to: '/focus', label: 'Focus', icon: '🍅' },
+  { to: '/timer', label: 'Timer', icon: '🍅' },
   { to: '/stats', label: 'Progress', icon: '📊' },
   { to: '/settings', label: 'Settings', icon: '⚙️' },
 ];
