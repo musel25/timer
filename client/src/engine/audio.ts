@@ -54,6 +54,7 @@ function blast(freq: number, dur: number, gain: number, at = 0, hold = 0): void 
 
 export const audio = {
   beep: () => tone(880, 0.12, 'sine', 0.25),
+  beepAt: (at: number) => tone(880, 0.12, 'sine', 0.25, at),
   // Race-start cue, loud enough to snap attention from across the room:
   // three hard same-pitch "ready" blasts, then a long sustained octave-up
   // "GO" blast — the cadence of a track/swimming start signal.

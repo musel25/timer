@@ -155,7 +155,12 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
     if (secLeft !== beepSecRef.current) {
       beepSecRef.current = secLeft;
       const cur = ph[idxRef.current];
-      if (optsRef.current.beeps && cur.seconds > 3 && secLeft <= 3 && secLeft >= 1) audio.beep();
+      if (optsRef.current.beeps && cur.seconds > 3 && secLeft <= 3 && secLeft >= 1) {
+        // Schedule the last beep on the audio clock so it fires exactly when the
+        // phase ends — not up to a second early like a plain audio.beep() would.
+        if (secLeft === 1) audio.beepAt(remRef.current / 1000);
+        else audio.beep();
+      }
     }
 
     // Re-render at most once per displayed second (CSS handles smooth ring motion).
