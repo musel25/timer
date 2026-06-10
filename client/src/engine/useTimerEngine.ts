@@ -50,6 +50,10 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
   const beepSecRef = useRef(-1);
   const dispSecRef = useRef(-1);
   const dispIdxRef = useRef(-1);
+  // Wall-clock alarm for the true finish time. setTimeout keeps firing in a hidden
+  // tab (unlike requestAnimationFrame, which freezes), so the finish sound + notification
+  // land on time even when the user is on another page.
+  const alarmRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const [, force] = useState(0);
   const [status, setStatus] = useState<EngineStatus>('idle');
@@ -66,12 +70,44 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
     }
   }, []);
 
-  const finish = useCallback((completed: boolean) => {
-    cancelAnimationFrame(rafRef.current);
-    setStatus('done');
-    if (completed) audio.finish();
-    optsRef.current.onFinish(Math.round(elapsedRef.current / 1000), completed);
+  const clearAlarm = useCallback(() => {
+    if (alarmRef.current !== undefined) {
+      clearTimeout(alarmRef.current);
+      alarmRef.current = undefined;
+    }
   }, []);
+
+  const finish = useCallback(
+    (completed: boolean) => {
+      clearAlarm();
+      cancelAnimationFrame(rafRef.current);
+      setStatus('done');
+      if (completed) {
+        // A completed run lasted its full planned duration; a backgrounded tab froze the
+        // tick loop, so trust the larger of accumulated time and the planned total.
+        const plannedMs = phasesRef.current.reduce((a, p) => a + (p.kind === 'finish' ? 0 : p.seconds * 1000), 0);
+        elapsedRef.current = Math.max(elapsedRef.current, plannedMs);
+        audio.finish();
+        if (typeof document !== 'undefined' && document.hidden) audio.notify("Time's up ⏱", 'Your timer finished.');
+      }
+      optsRef.current.onFinish(Math.round(elapsedRef.current / 1000), completed);
+    },
+    [clearAlarm],
+  );
+
+  // (Re)arm the wall-clock alarm for the remaining active time across all upcoming phases.
+  const scheduleAlarm = useCallback(() => {
+    clearAlarm();
+    const ph = phasesRef.current;
+    let ms = Math.max(0, remRef.current);
+    for (let i = idxRef.current + 1; i < ph.length; i++) {
+      if (ph[i].kind !== 'finish') ms += ph[i].seconds * 1000;
+    }
+    alarmRef.current = setTimeout(() => {
+      alarmRef.current = undefined;
+      finish(true);
+    }, ms);
+  }, [clearAlarm, finish]);
 
   const tick = useCallback(() => {
     const now = performance.now();
@@ -120,21 +156,24 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
     lastRef.current = performance.now();
     const first = phasesRef.current[0];
     if (first && first.kind !== 'finish') announce(first);
+    scheduleAlarm();
     rafRef.current = requestAnimationFrame(tick);
-  }, [status, announce, tick]);
+  }, [status, announce, tick, scheduleAlarm]);
 
   const pause = useCallback(() => {
     if (status !== 'running') return;
     cancelAnimationFrame(rafRef.current);
+    clearAlarm();
     setStatus('paused');
-  }, [status]);
+  }, [status, clearAlarm]);
 
   const resume = useCallback(() => {
     if (status !== 'paused') return;
     lastRef.current = performance.now();
     setStatus('running');
+    scheduleAlarm();
     rafRef.current = requestAnimationFrame(tick);
-  }, [status, tick]);
+  }, [status, tick, scheduleAlarm]);
 
   const toggle = useCallback(() => {
     if (status === 'idle') start();
@@ -155,8 +194,9 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
     }
     remRef.current = next.seconds * 1000;
     announce(next);
+    if (status === 'running') scheduleAlarm();
     rerender();
-  }, [announce, finish]);
+  }, [announce, finish, scheduleAlarm, status]);
 
   const skipPrev = useCallback(() => {
     const ph = phasesRef.current;
@@ -169,17 +209,22 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
       remRef.current = ph[idxRef.current].seconds * 1000;
     }
     beepSecRef.current = -1;
+    if (status === 'running') scheduleAlarm();
     rerender();
-  }, []);
+  }, [scheduleAlarm, status]);
 
   const addTime = useCallback((sec: number) => {
     remRef.current = Math.max(0, remRef.current + sec * 1000);
+    if (status === 'running') scheduleAlarm();
     rerender();
-  }, []);
+  }, [scheduleAlarm, status]);
 
   const stop = useCallback((completed: boolean) => finish(completed), [finish]);
 
-  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
+  useEffect(() => () => {
+    cancelAnimationFrame(rafRef.current);
+    clearAlarm();
+  }, [clearAlarm]);
 
   const ph = phasesRef.current;
   const idx = idxRef.current;

@@ -66,4 +66,31 @@ export const audio = {
       /* ignore */
     }
   },
+  /** System notification + vibration — fires even when the tab/page isn't visible. */
+  notify: (title: string, body: string) => {
+    try {
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+      const opts = { body, tag: 'timer-finish', icon: '/pwa-192.png', vibrate: [200, 100, 200] } as NotificationOptions;
+      // A PWA notification via the service worker is the only kind that reliably shows on mobile in the background.
+      if ('serviceWorker' in navigator) {
+        void navigator.serviceWorker.ready.then((reg) => reg.showNotification(title, opts)).catch(() => {
+          try { new Notification(title, opts); } catch { /* ignore */ }
+        });
+        return;
+      }
+      new Notification(title, opts);
+    } catch {
+      /* ignore */
+    }
+  },
 };
+
+/** Ask for notification permission. Must be called from a user gesture (Start button). */
+export function requestNotificationPermission(): void {
+  try {
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission === 'default') void Notification.requestPermission();
+  } catch {
+    /* ignore */
+  }
+}
