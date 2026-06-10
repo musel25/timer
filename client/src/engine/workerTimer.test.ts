@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-type Msg = { cmd: 'set' | 'clear'; id: number; ms?: number };
+type Msg = { cmd: 'set' | 'clear' | 'setInterval' | 'clearInterval'; id: number; ms?: number };
 
 class FakeWorker {
   static instances: FakeWorker[] = [];
@@ -81,5 +81,68 @@ describe('setWorkerTimeout', () => {
     clearWorkerTimeout(id2);
     vi.advanceTimersByTime(5000);
     expect(cb2).not.toHaveBeenCalled();
+  });
+});
+
+describe('setWorkerInterval', () => {
+  it('schedules via the worker and runs the callback on every worker reply', async () => {
+    const { setWorkerInterval } = await loadFresh();
+    const cb = vi.fn();
+    const id = setWorkerInterval(cb, 250);
+    const w = FakeWorker.instances[0];
+    expect(w.posted).toEqual([{ cmd: 'setInterval', id, ms: 250 }]);
+    w.fire(id);
+    w.fire(id);
+    w.fire(id);
+    expect(cb).toHaveBeenCalledTimes(3);
+  });
+
+  it('clearWorkerInterval stops the callback even if the worker still replies', async () => {
+    const { setWorkerInterval, clearWorkerInterval } = await loadFresh();
+    const cb = vi.fn();
+    const id = setWorkerInterval(cb, 250);
+    const w = FakeWorker.instances[0];
+    w.fire(id);
+    clearWorkerInterval(id);
+    expect(w.posted).toContainEqual({ cmd: 'clearInterval', id });
+    w.fire(id);
+    expect(cb).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to a plain setInterval when Worker is unavailable', async () => {
+    vi.stubGlobal(
+      'Worker',
+      class {
+        constructor() {
+          throw new Error('no workers here');
+        }
+      },
+    );
+    vi.useFakeTimers();
+    const { setWorkerInterval, clearWorkerInterval } = await loadFresh();
+    const cb = vi.fn();
+    const id = setWorkerInterval(cb, 250);
+    vi.advanceTimersByTime(1000);
+    expect(cb).toHaveBeenCalledTimes(4);
+    clearWorkerInterval(id);
+    vi.advanceTimersByTime(1000);
+    expect(cb).toHaveBeenCalledTimes(4);
+  });
+
+  it('keeps timeout and interval ids independent', async () => {
+    const { setWorkerTimeout, setWorkerInterval } = await loadFresh();
+    const tcb = vi.fn();
+    const icb = vi.fn();
+    const tid = setWorkerTimeout(tcb, 1000);
+    const iid = setWorkerInterval(icb, 250);
+    expect(tid).not.toBe(iid);
+    const w = FakeWorker.instances[0];
+    w.fire(iid);
+    expect(icb).toHaveBeenCalledTimes(1);
+    expect(tcb).not.toHaveBeenCalled();
+    w.fire(tid);
+    expect(tcb).toHaveBeenCalledTimes(1);
+    w.fire(iid); // interval keeps firing after a timeout consumed its id
+    expect(icb).toHaveBeenCalledTimes(2);
   });
 });

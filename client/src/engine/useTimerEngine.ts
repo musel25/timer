@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Phase } from '../lib/types';
 import { audio } from './audio';
-import { setWorkerTimeout, clearWorkerTimeout } from './workerTimer';
+import { setWorkerTimeout, clearWorkerTimeout, setWorkerInterval, clearWorkerInterval } from './workerTimer';
 
 export type EngineStatus = 'idle' | 'running' | 'paused' | 'done';
 
@@ -56,6 +56,11 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
   // hidden), which delayed the finish sound + notification when the user was on
   // another tab. Worker timers are exempt from that throttling.
   const alarmRef = useRef<number | undefined>(undefined);
+  // Worker-driven heartbeat that advances the engine while the tab is hidden:
+  // requestAnimationFrame freezes entirely in background tabs, which silenced
+  // every phase cue and countdown beep until the user came back. The heartbeat
+  // shares the same dt-based advance as the rAF loop, so running both is safe.
+  const heartbeatRef = useRef<number | undefined>(undefined);
 
   const [, force] = useState(0);
   const [status, setStatus] = useState<EngineStatus>('idle');
@@ -79,9 +84,17 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
     }
   }, []);
 
+  const clearHeartbeat = useCallback(() => {
+    if (heartbeatRef.current !== undefined) {
+      clearWorkerInterval(heartbeatRef.current);
+      heartbeatRef.current = undefined;
+    }
+  }, []);
+
   const finish = useCallback(
     (completed: boolean) => {
       clearAlarm();
+      clearHeartbeat();
       cancelAnimationFrame(rafRef.current);
       setStatus('done');
       if (completed) {
@@ -94,7 +107,7 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
       }
       optsRef.current.onFinish(Math.round(elapsedRef.current / 1000), completed);
     },
-    [clearAlarm],
+    [clearAlarm, clearHeartbeat],
   );
 
   // (Re)arm the wall-clock alarm for the remaining active time across all upcoming phases.
@@ -111,7 +124,10 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
     }, ms);
   }, [clearAlarm, finish]);
 
-  const tick = useCallback(() => {
+  // Advance the engine by however much wall time passed. Pure dt bookkeeping, so
+  // it can be driven by both the rAF loop (visible) and the worker heartbeat
+  // (hidden) without double-counting. Returns false once the run has finished.
+  const advance = useCallback((): boolean => {
     const now = performance.now();
     const dt = now - lastRef.current;
     lastRef.current = now;
@@ -129,7 +145,7 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
         elapsedRef.current -= carry;
         finish(true);
         rerender();
-        return;
+        return false;
       }
       announce(next);
       remRef.current = next.seconds * 1000 - carry;
@@ -148,8 +164,19 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
       dispIdxRef.current = idxRef.current;
       rerender();
     }
-    rafRef.current = requestAnimationFrame(tick);
+    return true;
   }, [announce, finish]);
+
+  const tick = useCallback(() => {
+    if (advance()) rafRef.current = requestAnimationFrame(tick);
+  }, [advance]);
+
+  const startHeartbeat = useCallback(() => {
+    clearHeartbeat();
+    heartbeatRef.current = setWorkerInterval(() => {
+      advance();
+    }, 250);
+  }, [advance, clearHeartbeat]);
 
   const start = useCallback(() => {
     if (status !== 'idle') return;
@@ -159,23 +186,26 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
     const first = phasesRef.current[0];
     if (first && first.kind !== 'finish') announce(first);
     scheduleAlarm();
+    startHeartbeat();
     rafRef.current = requestAnimationFrame(tick);
-  }, [status, announce, tick, scheduleAlarm]);
+  }, [status, announce, tick, scheduleAlarm, startHeartbeat]);
 
   const pause = useCallback(() => {
     if (status !== 'running') return;
     cancelAnimationFrame(rafRef.current);
     clearAlarm();
+    clearHeartbeat();
     setStatus('paused');
-  }, [status, clearAlarm]);
+  }, [status, clearAlarm, clearHeartbeat]);
 
   const resume = useCallback(() => {
     if (status !== 'paused') return;
     lastRef.current = performance.now();
     setStatus('running');
     scheduleAlarm();
+    startHeartbeat();
     rafRef.current = requestAnimationFrame(tick);
-  }, [status, tick, scheduleAlarm]);
+  }, [status, tick, scheduleAlarm, startHeartbeat]);
 
   const toggle = useCallback(() => {
     if (status === 'idle') start();
@@ -226,7 +256,8 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
   useEffect(() => () => {
     cancelAnimationFrame(rafRef.current);
     clearAlarm();
-  }, [clearAlarm]);
+    clearHeartbeat();
+  }, [clearAlarm, clearHeartbeat]);
 
   const ph = phasesRef.current;
   const idx = idxRef.current;
