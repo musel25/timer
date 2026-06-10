@@ -126,15 +126,12 @@ export function goalStreak(sessions: Session[], habitId: string, dailyGoalMin: n
   return streak;
 }
 
-export type FocusTag = 'work' | 'study' | 'other';
-
-/** Minutes of habit-less (focus/timer) sessions since `fromTs`, bucketed by the Work/Study tag in `note`. */
-export function focusMinutesByTag(sessions: Session[], fromTs: number): Record<FocusTag, number> {
-  const out: Record<FocusTag, number> = { work: 0, study: 0, other: 0 };
+/** Minutes of habit-less (focus/timer) sessions since `fromTs`. */
+export function focusMinutes(sessions: Session[], fromTs: number): number {
+  let m = 0;
   for (const s of sessions) {
     if (s.habitId || s.startedAt < fromTs) continue;
-    const tag: FocusTag = s.note === 'work' ? 'work' : s.note === 'study' ? 'study' : 'other';
-    out[tag] += s.actualSeconds / 60;
+    m += s.actualSeconds / 60;
   }
-  return out;
+  return m;
 }

@@ -3,7 +3,7 @@ import { Flame, Clock, CalendarRange } from 'lucide-react';
 import { useHabits, useSessions, useSettings } from '../../lib/hooks';
 import { HabitIcon } from '../../lib/habitIcons';
 import { categoryColor, gradient, tint, solid } from '../../lib/palette';
-import { currentStreak, focusMinutesByTag, goalBlocks, goalStreak, heatmap, minutesByHabitInRange, minutesInRange, todaySummary } from '../../lib/stats';
+import { currentStreak, focusMinutes, goalBlocks, goalStreak, heatmap, minutesByHabitInRange, minutesInRange, todaySummary } from '../../lib/stats';
 import { startOfToday, addDays } from '../../lib/time';
 import { BlockBar } from '../../components/BlockBar';
 
@@ -41,16 +41,8 @@ export function Progress() {
   const todayBlocks = Object.values(summary.blocksByHabit).reduce((a, b) => a + b, 0);
   const todayHabitMin = Math.round(Object.values(summary.minutesByHabit).reduce((a, b) => a + b, 0));
 
-  const focusWeek = focusMinutesByTag(sessions, weekAgo);
-  const focusToday = focusMinutesByTag(sessions, startOfToday());
-  const focusRows = (
-    [
-      { key: 'work', label: 'Work', week: Math.round(focusWeek.work), today: Math.round(focusToday.work) },
-      { key: 'study', label: 'Study', week: Math.round(focusWeek.study), today: Math.round(focusToday.study) },
-      { key: 'other', label: 'Other focus', week: Math.round(focusWeek.other), today: Math.round(focusToday.other) },
-    ] as const
-  ).filter((r) => r.key !== 'other' || r.week > 0);
-  const maxFocus = Math.max(1, ...focusRows.map((r) => r.week));
+  const focusWeekMin = Math.round(focusMinutes(sessions, weekAgo));
+  const focusTodayMin = Math.round(focusMinutes(sessions, startOfToday()));
 
   function intensity(min: number): string {
     if (min <= 0) return 'rgb(var(--ink-700))';
@@ -126,21 +118,11 @@ export function Progress() {
 
       <section>
         <h2 className="label mb-2">Focus · this week</h2>
-        <div className="card space-y-4 p-4">
-          {focusRows.map((r) => (
-            <div key={r.key}>
-              <div className="mb-1.5 flex items-baseline justify-between text-sm">
-                <span>{r.label}</span>
-                <span className="text-slate-400">{r.week}m this week · {r.today}m today</span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-ink-700">
-                <div className="h-full rounded-full bg-accent" style={{ width: `${(r.week / maxFocus) * 100}%` }} />
-              </div>
-            </div>
-          ))}
-          {focusRows.every((r) => r.week === 0) && (
-            <p className="text-center text-sm text-slate-500">No focus sessions this week yet.</p>
-          )}
+        <div className="card flex items-baseline justify-between p-4 text-sm">
+          <span>Focus sessions</span>
+          <span className="text-slate-400">
+            {focusWeekMin > 0 ? `${focusWeekMin}m this week · ${focusTodayMin}m today` : 'No focus sessions this week yet.'}
+          </span>
         </div>
       </section>
     </div>

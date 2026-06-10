@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { currentStreak, focusMinutesByTag, goalBlocks, goalStreak, todaySummary } from './stats';
+import { currentStreak, focusMinutes, goalBlocks, goalStreak, todaySummary } from './stats';
 import { startOfToday, addDays } from './time';
 import type { Session } from './types';
 
@@ -105,20 +105,16 @@ describe('goalStreak', () => {
   });
 });
 
-describe('focusMinutesByTag', () => {
+describe('focusMinutes', () => {
   const noon = startOfToday() + 12 * 3600_000;
 
-  it('buckets habit-less sessions by note tag', () => {
+  it('sums habit-less sessions in range', () => {
     const s = [
-      session(noon, { note: 'work', actualSeconds: 1500 }),
-      session(noon, { note: 'study', actualSeconds: 600 }),
-      session(noon, { note: null, actualSeconds: 300 }), // legacy / plain timer
-      session(noon, { habitId: 'h1', note: 'work', actualSeconds: 600 }), // habit session — excluded
-      session(addDays(noon, -10), { note: 'work', actualSeconds: 600 }), // out of range
+      session(noon, { actualSeconds: 1500 }),
+      session(noon, { actualSeconds: 600 }),
+      session(noon, { habitId: 'h1', actualSeconds: 600 }), // habit session — excluded
+      session(addDays(noon, -10), { actualSeconds: 600 }), // out of range
     ];
-    const f = focusMinutesByTag(s, startOfToday());
-    expect(Math.round(f.work)).toBe(25);
-    expect(Math.round(f.study)).toBe(10);
-    expect(Math.round(f.other)).toBe(5);
+    expect(Math.round(focusMinutes(s, startOfToday()))).toBe(35);
   });
 });

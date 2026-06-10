@@ -26,9 +26,10 @@ a one-tap action. Tracking is also confusing:
   credit for finished ones.
 - **Goal = N blocks/day, segmented bar.** The habit's daily goal is expressed in
   10-minute blocks. Bars fill per completed block **today**; 100% = goal met.
-- **Focus sessions tagged Work or Study, tracked in minutes only.** Picked at
-  start on the Timer page; Progress gets a Focus section with today/week minutes
-  per tag. No goals for focus — session lengths vary, totals are honest.
+- **Focus sessions tracked in minutes only.** Progress gets a Focus section with
+  today/week minutes. No goals for focus — session lengths vary, totals are
+  honest. *(Revised post-launch: the original Work/Study tag was removed — focus
+  is one bucket, no per-session tagging.)*
 - **Timer page reduced to two modes** (second round of brainstorming):
   - The old "Focus block" (plain simple) and "Interval" modes are removed from
     the builder.
@@ -51,9 +52,8 @@ a one-tap action. Tracking is also confusing:
   schema but the UI no longer reads them. New habits are created with
   `durations: [10]`, `defaultDurationMin: 10`, `timerType: 'simple'`. No
   migration; old sessions keep counting toward stats.
-- The Work/Study tag is stored in the existing `sessions.note` field (`'work'`
-  or `'study'`), keeping `label` free for the task text. Older focus sessions
-  have no tag and group under an "Other focus" row when nonzero.
+- ~~Work/Study tag~~ Removed in revision: focus sessions carry no tag; all
+  habit-less session minutes count as one Focus total.
 
 ### Block counting
 
@@ -107,11 +107,8 @@ session-count-based) so legacy 5/15/20-minute sessions still convert sensibly.
   button. An **Edit** toggle expands the steppers; editing any value deselects
   the chip (it's now a custom config). The legacy `settings.pomodoro` default
   seeds the Focus-block steppers when no preset is selected.
-- **Work / Study toggle** on the Focus-block mode only; default = last used,
-  remembered in `localStorage` (`timer_focus_tag`). The started run's session
-  `note` is set to the tag (`'work'`/`'study'`), keeping `label` free for the
-  task text. Plain Timer runs are logged with the preset name (or "Timer") and
-  land in the "Other focus" bucket on Progress.
+- ~~Work / Study toggle~~ Removed in revision — no tagging UI. Focus-block and
+  plain-Timer runs log with `note: null`; Progress shows a single Focus total.
 
 ### 5. Progress page — `client/src/features/stats/Progress.tsx`, `client/src/lib/stats.ts`
 - **Habits list**: per-habit row becomes the segmented blocks-today-vs-goal bar
@@ -122,15 +119,13 @@ session-count-based) so legacy 5/15/20-minute sessions still convert sensibly.
 - **Overall streak card** stays "consecutive days with at least one completed
   session" — existing streaks survive.
 - Add a **"Today: N blocks · M min"** summary line (habit sessions only).
-- New **Focus section**: rows for Work and Study (and "Other focus" if legacy
-  untagged minutes exist in the window) showing `{week}m this week · {today}m
-  today`, with a simple bar scaled relative within the section.
+- New **Focus section**: a single row showing `{week}m this week · {today}m
+  today` for all habit-less session minutes. *(Revised: no Work/Study rows.)*
 - Week / 30-day stat cards unchanged (they already include focus minutes).
 
 ### 6. Stats helpers — `client/src/lib/stats.ts`
 - Add `blocksTodayByHabit(sessions)`, goal-aware per-habit streak, and a
-  focus-minutes-by-label helper (sessions with `habitId === null`, bucketed
-  into `Work` / `Study` / other).
+  focus-minutes helper (total minutes of sessions with `habitId === null`).
 
 ## Testing
 
@@ -138,8 +133,8 @@ session-count-based) so legacy 5/15/20-minute sessions still convert sensibly.
   goal-met streak vs ≥1-block streak; focus bucketing of tagged + legacy labels.
 - **Manual**: start habit → single 10-min button; finish → "+10 more" chains a
   second block and both log; bar shows `2/3` after two blocks of a 3-block goal;
-  editor round-trips a goal of 3 blocks as `dailyGoalMin = 30`; Timer page
-  remembers last Work/Study choice; Progress shows the Focus section split.
+  editor round-trips a goal of 3 blocks as `dailyGoalMin = 30`; Progress shows
+  the Focus minutes line.
 
 ## Out of scope
 

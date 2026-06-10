@@ -43,7 +43,7 @@ export function ActiveRun({ spec, onClose, onAgain }: { spec: RunSpec; onClose: 
       completed,
       startedAt: startedAt.current,
       endedAt: Date.now(),
-      note: spec.tag ?? null,
+      note: null,
       createdAt: Date.now(),
     });
   }

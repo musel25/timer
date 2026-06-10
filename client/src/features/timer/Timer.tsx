@@ -10,9 +10,6 @@ import { useRun } from '../run/RunContext';
 const POMODORO_DEFAULTS: PomodoroConfig = { work: 25, short: 5, long: 20, longEvery: 4, rounds: 4 };
 
 type Mode = 'focus' | 'timer';
-type FocusTag = 'work' | 'study';
-
-const TAG_KEY = 'timer_focus_tag';
 
 /** Timer builder: Focus block (deep-work cycles, Work/Study-tagged) and a plain countdown Timer. */
 export function Timer() {
@@ -75,7 +72,6 @@ function FocusBlockBuilder() {
   const presets = timers.filter((t) => !t.archived && t.type === 'pomodoro');
 
   const [task, setTask] = useState('');
-  const [tag, setTag] = useState<FocusTag>(() => (localStorage.getItem(TAG_KEY) === 'study' ? 'study' : 'work'));
   const [cfg, setCfg] = useState<PomodoroConfig>(POMODORO_DEFAULTS);
   const [presetId, setPresetId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -87,10 +83,6 @@ function FocusBlockBuilder() {
     seeded.current = true;
   }, [settings?.pomodoro]);
 
-  function pickTag(t: FocusTag) {
-    setTag(t);
-    localStorage.setItem(TAG_KEY, t);
-  }
   function loadPreset(p: TimerPreset) {
     setCfg(p.config as PomodoroConfig);
     setPresetId(p.id);
@@ -114,7 +106,6 @@ function FocusBlockBuilder() {
       plannedSeconds: workSeconds(phases),
       phases,
       trackMode: 'focus',
-      tag,
     });
   }
 
@@ -124,14 +115,6 @@ function FocusBlockBuilder() {
 
   return (
     <div className="space-y-5">
-      <div className="flex gap-2">
-        {(['work', 'study'] as FocusTag[]).map((t) => (
-          <button key={t} className={`chip flex-1 capitalize ${tag === t ? 'chip-active' : ''}`} onClick={() => pickTag(t)}>
-            {t}
-          </button>
-        ))}
-      </div>
-
       <input
         className="input"
         placeholder="What are you working on? (optional)"

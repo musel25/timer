@@ -109,8 +109,6 @@ export interface RunSpec {
   phases?: Phase[];
   /** 'focus' logs only completed work time (Pomodoro); 'whole' logs total elapsed. */
   trackMode?: 'whole' | 'focus';
-  /** Work/Study tag for focus sessions; logged into the session's `note`. */
-  tag?: 'work' | 'study';
 }
 
 export type PhaseKind = 'prep' | 'work' | 'rest' | 'cooldown' | 'finish';
