@@ -1,29 +1,32 @@
 import { Link } from 'react-router-dom';
-import { Check, EyeOff, Pencil } from 'lucide-react';
+import { EyeOff, Pencil, Play } from 'lucide-react';
 import type { Habit } from '../../lib/types';
 import { HabitIcon } from '../../lib/habitIcons';
 import { categoryColor, gradient, tint, solid } from '../../lib/palette';
+import { goalBlocks } from '../../lib/stats';
+import { BlockBar } from '../../components/BlockBar';
 
 /**
- * A habit as a colorful card: category-tinted icon chip, name, and duration chips
- * whose done state renders in the habit's category color. Shared by the Today
- * dashboard and the Habits page. Pass `onHide` for the Today hide-for-today control,
- * or `editTo` for an edit link.
+ * A habit as a colorful card: category-tinted icon chip, name, a single
+ * "Start · 10 min" button, and today's block progress. Shared by the Today
+ * dashboard and the Habits page. Pass `onHide` for the Today hide-for-today
+ * control, or `editTo` for an edit link.
  */
 export function HabitCard({
   habit,
-  doneChips,
+  blocksToday,
   onStart,
   onHide,
   editTo,
 }: {
   habit: Habit;
-  doneChips: Set<string>;
+  blocksToday: number;
   onStart: (h: Habit, min: number) => void;
   onHide?: (h: Habit) => void;
   editTo?: string;
 }) {
   const color = categoryColor(habit.id);
+  const goal = goalBlocks(habit.dailyGoalMin);
   return (
     <div className="card group relative overflow-hidden p-4">
       <div className="absolute inset-x-0 top-0 h-1" style={{ backgroundImage: gradient(color.rgb) }} />
@@ -54,21 +57,22 @@ export function HabitCard({
           </button>
         )}
       </div>
-      <div className="flex flex-wrap gap-2">
-        {habit.durations.map((min) => {
-          const done = doneChips.has(`${habit.id}:${min}`);
-          return (
-            <button
-              key={min}
-              onClick={() => onStart(habit, min)}
-              className="chip gap-1"
-              style={done ? { borderColor: solid(color.rgb), backgroundColor: tint(color.rgb, 0.16), color: solid(color.rgb) } : undefined}
-            >
-              {done && <Check size={13} strokeWidth={3} />}{min}
-            </button>
-          );
-        })}
-      </div>
+      <button
+        onClick={() => onStart(habit, 10)}
+        className="chip w-full justify-center gap-1.5 py-2 font-medium"
+        style={{ borderColor: tint(color.rgb, 0.5), backgroundColor: tint(color.rgb, 0.1), color: solid(color.rgb) }}
+      >
+        <Play size={13} fill="currentColor" /> Start · 10 min
+      </button>
+      {goal ? (
+        <div className="mt-3">
+          <BlockBar done={blocksToday} goal={goal} rgb={color.rgb} />
+        </div>
+      ) : blocksToday > 0 ? (
+        <div className="mt-3 text-xs text-slate-400">
+          {blocksToday} block{blocksToday === 1 ? '' : 's'} today
+        </div>
+      ) : null}
     </div>
   );
 }

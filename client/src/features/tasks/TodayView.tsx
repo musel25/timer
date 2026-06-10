@@ -94,7 +94,7 @@ export function TodayView() {
             <h2 className="label mb-3">Habits</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {active.map((h) => (
-                <HabitCard key={h.id} habit={h} doneChips={summary.doneChips} onStart={startHabit} onHide={hideHabit} />
+                <HabitCard key={h.id} habit={h} blocksToday={summary.blocksByHabit[h.id] ?? 0} onStart={startHabit} onHide={hideHabit} />
               ))}
             </div>
             {active.length === 0 && <p className="py-1 text-sm text-slate-500">All habits hidden for today.</p>}

@@ -37,7 +37,7 @@ export function Dashboard() {
         <div>
           <h1 className="text-3xl font-bold md:text-4xl">Habits</h1>
           <div className="mt-1 text-sm text-slate-300">
-            {today.count > 0 ? `Today · ${today.count} done · ${today.minutes} min` : 'Tap a duration to start a habit'}
+            {today.count > 0 ? `Today · ${today.count} done · ${today.minutes} min` : 'Tap a habit to start a 10-minute block'}
           </div>
         </div>
         <Link to="/timers" className="flex items-center rounded-full border border-ink-600/60 bg-ink-900/30 p-2.5 text-slate-300 backdrop-blur hover:text-slate-100" title="Timer presets"><Timer size={18} /></Link>
@@ -53,7 +53,7 @@ export function Dashboard() {
             </h2>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {list.map((h) => (
-                <HabitCard key={h.id} habit={h} doneChips={today.doneChips} onStart={start} editTo={`/habits/${h.id}`} />
+                <HabitCard key={h.id} habit={h} blocksToday={today.blocksByHabit[h.id] ?? 0} onStart={start} editTo={`/habits/${h.id}`} />
               ))}
             </div>
           </section>
@@ -65,7 +65,7 @@ export function Dashboard() {
           <h2 className="label mb-2">Other</h2>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {ungrouped.map((h) => (
-              <HabitCard key={h.id} habit={h} doneChips={today.doneChips} onStart={start} editTo={`/habits/${h.id}`} />
+              <HabitCard key={h.id} habit={h} blocksToday={today.blocksByHabit[h.id] ?? 0} onStart={start} editTo={`/habits/${h.id}`} />
             ))}
           </div>
         </section>
