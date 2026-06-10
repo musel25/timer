@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { Timer as TimerIcon } from 'lucide-react';
 import { useMe, useSettings } from './lib/hooks';
 import { applyAccent, applyTheme } from './lib/theme';
 import { Login } from './features/auth/Login';
@@ -19,7 +20,7 @@ import { SettingsPage } from './features/settings/Settings';
 function Splash() {
   return (
     <div className="flex h-full items-center justify-center text-slate-500">
-      <div className="animate-pulse text-2xl">⏱</div>
+      <TimerIcon className="animate-pulse" size={32} />
     </div>
   );
 }

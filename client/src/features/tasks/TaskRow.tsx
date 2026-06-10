@@ -1,3 +1,4 @@
+import { EyeOff, Check } from 'lucide-react';
 import type { Task } from '../../lib/types';
 import { useToggleTask } from '../../lib/hooks';
 
@@ -12,7 +13,7 @@ export function TaskRow({ task, onEdit, onHide }: { task: Task; onEdit?: (t: Tas
           task.done ? 'border-transparent bg-accent' : 'border-ink-500 hover:border-accent'
         }`}
       >
-        {task.done && <span className="block text-center text-[11px] leading-[16px] text-white">✓</span>}
+        {task.done && <Check size={14} strokeWidth={3} className="mx-auto text-white" />}
       </button>
       <button
         onClick={() => onEdit?.(task)}
@@ -27,7 +28,7 @@ export function TaskRow({ task, onEdit, onHide }: { task: Task; onEdit?: (t: Tas
           onClick={() => onHide(task)}
           className="shrink-0 text-slate-500 opacity-0 transition hover:text-slate-200 group-hover:opacity-100"
         >
-          🙈
+          <EyeOff size={16} />
         </button>
       )}
     </div>

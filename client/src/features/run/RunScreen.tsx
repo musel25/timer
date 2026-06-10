@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+import { ChevronDown, X, Check, RotateCcw, SkipBack, SkipForward, Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import type { RunSpec } from '../../lib/types';
 import type { EngineState } from '../../engine/useTimerEngine';
 import { clock } from '../../lib/time';
@@ -32,21 +34,21 @@ export function RunScreen({ spec, engine, muted, onToggleMute, focusMode, workDo
         <div className="truncate text-lg font-semibold">{spec.label}</div>
         <div className="flex items-center gap-2">
           {!done && (
-            <button onClick={onMinimize} className="rounded-full bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20" title="Minimize (Esc)">⌄</button>
+            <button onClick={onMinimize} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20" title="Minimize (Esc)"><ChevronDown size={18} /></button>
           )}
-          <button onClick={onStop} className="rounded-full bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20" title="Stop">✕</button>
+          <button onClick={onStop} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20" title="Stop"><X size={18} /></button>
         </div>
       </div>
 
       {done ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
-          <div className="text-7xl">✓</div>
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/15"><Check size={56} strokeWidth={2.5} /></div>
           <div>
             <div className="text-2xl font-bold">Done</div>
             <div className="mt-1 text-white/70">{clock(focusMode ? workDone : engine.elapsed)} of focused time logged</div>
           </div>
           <div className="flex gap-3">
-            <button className="btn-outline border-white/30 text-white" onClick={onAgain}>↻ Again</button>
+            <button className="btn-outline border-white/30 text-white" onClick={onAgain}><RotateCcw size={16} /> Again</button>
             <button className="btn-accent" onClick={onClose}>Done</button>
           </div>
         </div>
@@ -78,16 +80,16 @@ export function RunScreen({ spec, engine, muted, onToggleMute, focusMode, workDo
           </div>
 
           <div className="flex items-center justify-center gap-3 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-            <CtrlButton onClick={engine.skipPrev} label="⏮" />
-            <CtrlButton onClick={() => engine.addTime(15)} label="+15s" small />
+            <CtrlButton onClick={engine.skipPrev}><SkipBack size={20} /></CtrlButton>
+            <CtrlButton onClick={() => engine.addTime(15)} small>+15s</CtrlButton>
             <button
               onClick={engine.toggle}
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-2xl text-[#0b0f14] shadow-lg active:scale-95"
+              className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-[#0b0f14] shadow-lg active:scale-95"
             >
-              {engine.status === 'running' ? '⏸' : '▶'}
+              {engine.status === 'running' ? <Pause size={26} fill="currentColor" /> : <Play size={26} fill="currentColor" />}
             </button>
-            <CtrlButton onClick={() => engine.skipNext()} label="⏭" />
-            <CtrlButton onClick={onToggleMute} label={muted ? '🔇' : '🔊'} small />
+            <CtrlButton onClick={() => engine.skipNext()}><SkipForward size={20} /></CtrlButton>
+            <CtrlButton onClick={onToggleMute} small>{muted ? <VolumeX size={18} /> : <Volume2 size={18} />}</CtrlButton>
           </div>
         </>
       )}
@@ -95,15 +97,15 @@ export function RunScreen({ spec, engine, muted, onToggleMute, focusMode, workDo
   );
 }
 
-function CtrlButton({ onClick, label, small }: { onClick: () => void; label: string; small?: boolean }) {
+function CtrlButton({ onClick, children, small }: { onClick: () => void; children: ReactNode; small?: boolean }) {
   return (
     <button
       onClick={onClick}
       className={`flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 active:scale-95 ${
-        small ? 'h-12 px-3 text-sm' : 'h-12 w-12 text-lg'
+        small ? 'h-12 px-3 text-sm' : 'h-12 w-12'
       }`}
     >
-      {label}
+      {children}
     </button>
   );
 }

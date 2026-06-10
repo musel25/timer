@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Timer } from 'lucide-react';
 import { api } from '../../lib/api';
 
 export function Login() {
@@ -15,7 +16,7 @@ export function Login() {
   return (
     <div className="mx-auto flex h-full max-w-sm flex-col items-center justify-center px-6">
       <div className="mb-8 text-center">
-        <div className="text-5xl">⏱</div>
+        <div className="flex justify-center text-accent"><Timer size={48} /></div>
         <h1 className="mt-3 text-2xl font-bold">Timer</h1>
         <p className="text-sm text-slate-400">Interval timer &amp; habit tracker</p>
       </div>

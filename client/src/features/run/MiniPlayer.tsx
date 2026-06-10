@@ -1,3 +1,4 @@
+import { Play, Pause } from 'lucide-react';
 import type { RunSpec } from '../../lib/types';
 import type { EngineState } from '../../engine/useTimerEngine';
 import { clock } from '../../lib/time';
@@ -33,7 +34,7 @@ export function MiniPlayer({ spec, engine, onExpand, onStop }: MiniPlayerProps) 
           style={{ background: phase.color }}
           title={running ? 'Pause' : 'Play'}
         >
-          {running ? '⏸' : '▶'}
+          {running ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
         </button>
 
         <button onClick={onExpand} className="min-w-0 flex-1 text-left" title="Expand">

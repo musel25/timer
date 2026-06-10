@@ -13,9 +13,9 @@ export function applyAccent(accent: AccentName): void {
   document.documentElement.setAttribute('data-accent', accent);
 }
 
-export const THEMES: { name: ThemeName; label: string; icon: string }[] = [
-  { name: 'night', label: 'Night', icon: '🌙' },
-  { name: 'day', label: 'Day', icon: '☀️' },
+export const THEMES: { name: ThemeName; label: string; icon: 'moon' | 'sun' }[] = [
+  { name: 'night', label: 'Night', icon: 'moon' },
+  { name: 'day', label: 'Day', icon: 'sun' },
 ];
 
 /** Page-chrome color per theme (browser status bar / address bar tint). */

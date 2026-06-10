@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Plus, X } from 'lucide-react';
 import { Stepper } from '../../components/Stepper';
 import { useDeleteTimer, useSaveTimer, useTimers } from '../../lib/hooks';
 import { PHASE_COLORS } from '../../engine/buildPhases';
@@ -92,7 +93,7 @@ export function TimerEditor() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="label">Intervals (per set)</h2>
-            <button className="text-sm text-accent" onClick={addInterval}>＋ Add</button>
+            <button className="inline-flex items-center gap-1 text-sm text-accent" onClick={addInterval}><Plus size={14} /> Add</button>
           </div>
           {intervals.map((iv, i) => (
             <div key={i} className="card space-y-3 p-3">
@@ -112,7 +113,7 @@ export function TimerEditor() {
                   <option value="rest">Rest</option>
                 </select>
                 {intervals.length > 1 && (
-                  <button className="px-2 text-slate-500 hover:text-rose-400" onClick={() => removeInterval(i)}>✕</button>
+                  <button className="px-2 text-slate-500 hover:text-rose-400" onClick={() => removeInterval(i)}><X size={16} /></button>
                 )}
               </div>
               <Stepper label="Seconds" value={iv.seconds} onChange={(v) => updateInterval(i, { seconds: v })} min={1} max={3600} step={5} suffix="s" />

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Check } from 'lucide-react';
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { useTasks, useSaveTask, useToggleTask } from '../../lib/hooks';
@@ -29,7 +30,7 @@ function DraggableTask({ task, onEdit }: { task: Task; onEdit: (t: Task) => void
         aria-label={task.done ? 'Mark not done' : 'Mark done'}
         className={`mt-px h-[15px] w-[15px] shrink-0 rounded border-[1.5px] ${task.done ? 'border-transparent bg-accent' : 'border-ink-500 hover:border-accent'}`}
       >
-        {task.done && <span className="block text-center text-[9px] leading-[12px] text-white">✓</span>}
+        {task.done && <Check size={11} strokeWidth={3} className="mx-auto text-white" />}
       </button>
       <button
         onPointerDown={(e) => e.stopPropagation()}

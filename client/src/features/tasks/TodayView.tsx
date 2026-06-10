@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useTasks, useHabits, useSessions, useSettings, useSaveTask, useSaveHabit } from '../../lib/hooks';
 import type { Habit, Task } from '../../lib/types';
 import { currentStreak, todaySummary } from '../../lib/stats';
+import { Flame, Check, EyeOff } from 'lucide-react';
 import { todayKey } from '../../lib/date';
+import { HabitIcon } from '../../lib/habitIcons';
 import { useRun } from '../run/RunContext';
 import { TaskRow } from './TaskRow';
 import { QuickAdd } from './QuickAdd';
@@ -46,8 +48,8 @@ export function TodayView() {
       <header className="pt-1">
         <div className="text-sm text-slate-400">{dateLabel}</div>
         <h1 className="text-2xl font-bold">Today</h1>
-        <div className="text-sm text-slate-400">
-          {streak > 0 ? `🔥 ${streak}-day streak` : "Let's begin"}
+        <div className="flex items-center gap-1 text-sm text-slate-400">
+          {streak > 0 ? <span className="flex items-center gap-1"><Flame size={14} className="text-amber-500" />{streak}-day streak</span> : "Let's begin"}
           {summary.count > 0 ? ` · ${summary.count} session${summary.count > 1 ? 's' : ''} · ${summary.minutes} min` : ''}
         </div>
       </header>
@@ -84,14 +86,14 @@ export function TodayView() {
           <div className="space-y-1">
             {active.map((h) => (
               <div key={h.id} className="group flex items-center gap-2 py-1.5">
-                <span className="text-lg">{h.emoji}</span>
+                <HabitIcon name={h.emoji} className="text-slate-300" size={20} />
                 <span className="min-w-0 flex-1 truncate text-sm">{h.name}</span>
                 <div className="flex flex-wrap gap-1.5">
                   {h.durations.map((min) => {
                     const done = summary.doneChips.has(`${h.id}:${min}`);
                     return (
-                      <button key={min} onClick={() => startHabit(h, min)} className={`chip ${done ? 'chip-done' : ''}`}>
-                        {done ? '✓ ' : ''}{min}
+                      <button key={min} onClick={() => startHabit(h, min)} className={`chip gap-1 ${done ? 'chip-done' : ''}`}>
+                        {done && <Check size={13} strokeWidth={3} />}{min}
                       </button>
                     );
                   })}
@@ -102,7 +104,7 @@ export function TodayView() {
                   onClick={() => hideHabit(h)}
                   className="shrink-0 text-slate-500 opacity-0 transition hover:text-slate-200 group-hover:opacity-100"
                 >
-                  🙈
+                  <EyeOff size={16} />
                 </button>
               </div>
             ))}
@@ -117,7 +119,7 @@ export function TodayView() {
                 <div className="mt-1 space-y-1">
                   {hiddenHabits.map((h) => (
                     <div key={h.id} className="flex items-center gap-2 py-1 opacity-60">
-                      <span className="text-lg">{h.emoji}</span>
+                      <HabitIcon name={h.emoji} className="text-slate-300" size={20} />
                       <span className="min-w-0 flex-1 truncate text-sm text-slate-400">{h.name}</span>
                       <button onClick={() => unhideHabit(h)} className="shrink-0 text-xs text-accent hover:underline">Unhide</button>
                     </div>

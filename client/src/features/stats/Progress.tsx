@@ -1,4 +1,7 @@
+import type { ReactNode } from 'react';
+import { Flame } from 'lucide-react';
 import { useHabits, useSessions, useSettings } from '../../lib/hooks';
+import { HabitIcon } from '../../lib/habitIcons';
 import { currentStreak, heatmap, minutesByHabitInRange, minutesInRange } from '../../lib/stats';
 import { startOfToday, addDays } from '../../lib/time';
 
@@ -38,7 +41,7 @@ export function Progress() {
       <h1 className="pt-1 text-2xl font-bold">Progress</h1>
 
       <div className="grid grid-cols-3 gap-3">
-        <Stat label="Streak" value={`🔥 ${streak}`} />
+        <Stat label="Streak" value={<><Flame size={18} className="text-amber-500" />{streak}</>} />
         <Stat label="This week" value={`${weekMin}m`} />
         <Stat label="30 days" value={`${monthMin}m`} />
       </div>
@@ -68,9 +71,10 @@ export function Progress() {
           {ranked.map(({ h, min, streak }) => (
             <div key={h.id} className="card p-3">
               <div className="mb-1.5 flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2"><span>{h.emoji}</span>{h.name}</span>
-                <span className="text-slate-400">
-                  {min}m{h.dailyGoalMin ? ` · goal ${h.dailyGoalMin}m/d` : ''}{streak > 0 ? ` · 🔥${streak}` : ''}
+                <span className="flex items-center gap-2"><HabitIcon name={h.emoji} size={16} className="text-slate-300" />{h.name}</span>
+                <span className="flex items-center gap-1 text-slate-400">
+                  {min}m{h.dailyGoalMin ? ` · goal ${h.dailyGoalMin}m/d` : ''}
+                  {streak > 0 && <span className="flex items-center gap-0.5">· <Flame size={12} className="text-amber-500" />{streak}</span>}
                 </span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-ink-700">
@@ -85,10 +89,10 @@ export function Progress() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="card p-3 text-center">
-      <div className="text-xl font-bold">{value}</div>
+      <div className="flex items-center justify-center gap-1 text-xl font-bold">{value}</div>
       <div className="text-xs text-slate-400">{label}</div>
     </div>
   );

@@ -1,41 +1,44 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import {
+  Star, CalendarDays, CalendarRange, Inbox, Timer, Repeat, BarChart3, Settings, type LucideIcon,
+} from 'lucide-react';
 
-const groups: { title: string; tabs: { to: string; label: string; icon: string; end?: boolean }[] }[] = [
+const groups: { title: string; tabs: { to: string; label: string; icon: LucideIcon; end?: boolean }[] }[] = [
   {
     title: 'Plan',
     tabs: [
-      { to: '/', label: 'Today', icon: '★', end: true },
-      { to: '/week', label: 'Week', icon: '🗓' },
-      { to: '/month', label: 'Month', icon: '📅' },
-      { to: '/inbox', label: 'Inbox', icon: '📥' },
+      { to: '/', label: 'Today', icon: Star, end: true },
+      { to: '/week', label: 'Week', icon: CalendarDays },
+      { to: '/month', label: 'Month', icon: CalendarRange },
+      { to: '/inbox', label: 'Inbox', icon: Inbox },
     ],
   },
   {
     title: 'Tools',
     tabs: [
-      { to: '/timer', label: 'Timer', icon: '🍅' },
-      { to: '/habits', label: 'Habits', icon: '↻' },
-      { to: '/stats', label: 'Progress', icon: '📊' },
-      { to: '/settings', label: 'Settings', icon: '⚙️' },
+      { to: '/timer', label: 'Timer', icon: Timer },
+      { to: '/habits', label: 'Habits', icon: Repeat },
+      { to: '/stats', label: 'Progress', icon: BarChart3 },
+      { to: '/settings', label: 'Settings', icon: Settings },
     ],
   },
 ];
 
 // Most-used items for the mobile bottom bar.
-const mobileTabs = [
-  { to: '/', label: 'Today', icon: '★', end: true },
-  { to: '/week', label: 'Week', icon: '🗓' },
-  { to: '/timer', label: 'Timer', icon: '🍅' },
-  { to: '/stats', label: 'Progress', icon: '📊' },
-  { to: '/settings', label: 'Settings', icon: '⚙️' },
+const mobileTabs: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
+  { to: '/', label: 'Today', icon: Star, end: true },
+  { to: '/week', label: 'Week', icon: CalendarDays },
+  { to: '/timer', label: 'Timer', icon: Timer },
+  { to: '/stats', label: 'Progress', icon: BarChart3 },
+  { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export function Layout() {
   return (
     <div className="mx-auto flex h-full w-full max-w-6xl">
       <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col gap-1 border-r border-ink-600 px-3 py-5 md:flex">
-        <div className="mb-4 flex items-center gap-2 px-3 text-lg font-bold">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-sm text-white">◗</span>Timer
+        <div className="mb-4 flex items-center gap-2 px-3 text-lg font-bold tracking-tight">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-white"><Timer size={16} /></span>Timer
         </div>
         {groups.map((g) => (
           <div key={g.title} className="mt-2">
@@ -51,7 +54,7 @@ export function Layout() {
                   }`
                 }
               >
-                <span className="w-5 text-center text-base">{t.icon}</span>
+                <t.icon size={18} className="shrink-0" />
                 {t.label}
               </NavLink>
             ))}
@@ -74,7 +77,7 @@ export function Layout() {
                 `flex flex-col items-center gap-0.5 py-2.5 text-[11px] ${isActive ? 'text-accent' : 'text-slate-400'}`
               }
             >
-              <span className="text-lg">{t.icon}</span>
+              <t.icon size={20} />
               {t.label}
             </NavLink>
           ))}

@@ -1,7 +1,9 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { Moon, Sun, Plus } from 'lucide-react';
 import { ACCENTS, THEMES, applyAccent, applyTheme } from '../../lib/theme';
+import { HabitIcon } from '../../lib/habitIcons';
 import {
   useDeleteGroup, useGroups, useMe, useSaveGroup, useSaveSettings, useSettings,
 } from '../../lib/hooks';
@@ -78,7 +80,7 @@ export function SettingsPage() {
                   active ? 'border-accent bg-accent-soft text-accent' : 'border-ink-600 text-slate-300 hover:bg-ink-700'
                 }`}
               >
-                <span>{t.icon}</span> {t.label}
+                {t.icon === 'moon' ? <Moon size={16} /> : <Sun size={16} />} {t.label}
               </button>
             );
           })}
@@ -117,16 +119,16 @@ export function SettingsPage() {
             className="text-sm text-accent"
             onClick={async () => {
               const name = window.prompt('Group name');
-              if (name) saveGroup.mutate({ name, emoji: '📌', sortOrder: groups.length });
+              if (name) saveGroup.mutate({ name, emoji: 'pin', sortOrder: groups.length });
             }}
           >
-            ＋ Add
+            <span className="inline-flex items-center gap-1"><Plus size={14} /> Add</span>
           </button>
         </div>
         <div className="space-y-2">
           {groups.map((g) => (
             <div key={g.id} className="card flex items-center justify-between p-3 text-sm">
-              <span>{g.emoji} {g.name}</span>
+              <span className="flex items-center gap-2"><HabitIcon name={g.emoji} size={16} className="text-slate-300" /> {g.name}</span>
               <div className="flex gap-3 text-xs text-slate-500">
                 <button
                   className="hover:text-slate-300"

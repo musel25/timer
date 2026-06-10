@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import { useHabits, useGroups, useSessions, useSettings } from '../../lib/hooks';
 import type { Habit } from '../../lib/types';
+import { Timer, Plus, Check } from 'lucide-react';
 import { todaySummary } from '../../lib/stats';
+import { HabitIcon } from '../../lib/habitIcons';
 import { useRun } from '../run/RunContext';
 
 export function Dashboard() {
@@ -37,7 +39,7 @@ export function Dashboard() {
             {today.count > 0 ? `Today · ${today.count} done · ${today.minutes} min` : 'Tap a duration to start a habit'}
           </div>
         </div>
-        <Link to="/timers" className="rounded-full bg-ink-700 p-2 text-lg">⏱</Link>
+        <Link to="/timers" className="flex items-center rounded-full bg-ink-700 p-2.5 text-slate-300 hover:text-slate-100" title="Timer presets"><Timer size={18} /></Link>
       </header>
 
       {ordered.map((group) => {
@@ -46,7 +48,7 @@ export function Dashboard() {
         return (
           <section key={group.id}>
             <h2 className="label mb-2 flex items-center gap-2">
-              <span className="text-base">{group.emoji}</span> {group.name}
+              <HabitIcon name={group.emoji} size={16} /> {group.name}
             </h2>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {list.map((h) => (
@@ -73,8 +75,8 @@ export function Dashboard() {
       )}
 
       <div className="grid grid-cols-2 gap-3 pt-2">
-        <Link to="/timer" className="btn-accent">⚡ Timer</Link>
-        <Link to="/habits/new" className="btn-ghost">＋ Habit</Link>
+        <Link to="/timer" className="btn-accent"><Timer size={16} /> Timer</Link>
+        <Link to="/habits/new" className="btn-ghost"><Plus size={16} /> Habit</Link>
       </div>
     </div>
   );
@@ -93,7 +95,7 @@ function HabitRow({
     <div className="card p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="text-lg">{habit.emoji}</span>
+          <HabitIcon name={habit.emoji} className="shrink-0 text-slate-300" size={20} />
           <span className="truncate font-semibold">{habit.name}</span>
         </div>
         <Link to={`/habits/${habit.id}`} className="shrink-0 text-xs text-slate-500 hover:text-slate-300">edit</Link>
@@ -105,9 +107,9 @@ function HabitRow({
             <button
               key={min}
               onClick={() => onStart(habit, min)}
-              className={`chip ${done ? 'chip-done' : ''} ${min === habit.defaultDurationMin && !done ? 'border-accent/50' : ''}`}
+              className={`chip gap-1 ${done ? 'chip-done' : ''} ${min === habit.defaultDurationMin && !done ? 'border-accent/50' : ''}`}
             >
-              {done ? '✓ ' : ''}{min}
+              {done && <Check size={13} strokeWidth={3} />}{min}
             </button>
           );
         })}

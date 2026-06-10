@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Plus } from 'lucide-react';
 import { useSaveTask } from '../../lib/hooks';
 
 /** Title input that creates a task with the given date (null = Inbox).
@@ -30,7 +31,7 @@ export function QuickAdd({
         compact ? 'gap-1 px-1.5 py-1' : 'gap-2 px-3 py-2'
       }`}
     >
-      <span className={`shrink-0 text-slate-400 ${compact ? 'text-xs leading-none' : ''}`}>＋</span>
+      <Plus size={compact ? 12 : 16} className="shrink-0 text-slate-400" />
       <input
         className={`w-full min-w-0 bg-transparent outline-none placeholder:text-slate-500 ${compact ? 'text-[11px]' : 'text-sm'}`}
         placeholder={placeholder}

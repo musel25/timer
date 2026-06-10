@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Plus, X } from 'lucide-react';
 import { Stepper } from '../../components/Stepper';
 import { useDeleteHabit, useGroups, useHabits, useSaveGroup, useSaveHabit } from '../../lib/hooks';
-
-const EMOJI = ['⚔️', '🧮', '🧠', '💻', '📖', '✍️', '🏃', '🧘', '🎸', '💪', '🥗', '🌙', '☀️', '⏱'];
+import { HabitIcon, HABIT_ICONS, HABIT_ICON_NAMES, DEFAULT_HABIT_ICON } from '../../lib/habitIcons';
 
 export function HabitEditor() {
   const { id } = useParams();
@@ -16,7 +16,7 @@ export function HabitEditor() {
   const existing = id ? habits.find((h) => h.id === id) : undefined;
 
   const [name, setName] = useState('');
-  const [emoji, setEmoji] = useState('⏱');
+  const [icon, setIcon] = useState(DEFAULT_HABIT_ICON);
   const [note, setNote] = useState('');
   const [groupId, setGroupId] = useState<string | null>(null);
   const [durations, setDurations] = useState<number[]>([5, 10, 15, 20]);
@@ -27,7 +27,7 @@ export function HabitEditor() {
   useEffect(() => {
     if (!existing) return;
     setName(existing.name);
-    setEmoji(existing.emoji ?? '⏱');
+    setIcon(existing.emoji ?? DEFAULT_HABIT_ICON);
     setNote(existing.note ?? '');
     setGroupId(existing.groupId);
     setDurations(existing.durations);
@@ -46,7 +46,7 @@ export function HabitEditor() {
   async function newGroup() {
     const name = window.prompt('New group name (e.g. Morning)');
     if (!name) return;
-    const g = await saveGroup.mutateAsync({ name, emoji: '📌', sortOrder: groups.length });
+    const g = await saveGroup.mutateAsync({ name, emoji: 'pin', sortOrder: groups.length });
     setGroupId(g.id);
   }
 
@@ -55,7 +55,7 @@ export function HabitEditor() {
     await save.mutateAsync({
       id,
       name: name.trim(),
-      emoji,
+      emoji: icon,
       note: note.trim() || null,
       groupId,
       durations,
@@ -71,13 +71,25 @@ export function HabitEditor() {
       <h1 className="pt-1 text-2xl font-bold">{existing ? 'Edit habit' : 'New habit'}</h1>
 
       <div className="flex items-center gap-3">
-        <input className="input w-16 text-center text-xl" value={emoji} onChange={(e) => setEmoji(e.target.value)} maxLength={4} />
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
+          <HabitIcon name={icon} size={24} />
+        </div>
         <input className="input flex-1" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div className="flex flex-wrap gap-1.5">
-        {EMOJI.map((e) => (
-          <button key={e} onClick={() => setEmoji(e)} className="rounded-lg bg-ink-700/50 p-1.5 text-lg hover:bg-ink-600/60">{e}</button>
-        ))}
+        {HABIT_ICON_NAMES.map((n) => {
+          const Icon = HABIT_ICONS[n];
+          return (
+            <button
+              key={n}
+              onClick={() => setIcon(n)}
+              className={`rounded-lg p-2 transition ${icon === n ? 'bg-accent text-white' : 'bg-ink-700/50 text-slate-300 hover:bg-ink-600/60'}`}
+              title={n}
+            >
+              <Icon size={18} strokeWidth={2} />
+            </button>
+          );
+        })}
       </div>
 
       <input className="input" placeholder="Note (e.g. in French)" value={note} onChange={(e) => setNote(e.target.value)} />
@@ -88,10 +100,10 @@ export function HabitEditor() {
           <select className="input flex-1" value={groupId ?? ''} onChange={(e) => setGroupId(e.target.value || null)}>
             <option value="">No group</option>
             {groups.map((g) => (
-              <option key={g.id} value={g.id}>{g.emoji} {g.name}</option>
+              <option key={g.id} value={g.id}>{g.name}</option>
             ))}
           </select>
-          <button className="btn-outline px-3" onClick={newGroup}>＋</button>
+          <button className="btn-outline px-3" onClick={newGroup}><Plus size={16} /></button>
         </div>
       </div>
 
@@ -101,7 +113,7 @@ export function HabitEditor() {
           {durations.map((m) => (
             <span key={m} className={`chip gap-1 ${m === defaultMin ? 'chip-active' : ''}`}>
               <button onClick={() => setDefaultMin(m)}>{m}</button>
-              <button onClick={() => removeDuration(m)} className="opacity-60 hover:opacity-100">✕</button>
+              <button onClick={() => removeDuration(m)} className="opacity-60 hover:opacity-100"><X size={13} /></button>
             </span>
           ))}
         </div>

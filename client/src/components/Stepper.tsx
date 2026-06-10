@@ -1,3 +1,5 @@
+import { Minus, Plus } from 'lucide-react';
+
 export function Stepper({
   label,
   value,
@@ -20,15 +22,15 @@ export function Stepper({
     <div className="flex items-center justify-between gap-3">
       {label && <span className="text-sm text-slate-300">{label}</span>}
       <div className="flex items-center gap-2">
-        <button type="button" className="h-9 w-9 rounded-lg bg-ink-700/70 text-lg active:scale-95" onClick={() => onChange(clamp(value - step))}>
-          −
+        <button type="button" className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink-700/70 active:scale-95" onClick={() => onChange(clamp(value - step))}>
+          <Minus size={16} />
         </button>
         <span className="min-w-[3.5rem] text-center font-mono text-lg tabular-nums">
           {value}
           {suffix ? <span className="ml-0.5 text-xs text-slate-400">{suffix}</span> : null}
         </span>
-        <button type="button" className="h-9 w-9 rounded-lg bg-ink-700/70 text-lg active:scale-95" onClick={() => onChange(clamp(value + step))}>
-          ＋
+        <button type="button" className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink-700/70 active:scale-95" onClick={() => onChange(clamp(value + step))}>
+          <Plus size={16} />
         </button>
       </div>
     </div>
