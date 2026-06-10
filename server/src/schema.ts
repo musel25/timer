@@ -52,7 +52,7 @@ export const timers = sqliteTable('timers', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
   name: text('name').notNull(),
-  type: text('type').notNull(), // 'simple' | 'interval'
+  type: text('type').notNull(), // 'simple' | 'interval' | 'pomodoro'
   config: text('config', { mode: 'json' }).notNull(),
   sortOrder: integer('sort_order').notNull().default(0),
   archived: integer('archived', { mode: 'boolean' }).notNull().default(false),

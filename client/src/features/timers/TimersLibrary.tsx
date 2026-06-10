@@ -34,7 +34,7 @@ export function TimersLibrary() {
               <button className="btn-accent px-3 py-2 text-sm" onClick={() => startRun(runSpecFromPreset(t))}><Play size={15} fill="currentColor" /></button>
             </div>
             <div className="mt-3 flex gap-3 text-xs text-slate-500">
-              <Link to={`/timers/${t.id}`} className="hover:text-slate-300">Edit</Link>
+              {t.type !== 'pomodoro' && <Link to={`/timers/${t.id}`} className="hover:text-slate-300">Edit</Link>}
               <button className="hover:text-slate-300" onClick={() => save.mutate({ name: `${t.name} copy`, type: t.type, config: t.config })}>
                 Duplicate
               </button>

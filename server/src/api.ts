@@ -70,7 +70,7 @@ api.use('/tasks', requireAuth); api.use('/tasks/*', requireAuth);
 /* ---------- timers ---------- */
 const timerInput = z.object({
   name: z.string().min(1),
-  type: z.enum(['simple', 'interval']),
+  type: z.enum(['simple', 'interval', 'pomodoro']),
   config: z.any(),
   sortOrder: z.number().int().optional(),
   archived: z.boolean().optional(),

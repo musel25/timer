@@ -29,7 +29,7 @@ export function TimerEditor() {
   ]);
 
   useEffect(() => {
-    if (!existing) return;
+    if (!existing || existing.type === 'pomodoro') return; // pomodoro presets are edited from the Timer page
     setType(existing.type);
     setName(existing.name);
     if (existing.type === 'simple') {

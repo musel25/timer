@@ -29,6 +29,8 @@ export interface HabitGroup {
 }
 
 export type TimerType = 'simple' | 'interval';
+/** Types storable as presets in the timers table. */
+export type PresetType = TimerType | 'pomodoro';
 
 export interface Habit {
   id: string;
@@ -72,8 +74,8 @@ export interface IntervalConfig {
 export interface TimerPreset {
   id: string;
   name: string;
-  type: TimerType;
-  config: SimpleConfig | IntervalConfig;
+  type: PresetType;
+  config: SimpleConfig | IntervalConfig | PomodoroConfig;
   sortOrder: number;
   archived: boolean;
   createdAt: number;
