@@ -43,6 +43,7 @@ export interface Habit {
   defaultTimerId: string | null;
   sortOrder: number;
   archived: boolean;
+  hiddenOn: string | null; // 'YYYY-MM-DD' the habit was hidden from Today, or null
   createdAt: number;
 }
 
@@ -126,6 +127,7 @@ export interface Task {
   date: string | null; // 'YYYY-MM-DD' local date, or null = Inbox (undated)
   done: boolean;
   completedAt: number | null;
+  hiddenOn: string | null; // 'YYYY-MM-DD' the task was hidden from Today, or null
   sortOrder: number;
   createdAt: number;
 }

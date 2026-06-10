@@ -43,6 +43,8 @@ export const habits = sqliteTable('habits', {
   defaultTimerId: text('default_timer_id'),
   sortOrder: integer('sort_order').notNull().default(0),
   archived: integer('archived', { mode: 'boolean' }).notNull().default(false),
+  // local calendar date 'YYYY-MM-DD' on which this habit was hidden from Today; NULL = not hidden
+  hiddenOn: text('hidden_on'),
   createdAt: integer('created_at').notNull(),
 });
 
@@ -83,6 +85,8 @@ export const tasks = sqliteTable('tasks', {
   date: text('date'),
   done: integer('done', { mode: 'boolean' }).notNull().default(false),
   completedAt: integer('completed_at'),
+  // local calendar date 'YYYY-MM-DD' on which this task was hidden from Today; NULL = not hidden
+  hiddenOn: text('hidden_on'),
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: integer('created_at').notNull(),
 });

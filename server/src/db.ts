@@ -58,6 +58,7 @@ export function migrate(): void {
       default_timer_id TEXT,
       sort_order INTEGER NOT NULL DEFAULT 0,
       archived INTEGER NOT NULL DEFAULT 0,
+      hidden_on TEXT,
       created_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_habits_user ON habits(user_id);
@@ -101,10 +102,23 @@ export function migrate(): void {
       date TEXT,
       done INTEGER NOT NULL DEFAULT 0,
       completed_at INTEGER,
+      hidden_on TEXT,
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_tasks_user ON tasks(user_id);
     CREATE INDEX IF NOT EXISTS idx_tasks_user_date ON tasks(user_id, date);
   `);
+
+  // Idempotent column additions for databases created before a column existed.
+  addColumnIfMissing('habits', 'hidden_on', 'TEXT');
+  addColumnIfMissing('tasks', 'hidden_on', 'TEXT');
+}
+
+/** Add a column only when it's not already present (SQLite ALTER has no IF NOT EXISTS). */
+function addColumnIfMissing(table: string, column: string, type: string): void {
+  const cols = sqlite.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === column)) {
+    sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
 }

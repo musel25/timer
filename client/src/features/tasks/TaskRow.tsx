@@ -1,10 +1,10 @@
 import type { Task } from '../../lib/types';
 import { useToggleTask } from '../../lib/hooks';
 
-export function TaskRow({ task, onEdit }: { task: Task; onEdit?: (t: Task) => void }) {
+export function TaskRow({ task, onEdit, onHide }: { task: Task; onEdit?: (t: Task) => void; onHide?: (t: Task) => void }) {
   const toggle = useToggleTask();
   return (
-    <div className="flex items-center gap-3 py-2">
+    <div className="group flex items-center gap-3 py-2">
       <button
         aria-label={task.done ? 'Mark not done' : 'Mark done'}
         onClick={() => toggle.mutate({ id: task.id, done: !task.done })}
@@ -20,6 +20,16 @@ export function TaskRow({ task, onEdit }: { task: Task; onEdit?: (t: Task) => vo
       >
         {task.title}
       </button>
+      {onHide && (
+        <button
+          aria-label="Hide from today"
+          title="Hide from today"
+          onClick={() => onHide(task)}
+          className="shrink-0 text-slate-500 opacity-0 transition hover:text-slate-200 group-hover:opacity-100"
+        >
+          🙈
+        </button>
+      )}
     </div>
   );
 }

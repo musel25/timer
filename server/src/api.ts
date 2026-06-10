@@ -137,6 +137,8 @@ api.delete('/habit-groups/:id', (c) => {
   return c.json({ ok: true });
 });
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 /* ---------- habits ---------- */
 const habitInput = z.object({
   groupId: z.string().nullable().optional(),
@@ -150,6 +152,7 @@ const habitInput = z.object({
   defaultTimerId: z.string().nullable().optional(),
   sortOrder: z.number().int().optional(),
   archived: z.boolean().optional(),
+  hiddenOn: z.string().regex(DATE_RE).nullable().optional(),
 });
 
 api.get('/habits', (c) =>
@@ -230,13 +233,13 @@ api.delete('/sessions/:id', (c) => {
 });
 
 /* ---------- tasks ---------- */
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const taskInput = z.object({
   title: z.string().min(1),
   notes: z.string().nullable().optional(),
   date: z.string().regex(DATE_RE).nullable().optional(),
   done: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
+  hiddenOn: z.string().regex(DATE_RE).nullable().optional(),
 });
 
 api.get('/tasks', (c) =>
