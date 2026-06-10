@@ -44,7 +44,7 @@ export function MonthCalendar() {
 
       <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
         <div className="card p-4">
-          <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[11px] font-semibold text-slate-400">
+          <div className="mb-1.5 grid grid-cols-7 gap-1 text-center text-xs font-semibold text-slate-400">
             {dow.map((d) => <div key={d}>{d}</div>)}
           </div>
           <div className="grid grid-cols-7 gap-1">
@@ -57,16 +57,30 @@ export function MonthCalendar() {
                 <button
                   key={key}
                   onClick={() => setSelected(key)}
-                  className={`flex min-h-[58px] flex-col rounded-lg border p-1.5 text-left transition ${
+                  className={`flex min-h-[64px] flex-col rounded-lg border p-1.5 text-left transition sm:min-h-[88px] ${
                     isSel ? 'border-accent bg-accent-soft' : isToday ? 'border-accent/40' : 'border-transparent hover:bg-ink-700'
                   } ${inMonth ? '' : 'opacity-40'}`}
                 >
-                  <span className={`text-[11px] font-semibold ${isToday ? 'text-accent' : 'text-slate-300'}`}>{keyToDate(key).getDate()}</span>
-                  <div className="mt-0.5 flex flex-wrap gap-0.5">
-                    {dayTasks.slice(0, 3).map((t) => (
-                      <span key={t.id} className={`h-1.5 w-1.5 rounded-full ${t.done ? 'bg-ink-500' : 'bg-accent'}`} />
+                  <span className={`text-sm font-semibold ${isToday ? 'text-accent' : 'text-slate-300'}`}>{keyToDate(key).getDate()}</span>
+                  {/* Phones get dots; from sm up the cells are tall enough for titles. */}
+                  <div className="mt-1 flex flex-wrap gap-1 sm:hidden">
+                    {dayTasks.slice(0, 4).map((t) => (
+                      <span key={t.id} className={`h-2 w-2 rounded-full ${t.done ? 'bg-ink-500' : 'bg-accent'}`} />
                     ))}
-                    {dayTasks.length > 3 && <span className="text-[9px] text-slate-400">+{dayTasks.length - 3}</span>}
+                    {dayTasks.length > 4 && <span className="text-[10px] text-slate-400">+{dayTasks.length - 4}</span>}
+                  </div>
+                  <div className="mt-1 hidden w-full flex-col gap-0.5 sm:flex">
+                    {dayTasks.slice(0, 3).map((t) => (
+                      <span
+                        key={t.id}
+                        className={`truncate rounded px-1 py-px text-[11px] leading-snug ${
+                          t.done ? 'bg-ink-700/60 text-slate-500 line-through' : 'bg-accent-soft text-slate-200'
+                        }`}
+                      >
+                        {t.title}
+                      </span>
+                    ))}
+                    {dayTasks.length > 3 && <span className="px-1 text-[10px] text-slate-400">+{dayTasks.length - 3} more</span>}
                   </div>
                 </button>
               );
