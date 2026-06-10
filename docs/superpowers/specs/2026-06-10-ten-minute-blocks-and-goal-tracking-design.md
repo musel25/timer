@@ -29,6 +29,16 @@ a one-tap action. Tracking is also confusing:
 - **Focus sessions tagged Work or Study, tracked in minutes only.** Picked at
   start on the Timer page; Progress gets a Focus section with today/week minutes
   per tag. No goals for focus — session lengths vary, totals are honest.
+- **Timer page reduced to two modes** (second round of brainstorming):
+  - The old "Focus block" (plain simple) and "Interval" modes are removed from
+    the builder.
+  - **Pomodoro is renamed "Focus block"** and keeps its work/break/rounds
+    builder.
+  - A new **"Timer"** mode is a plain countdown — no blocks, no rounds, like a
+    clock-app timer.
+  - **Both modes support multiple saved presets** shown as chips; tapping a chip
+    loads it. The stepper settings are **collapsed by default** to give the
+    presets and Start button room, with an "Edit" toggle to expand them.
 
 ## Approach
 
@@ -75,11 +85,32 @@ session-count-based) so legacy 5/15/20-minute sessions still convert sensibly.
   immediately starts a fresh identical 10-minute run for the same habit.
 - Non-habit runs (focus, interval) keep the current finish screen.
 
-### 4. Timer page Work/Study tag — `client/src/features/timer/Timer.tsx`
-- Pomodoro and Focus-block modes get a two-option **Work / Study** toggle.
-  Default = last used, remembered in `localStorage` (`timer_focus_tag`).
-- The started run's session `label` is set to the tag. Interval mode is
-  untouched (workouts, no tag).
+### 4. Timer page redesign — `client/src/features/timer/Timer.tsx`
+- Mode chips become **Focus block** (the old Pomodoro builder, renamed) and
+  **Timer** (plain countdown). The old simple "Focus block" mode and the
+  Interval builder are removed from this page. Existing interval presets remain
+  runnable from the Timers page.
+- **Presets per mode.** Saved presets render as a chip row at the top of each
+  mode (from the existing `timers` table):
+  - Focus block presets use a new `type: 'pomodoro'` whose config is
+    `PomodoroConfig`. Server `timerInput`'s type enum
+    (`server/src/api.ts:73`) gains `'pomodoro'`; client `TimerPreset` config
+    union gains `PomodoroConfig`; `presetSeconds`/`describePreset`
+    (`client/src/lib/presets.ts`) learn the new type (e.g. "4 × 25m / 5m").
+  - Timer presets reuse `type: 'simple'` (old simple presets show up here).
+  - Tapping a chip loads its values into the builder and marks it selected;
+    **Start** runs the loaded config. **Save preset** stores the current values
+    as a new auto-named preset ("25/5 × 4", "10 min"). Preset deletion stays on
+    the Timers page.
+- **Collapsible settings.** The stepper card is collapsed by default — the page
+  shows preset chips, a one-line summary of the loaded config, and the Start
+  button. An **Edit** toggle expands the steppers; editing any value deselects
+  the chip (it's now a custom config). The legacy `settings.pomodoro` default
+  seeds the Focus-block steppers when no preset is selected.
+- **Work / Study toggle** on the Focus-block mode only; default = last used,
+  remembered in `localStorage` (`timer_focus_tag`). The started run's session
+  `label` is set to the tag. Plain Timer runs are logged with the preset name
+  (or "Timer") and land in the "Other focus" bucket on Progress.
 
 ### 5. Progress page — `client/src/features/stats/Progress.tsx`, `client/src/lib/stats.ts`
 - **Habits list**: per-habit row becomes the segmented blocks-today-vs-goal bar
@@ -116,3 +147,7 @@ session-count-based) so legacy 5/15/20-minute sessions still convert sensibly.
 - Goals/blocks for focus sessions.
 - Auto-continue (rolling into the next block without a prompt).
 - Per-task time tracking — tasks remain checkbox-only.
+- Removing the Timers page or deleting existing interval/simple presets — they
+  stay listed and runnable there.
+- An interval-workout builder (removed from the Timer page; existing presets
+  cover it).
