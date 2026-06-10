@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import type { RunSpec } from '../../lib/types';
 import { unlockAudio, requestNotificationPermission } from '../../engine/audio';
-import { RunScreen } from './RunScreen';
+import { ActiveRun } from './ActiveRun';
 
 interface RunCtx {
   startRun: (spec: RunSpec) => void;
@@ -26,7 +26,7 @@ export function RunProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={{ startRun }}>
       {children}
-      {spec && <RunScreen key={key} spec={spec} onClose={close} onAgain={startRun} />}
+      {spec && <ActiveRun key={key} spec={spec} onClose={close} onAgain={startRun} />}
     </Ctx.Provider>
   );
 }
