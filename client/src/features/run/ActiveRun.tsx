@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RunSpec } from '../../lib/types';
 import { useSettings } from '../../lib/hooks';
+import { isTypingTarget } from '../../lib/dom';
 import { logSession } from '../../lib/offlineQueue';
 import { buildPhases, totalSeconds, workSeconds } from '../../engine/buildPhases';
 import { useTimerEngine } from '../../engine/useTimerEngine';
@@ -82,6 +83,9 @@ export function ActiveRun({ spec, onClose, onAgain }: { spec: RunSpec; onClose: 
   // than stopping, so the user can glance at the dashboard without losing the run.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // This listener outlives the run screen (mini-player + any tab), so it
+      // must never steal keys from a focused input elsewhere in the app.
+      if (isTypingTarget(e.target)) return;
       if (e.key === ' ') { e.preventDefault(); engine.toggle(); }
       else if (e.key === 'ArrowRight') engine.skipNext();
       else if (e.key === 'ArrowLeft') engine.skipPrev();
