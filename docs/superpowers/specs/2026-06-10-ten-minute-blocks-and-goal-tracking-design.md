@@ -51,9 +51,9 @@ a one-tap action. Tracking is also confusing:
   schema but the UI no longer reads them. New habits are created with
   `durations: [10]`, `defaultDurationMin: 10`, `timerType: 'simple'`. No
   migration; old sessions keep counting toward stats.
-- The Work/Study tag is stored in the existing `sessions.label` field (`'Work'`
-  or `'Study'`). Older focus sessions keep their old labels and group under an
-  "Other focus" row when nonzero.
+- The Work/Study tag is stored in the existing `sessions.note` field (`'work'`
+  or `'study'`), keeping `label` free for the task text. Older focus sessions
+  have no tag and group under an "Other focus" row when nonzero.
 
 ### Block counting
 
@@ -109,8 +109,9 @@ session-count-based) so legacy 5/15/20-minute sessions still convert sensibly.
   seeds the Focus-block steppers when no preset is selected.
 - **Work / Study toggle** on the Focus-block mode only; default = last used,
   remembered in `localStorage` (`timer_focus_tag`). The started run's session
-  `label` is set to the tag. Plain Timer runs are logged with the preset name
-  (or "Timer") and land in the "Other focus" bucket on Progress.
+  `note` is set to the tag (`'work'`/`'study'`), keeping `label` free for the
+  task text. Plain Timer runs are logged with the preset name (or "Timer") and
+  land in the "Other focus" bucket on Progress.
 
 ### 5. Progress page — `client/src/features/stats/Progress.tsx`, `client/src/lib/stats.ts`
 - **Habits list**: per-habit row becomes the segmented blocks-today-vs-goal bar

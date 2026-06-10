@@ -48,8 +48,17 @@ export function RunScreen({ spec, engine, muted, onToggleMute, focusMode, workDo
             <div className="mt-1 text-white/70">{clock(focusMode ? workDone : engine.elapsed)} of focused time logged</div>
           </div>
           <div className="flex gap-3">
-            <button className="btn-outline border-white/30 text-white" onClick={onAgain}><RotateCcw size={16} /> Again</button>
-            <button className="btn-accent" onClick={onClose}>Done</button>
+            {spec.habitId ? (
+              <>
+                <button className="btn-accent" onClick={onAgain}><RotateCcw size={16} /> +10 more</button>
+                <button className="btn-outline border-white/30 text-white" onClick={onClose}>Done</button>
+              </>
+            ) : (
+              <>
+                <button className="btn-outline border-white/30 text-white" onClick={onAgain}><RotateCcw size={16} /> Again</button>
+                <button className="btn-accent" onClick={onClose}>Done</button>
+              </>
+            )}
           </div>
         </div>
       ) : (
