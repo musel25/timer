@@ -28,12 +28,12 @@ export function QuickAdd({
     <form
       onSubmit={submit}
       className={`flex items-center rounded-lg border border-dashed border-ink-600 transition focus-within:border-accent/70 ${
-        compact ? 'gap-1 px-1.5 py-1' : 'gap-2 px-3 py-2'
+        compact ? 'gap-1.5 px-2 py-1.5' : 'gap-2 px-3 py-2'
       }`}
     >
-      <Plus size={compact ? 12 : 16} className="shrink-0 text-slate-400" />
+      <Plus size={compact ? 14 : 16} className="shrink-0 text-slate-400" />
       <input
-        className={`w-full min-w-0 bg-transparent outline-none placeholder:text-slate-500 ${compact ? 'text-[11px]' : 'text-sm'}`}
+        className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-slate-500"
         placeholder={placeholder}
         value={title}
         onChange={(e) => setTitle(e.target.value)}

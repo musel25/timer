@@ -20,7 +20,7 @@ function DraggableTask({ task, onEdit }: { task: Task; onEdit: (t: Task) => void
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      className={`flex cursor-grab items-start gap-2 rounded-lg border border-ink-600 bg-ink-800 px-2 py-1.5 text-xs shadow-sm transition active:cursor-grabbing ${
+      className={`flex cursor-grab items-start gap-2 rounded-lg border border-ink-600 bg-ink-800 px-2.5 py-2 text-sm shadow-sm transition active:cursor-grabbing ${
         isDragging ? 'opacity-50' : ''
       }`}
     >
@@ -28,9 +28,9 @@ function DraggableTask({ task, onEdit }: { task: Task; onEdit: (t: Task) => void
         onPointerDown={(e) => e.stopPropagation()}
         onClick={() => toggle.mutate({ id: task.id, done: !task.done })}
         aria-label={task.done ? 'Mark not done' : 'Mark done'}
-        className={`mt-px h-[15px] w-[15px] shrink-0 rounded border-[1.5px] ${task.done ? 'border-transparent bg-accent' : 'border-ink-500 hover:border-accent'}`}
+        className={`mt-0.5 h-[17px] w-[17px] shrink-0 rounded border-[1.5px] ${task.done ? 'border-transparent bg-accent' : 'border-ink-500 hover:border-accent'}`}
       >
-        {task.done && <Check size={11} strokeWidth={3} className="mx-auto text-white" />}
+        {task.done && <Check size={13} strokeWidth={3} className="mx-auto text-white" />}
       </button>
       <button
         onPointerDown={(e) => e.stopPropagation()}
@@ -60,17 +60,17 @@ function DayColumn({ dayKey, tasks, onEdit }: { dayKey: string; tasks: Task[]; o
   const isToday = dayKey === todayKey();
   return (
     <div
-      className={`card flex flex-col p-2 ${isToday ? 'ring-1 ring-accent/50' : ''}`}
+      className={`card flex flex-col p-3 ${isToday ? 'ring-1 ring-accent/50' : ''}`}
       style={isToday ? { backgroundImage: 'linear-gradient(160deg, rgb(var(--accent) / 0.14), transparent 65%)' } : undefined}
     >
-      <div className={`mb-1.5 flex items-baseline justify-between px-1 ${isToday ? 'text-accent' : 'text-slate-400'}`}>
-        <span className="text-[10px] font-bold uppercase tracking-wide">{d.toLocaleDateString(undefined, { weekday: 'short' })}</span>
-        <span className="text-sm font-bold">{d.getDate()}</span>
+      <div className={`mb-2 flex items-baseline justify-between px-1 ${isToday ? 'text-accent' : 'text-slate-400'}`}>
+        <span className="text-xs font-bold uppercase tracking-wide">{d.toLocaleDateString(undefined, { weekday: 'short' })}</span>
+        <span className="text-lg font-bold">{d.getDate()}</span>
       </div>
       <DropColumn id={dayKey}>
         {tasks.map((t) => <DraggableTask key={t.id} task={t} onEdit={onEdit} />)}
       </DropColumn>
-      <div className="mt-1.5"><QuickAdd date={dayKey} placeholder="Add task" compact /></div>
+      <div className="mt-2"><QuickAdd date={dayKey} placeholder="Add task" compact /></div>
     </div>
   );
 }
@@ -82,10 +82,8 @@ export function WeekBoard() {
   const [editing, setEditing] = useState<Task | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  // Always Monday-first here so the layout splits cleanly into Mon–Fri + weekend.
+  // Always Monday-first here so the 2×4 board reads Mon–Thu / Fri–Sun + Inbox.
   const days = weekDays(anchor, 1);
-  const weekdays = days.slice(0, 5);
-  const weekend = days.slice(5, 7);
   const inbox = tasks.filter((t) => t.date === null && !t.done);
   const byDateMap = new Map<string, Task[]>();
   for (const t of tasks) if (t.date) { const arr = byDateMap.get(t.date) ?? []; arr.push(t); byDateMap.set(t.date, arr); }
@@ -112,28 +110,20 @@ export function WeekBoard() {
       </header>
 
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-        <div className="space-y-3">
-          {/* Row 1 — Monday to Friday */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {weekdays.map((key) => <DayColumn key={key} dayKey={key} tasks={byDate(key)} onEdit={setEditing} />)}
-          </div>
+        {/* 2×4 board: Mon–Thu on the first row, Fri/Sat/Sun + Inbox on the second. */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {days.map((key) => <DayColumn key={key} dayKey={key} tasks={byDate(key)} onEdit={setEditing} />)}
 
-          {/* Row 2 — Weekend (kept to ~2/5 width so columns match the weekday size) */}
-          <div className="grid grid-cols-2 gap-3 lg:w-2/5">
-            {weekend.map((key) => <DayColumn key={key} dayKey={key} tasks={byDate(key)} onEdit={setEditing} />)}
-          </div>
-
-          {/* Row 3 — Inbox */}
-          <div className="card p-3">
-            <h2 className="label mb-2 flex items-center justify-between">
-              Inbox
-              {inbox.length > 0 && <span className="text-slate-500">{inbox.length}</span>}
-            </h2>
-            <DropColumn id={INBOX} layout="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="card flex flex-col p-3">
+            <div className="mb-2 flex items-baseline justify-between px-1 text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wide">Inbox</span>
+              {inbox.length > 0 && <span className="text-lg font-bold">{inbox.length}</span>}
+            </div>
+            <DropColumn id={INBOX}>
               {inbox.map((t) => <DraggableTask key={t.id} task={t} onEdit={setEditing} />)}
-              {inbox.length === 0 && <p className="col-span-full px-1 py-2 text-xs text-slate-500">Drop undated tasks here, or capture below.</p>}
+              {inbox.length === 0 && <p className="px-1 py-2 text-sm text-slate-500">Drop undated tasks here.</p>}
             </DropColumn>
-            <div className="mt-2 max-w-xs"><QuickAdd date={null} placeholder="Capture a task…" compact /></div>
+            <div className="mt-2"><QuickAdd date={null} placeholder="Capture a task…" compact /></div>
           </div>
         </div>
       </DndContext>
