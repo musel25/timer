@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Phase } from '../lib/types';
 import { audio } from './audio';
+import { setWorkerTimeout, clearWorkerTimeout } from './workerTimer';
 
 export type EngineStatus = 'idle' | 'running' | 'paused' | 'done';
 
@@ -50,10 +51,11 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
   const beepSecRef = useRef(-1);
   const dispSecRef = useRef(-1);
   const dispIdxRef = useRef(-1);
-  // Wall-clock alarm for the true finish time. setTimeout keeps firing in a hidden
-  // tab (unlike requestAnimationFrame, which freezes), so the finish sound + notification
-  // land on time even when the user is on another page.
-  const alarmRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Wall-clock alarm for the true finish time. It runs in a Web Worker because
+  // hidden tabs throttle main-thread timers (Chrome: once per minute after ~5 min
+  // hidden), which delayed the finish sound + notification when the user was on
+  // another tab. Worker timers are exempt from that throttling.
+  const alarmRef = useRef<number | undefined>(undefined);
 
   const [, force] = useState(0);
   const [status, setStatus] = useState<EngineStatus>('idle');
@@ -72,7 +74,7 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
 
   const clearAlarm = useCallback(() => {
     if (alarmRef.current !== undefined) {
-      clearTimeout(alarmRef.current);
+      clearWorkerTimeout(alarmRef.current);
       alarmRef.current = undefined;
     }
   }, []);
@@ -103,7 +105,7 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
     for (let i = idxRef.current + 1; i < ph.length; i++) {
       if (ph[i].kind !== 'finish') ms += ph[i].seconds * 1000;
     }
-    alarmRef.current = setTimeout(() => {
+    alarmRef.current = setWorkerTimeout(() => {
       alarmRef.current = undefined;
       finish(true);
     }, ms);

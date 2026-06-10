@@ -18,16 +18,23 @@ export function unlockAudio(): void {
   }
 }
 
-function tone(freq: number, dur: number, type: OscillatorType = 'sine', gain = 0.22): void {
+/**
+ * Plays a tone `at` seconds from now, scheduled on the AudioContext clock —
+ * unlike setTimeout, audio-clock scheduling is not throttled in hidden tabs.
+ */
+function tone(freq: number, dur: number, type: OscillatorType = 'sine', gain = 0.22, at = 0): void {
   try {
     const c = getCtx();
+    // Background tabs (Safari especially) suspend the context; the Start click
+    // gave the page sticky activation, so resuming here is allowed.
+    if (c.state === 'suspended') void c.resume();
     const o = c.createOscillator();
     const g = c.createGain();
     o.type = type;
     o.frequency.value = freq;
     o.connect(g);
     g.connect(c.destination);
-    const t = c.currentTime;
+    const t = c.currentTime + at;
     g.gain.setValueAtTime(gain, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.start(t);
@@ -42,18 +49,22 @@ export const audio = {
   // Race-start cue: three short "ready" beeps, then a longer higher "go" tone — like a track/F1 start.
   prep: () => {
     tone(700, 0.12, 'square', 0.2);
-    setTimeout(() => tone(700, 0.12, 'square', 0.2), 500);
-    setTimeout(() => tone(700, 0.12, 'square', 0.2), 1000);
-    setTimeout(() => tone(1100, 0.4, 'square', 0.24), 1500);
+    tone(700, 0.12, 'square', 0.2, 0.5);
+    tone(700, 0.12, 'square', 0.2, 1.0);
+    tone(1100, 0.4, 'square', 0.24, 1.5);
   },
   work: () => {
     tone(660, 0.16, 'square', 0.18);
   },
   rest: () => tone(440, 0.2, 'sine', 0.2),
   cooldown: () => tone(400, 0.22, 'sine', 0.18),
+  // A real alarm: the two-note chime repeated four times (~3 s), loud enough to
+  // register from another tab — the old single half-second chime was easy to miss.
   finish: () => {
-    tone(784, 0.16);
-    setTimeout(() => tone(1047, 0.32), 170);
+    for (const at of [0, 0.8, 1.6, 2.4]) {
+      tone(784, 0.16, 'sine', 0.3, at);
+      tone(1047, 0.32, 'sine', 0.3, at + 0.17);
+    }
   },
   speak: (text: string) => {
     try {
