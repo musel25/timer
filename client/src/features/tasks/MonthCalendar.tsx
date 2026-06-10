@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTasks, useSettings } from '../../lib/hooks';
 import type { Task } from '../../lib/types';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { monthMatrix, monthLabel, isSameMonth, todayKey, keyToDate } from '../../lib/date';
 import { TaskRow } from './TaskRow';
 import { QuickAdd } from './QuickAdd';
@@ -31,18 +32,18 @@ export function MonthCalendar() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
-      <header className="flex items-center justify-between pt-1">
-        <h1 className="text-2xl font-bold">{monthLabel(year, month0)}</h1>
+    <div className="space-y-6">
+      <header className="hero flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-3xl font-bold md:text-4xl">{monthLabel(year, month0)}</h1>
         <div className="flex gap-2">
-          <button className="btn-ghost px-3 py-1.5" onClick={() => shift(-1)}>‹</button>
+          <button className="btn-ghost px-3 py-1.5" onClick={() => shift(-1)}><ChevronLeft size={16} /></button>
           <button className="btn-ghost px-3 py-1.5" onClick={() => { const d = new Date(); setYear(d.getFullYear()); setMonth0(d.getMonth()); setSelected(todayKey()); }}>Today</button>
-          <button className="btn-ghost px-3 py-1.5" onClick={() => shift(1)}>›</button>
+          <button className="btn-ghost px-3 py-1.5" onClick={() => shift(1)}><ChevronRight size={16} /></button>
         </div>
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
-        <div className="card p-3">
+        <div className="card p-4">
           <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[11px] font-semibold text-slate-400">
             {dow.map((d) => <div key={d}>{d}</div>)}
           </div>
@@ -57,7 +58,7 @@ export function MonthCalendar() {
                   key={key}
                   onClick={() => setSelected(key)}
                   className={`flex min-h-[58px] flex-col rounded-lg border p-1.5 text-left transition ${
-                    isSel ? 'border-accent bg-accent-soft' : 'border-transparent hover:bg-ink-700'
+                    isSel ? 'border-accent bg-accent-soft' : isToday ? 'border-accent/40' : 'border-transparent hover:bg-ink-700'
                   } ${inMonth ? '' : 'opacity-40'}`}
                 >
                   <span className={`text-[11px] font-semibold ${isToday ? 'text-accent' : 'text-slate-300'}`}>{keyToDate(key).getDate()}</span>

@@ -12,12 +12,12 @@ export function Inbox() {
     .sort((a, b) => Number(a.done) - Number(b.done) || b.createdAt - a.createdAt);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
-      <header className="pt-1">
-        <h1 className="text-2xl font-bold">Inbox</h1>
-        <p className="text-sm text-slate-400">Undated tasks — schedule them from the Week or Month view.</p>
+    <div className="mx-auto max-w-2xl space-y-6">
+      <header className="hero">
+        <h1 className="text-3xl font-bold md:text-4xl">Inbox</h1>
+        <p className="mt-1 text-sm text-slate-300">Undated tasks — schedule them from the Week or Month view.</p>
       </header>
-      <section className="card p-4">
+      <section className="card p-5">
         <div className="divide-y divide-ink-600">
           {inbox.map((t) => <TaskRow key={t.id} task={t} onEdit={setEditing} />)}
         </div>

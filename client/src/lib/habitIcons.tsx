@@ -56,6 +56,12 @@ export const LEGACY_EMOJI_TO_ICON: Record<string, string> = {
   '📌': 'pin',
   '🌱': 'sprout',
   '🔥': 'flame',
+  '💼': 'briefcase',
+  '🎯': 'target',
+  '☕': 'coffee',
+  '🚴': 'bike',
+  '🎨': 'palette',
+  '❤️': 'heart',
 };
 
 /** The default icon id for a brand-new habit/group. */

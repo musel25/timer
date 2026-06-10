@@ -27,10 +27,10 @@ export function Timer() {
   const [mode, setMode] = useState<Mode>('pomodoro');
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
-      <header className="pt-1">
-        <h1 className="text-2xl font-bold">Timer</h1>
-        <p className="text-sm text-slate-400">Pomodoro sessions, focus blocks &amp; interval workouts</p>
+    <div className="mx-auto max-w-2xl space-y-6">
+      <header className="hero">
+        <h1 className="text-3xl font-bold md:text-4xl">Timer</h1>
+        <p className="mt-1 text-sm text-slate-300">Pomodoro sessions, focus blocks &amp; interval workouts</p>
       </header>
 
       <div className="flex gap-2">

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { useTasks, useSaveTask, useToggleTask } from '../../lib/hooks';
@@ -59,7 +59,10 @@ function DayColumn({ dayKey, tasks, onEdit }: { dayKey: string; tasks: Task[]; o
   const d = keyToDate(dayKey);
   const isToday = dayKey === todayKey();
   return (
-    <div className={`card flex flex-col p-2 ${isToday ? 'ring-1 ring-accent/50' : ''}`}>
+    <div
+      className={`card flex flex-col p-2 ${isToday ? 'ring-1 ring-accent/50' : ''}`}
+      style={isToday ? { backgroundImage: 'linear-gradient(160deg, rgb(var(--accent) / 0.14), transparent 65%)' } : undefined}
+    >
       <div className={`mb-1.5 flex items-baseline justify-between px-1 ${isToday ? 'text-accent' : 'text-slate-400'}`}>
         <span className="text-[10px] font-bold uppercase tracking-wide">{d.toLocaleDateString(undefined, { weekday: 'short' })}</span>
         <span className="text-sm font-bold">{d.getDate()}</span>
@@ -99,12 +102,12 @@ export function WeekBoard() {
 
   return (
     <div className="space-y-4">
-      <header className="flex items-center justify-between pt-1">
-        <h1 className="text-2xl font-bold">Week</h1>
+      <header className="hero flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-3xl font-bold md:text-4xl">Week</h1>
         <div className="flex gap-2">
-          <button className="btn-ghost px-3 py-1.5" onClick={() => setAnchor(addDaysKey(anchor, -7))}>‹</button>
+          <button className="btn-ghost px-3 py-1.5" onClick={() => setAnchor(addDaysKey(anchor, -7))}><ChevronLeft size={16} /></button>
           <button className="btn-ghost px-3 py-1.5" onClick={() => setAnchor(todayKey())}>This week</button>
-          <button className="btn-ghost px-3 py-1.5" onClick={() => setAnchor(addDaysKey(anchor, 7))}>›</button>
+          <button className="btn-ghost px-3 py-1.5" onClick={() => setAnchor(addDaysKey(anchor, 7))}><ChevronRight size={16} /></button>
         </div>
       </header>
 
