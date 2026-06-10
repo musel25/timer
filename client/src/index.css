@@ -49,11 +49,21 @@ body {
   @apply bg-ink-900 text-slate-100 font-sans antialiased;
   margin: 0;
   overscroll-behavior-y: none;
+  /* Apple-like text: subtle negative tracking + Inter stylistic sets (single-story a/g, etc.). */
+  letter-spacing: -0.011em;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
+  text-rendering: optimizeLegibility;
+}
+
+@layer base {
+  /* Tighten display type the way SF does on large sizes. */
+  h1 { @apply tracking-tightest; }
+  h2, h3 { @apply tracking-tight; }
 }
 
 @layer components {
   .card {
-    @apply rounded-2xl bg-ink-800 border border-ink-600 shadow-card;
+    @apply rounded-[20px] bg-ink-800 border border-ink-600 shadow-card;
   }
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-medium

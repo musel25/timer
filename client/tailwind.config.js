@@ -29,11 +29,15 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['General Sans', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
+      letterSpacing: {
+        tightest: '-0.03em',
+      },
       boxShadow: {
-        card: '0 4px 20px rgba(20, 30, 60, 0.05)',
+        // Soft, layered elevation in the Apple spirit — works on both themes.
+        card: '0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 24px rgba(0, 0, 0, 0.06)',
       },
     },
   },
