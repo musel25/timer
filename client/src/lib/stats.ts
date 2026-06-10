@@ -44,8 +44,8 @@ export interface TodaySummary {
   count: number;
   minutes: number;
   doneHabitIds: Set<string>;
-  doneChips: Set<string>; // `${habitId}:${minutes}`
   minutesByHabit: Record<string, number>;
+  blocksByHabit: Record<string, number>; // completed 10-min blocks per habit
 }
 
 export function todaySummary(sessions: Session[]): TodaySummary {
@@ -53,18 +53,18 @@ export function todaySummary(sessions: Session[]): TodaySummary {
   const t1 = addDays(t0, 1);
   const s = sessions.filter((x) => x.startedAt >= t0 && x.startedAt < t1 && x.completed);
   const doneHabitIds = new Set<string>();
-  const doneChips = new Set<string>();
   const minutesByHabit: Record<string, number> = {};
   let minutes = 0;
   for (const x of s) {
     minutes += x.actualSeconds / 60;
     if (x.habitId) {
       doneHabitIds.add(x.habitId);
-      doneChips.add(`${x.habitId}:${Math.round(x.plannedSeconds / 60)}`);
       minutesByHabit[x.habitId] = (minutesByHabit[x.habitId] ?? 0) + x.actualSeconds / 60;
     }
   }
-  return { count: s.length, minutes: Math.round(minutes), doneHabitIds, doneChips, minutesByHabit };
+  const blocksByHabit: Record<string, number> = {};
+  for (const [id, min] of Object.entries(minutesByHabit)) blocksByHabit[id] = Math.floor(min / 10);
+  return { count: s.length, minutes: Math.round(minutes), doneHabitIds, minutesByHabit, blocksByHabit };
 }
 
 export function minutesInRange(sessions: Session[], fromTs: number, toTs = Date.now()): number {
@@ -90,6 +90,51 @@ export function heatmap(sessions: Session[], days: number): { date: string; minu
   for (let i = days - 1; i >= 0; i--) {
     const k = dayKey(addDays(t0, -i));
     out.push({ date: k, minutes: Math.round(byDay[k] ?? 0) });
+  }
+  return out;
+}
+
+/** A habit's daily goal converted to 10-minute blocks, or null when it has no goal. */
+export function goalBlocks(dailyGoalMin: number | null): number | null {
+  return dailyGoalMin ? Math.max(1, Math.round(dailyGoalMin / 10)) : null;
+}
+
+/**
+ * Consecutive days (ending today, or yesterday when today isn't met yet) on
+ * which the habit completed `goalBlocks` blocks — or at least one block when
+ * it has no goal.
+ */
+export function goalStreak(sessions: Session[], habitId: string, dailyGoalMin: number | null): number {
+  const need = goalBlocks(dailyGoalMin) ?? 1;
+  const minByDay: Record<string, number> = {};
+  for (const s of sessions) {
+    if (!s.completed || s.habitId !== habitId) continue;
+    const k = dayKey(s.startedAt);
+    minByDay[k] = (minByDay[k] ?? 0) + s.actualSeconds / 60;
+  }
+  const met = (ts: number) => Math.floor((minByDay[dayKey(ts)] ?? 0) / 10) >= need;
+  let cursor = startOfToday();
+  if (!met(cursor)) {
+    cursor = addDays(cursor, -1);
+    if (!met(cursor)) return 0;
+  }
+  let streak = 0;
+  while (met(cursor)) {
+    streak += 1;
+    cursor = addDays(cursor, -1);
+  }
+  return streak;
+}
+
+export type FocusTag = 'work' | 'study' | 'other';
+
+/** Minutes of habit-less (focus/timer) sessions since `fromTs`, bucketed by the Work/Study tag in `note`. */
+export function focusMinutesByTag(sessions: Session[], fromTs: number): Record<FocusTag, number> {
+  const out: Record<FocusTag, number> = { work: 0, study: 0, other: 0 };
+  for (const s of sessions) {
+    if (s.habitId || s.startedAt < fromTs) continue;
+    const tag: FocusTag = s.note === 'work' ? 'work' : s.note === 'study' ? 'study' : 'other';
+    out[tag] += s.actualSeconds / 60;
   }
   return out;
 }

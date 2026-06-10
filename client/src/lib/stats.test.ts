@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { currentStreak, todaySummary } from './stats';
+import { currentStreak, focusMinutesByTag, goalBlocks, goalStreak, todaySummary } from './stats';
 import { startOfToday, addDays } from './time';
 import type { Session } from './types';
 
@@ -44,16 +44,81 @@ describe('currentStreak', () => {
 });
 
 describe('todaySummary', () => {
-  it('aggregates completed sessions and marks done chips', () => {
+  it('aggregates completed sessions and counts 10-min blocks', () => {
     const noon = startOfToday() + 12 * 3600_000;
     const s = [
       session(noon, { habitId: 'h1', plannedSeconds: 600, actualSeconds: 600 }),
+      session(noon + 3600_000, { habitId: 'h1', plannedSeconds: 600, actualSeconds: 600 }),
+      session(noon + 7200_000, { habitId: 'h2', plannedSeconds: 1500, actualSeconds: 1500 }), // legacy 25-min session
       session(addDays(noon, -1), { habitId: 'h1' }), // yesterday — excluded
     ];
     const t = todaySummary(s);
-    expect(t.count).toBe(1);
-    expect(t.minutes).toBe(10);
+    expect(t.count).toBe(3);
+    expect(t.minutes).toBe(45);
     expect(t.doneHabitIds.has('h1')).toBe(true);
-    expect(t.doneChips.has('h1:10')).toBe(true);
+    expect(t.blocksByHabit['h1']).toBe(2);
+    expect(t.blocksByHabit['h2']).toBe(2); // floor(25 / 10)
+  });
+});
+
+describe('goalBlocks', () => {
+  it('converts goal minutes to blocks', () => {
+    expect(goalBlocks(30)).toBe(3);
+    expect(goalBlocks(25)).toBe(3); // rounds
+    expect(goalBlocks(5)).toBe(1); // at least one block when a goal exists
+    expect(goalBlocks(null)).toBeNull();
+    expect(goalBlocks(0)).toBeNull();
+  });
+});
+
+describe('goalStreak', () => {
+  const noon = startOfToday() + 12 * 3600_000;
+
+  it('counts consecutive days the goal was met', () => {
+    const s = [
+      session(noon, { habitId: 'h1', actualSeconds: 1200 }), // 2 blocks today
+      session(addDays(noon, -1), { habitId: 'h1', actualSeconds: 1200 }),
+      session(addDays(noon, -2), { habitId: 'h1', actualSeconds: 600 }), // only 1 block — goal missed
+    ];
+    expect(goalStreak(s, 'h1', 20)).toBe(2);
+  });
+
+  it('does not break the streak when today is not yet met', () => {
+    const s = [session(addDays(noon, -1), { habitId: 'h1', actualSeconds: 1200 })];
+    expect(goalStreak(s, 'h1', 20)).toBe(1);
+  });
+
+  it('requires at least one block per day when there is no goal', () => {
+    const s = [
+      session(noon, { habitId: 'h1', actualSeconds: 600 }),
+      session(addDays(noon, -1), { habitId: 'h1', actualSeconds: 300 }), // half a block — breaks
+    ];
+    expect(goalStreak(s, 'h1', null)).toBe(1);
+  });
+
+  it('ignores other habits and incomplete sessions', () => {
+    const s = [
+      session(noon, { habitId: 'h2', actualSeconds: 1200 }),
+      session(noon, { habitId: 'h1', actualSeconds: 1200, completed: false }),
+    ];
+    expect(goalStreak(s, 'h1', 10)).toBe(0);
+  });
+});
+
+describe('focusMinutesByTag', () => {
+  const noon = startOfToday() + 12 * 3600_000;
+
+  it('buckets habit-less sessions by note tag', () => {
+    const s = [
+      session(noon, { note: 'work', actualSeconds: 1500 }),
+      session(noon, { note: 'study', actualSeconds: 600 }),
+      session(noon, { note: null, actualSeconds: 300 }), // legacy / plain timer
+      session(noon, { habitId: 'h1', note: 'work', actualSeconds: 600 }), // habit session — excluded
+      session(addDays(noon, -10), { note: 'work', actualSeconds: 600 }), // out of range
+    ];
+    const f = focusMinutesByTag(s, startOfToday());
+    expect(Math.round(f.work)).toBe(25);
+    expect(Math.round(f.study)).toBe(10);
+    expect(Math.round(f.other)).toBe(5);
   });
 });
