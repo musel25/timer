@@ -3,8 +3,9 @@ import { Flame, Clock, CalendarRange } from 'lucide-react';
 import { useHabits, useSessions, useSettings } from '../../lib/hooks';
 import { HabitIcon } from '../../lib/habitIcons';
 import { categoryColor, gradient, tint, solid } from '../../lib/palette';
-import { currentStreak, heatmap, minutesByHabitInRange, minutesInRange } from '../../lib/stats';
+import { currentStreak, focusMinutesByTag, goalBlocks, goalStreak, heatmap, minutesByHabitInRange, minutesInRange, todaySummary } from '../../lib/stats';
 import { startOfToday, addDays } from '../../lib/time';
+import { BlockBar } from '../../components/BlockBar';
 
 const WEEKS = 18;
 
@@ -24,12 +25,32 @@ export function Progress() {
   const firstDay = new Date(days[0].date + 'T00:00:00');
   const lead = (firstDay.getDay() - weekStart + 7) % 7;
 
+  const summary = todaySummary(sessions);
   const byHabit = minutesByHabitInRange(sessions, weekAgo);
   const ranked = habits
     .filter((h) => !h.archived)
-    .map((h) => ({ h, min: Math.round(byHabit[h.id] ?? 0), streak: currentStreak(sessions, h.id) }))
-    .sort((a, b) => b.min - a.min);
-  const maxMin = Math.max(1, ...ranked.map((r) => r.min));
+    .map((h) => ({
+      h,
+      weekMin: Math.round(byHabit[h.id] ?? 0),
+      blocks: summary.blocksByHabit[h.id] ?? 0,
+      goal: goalBlocks(h.dailyGoalMin),
+      streak: goalStreak(sessions, h.id, h.dailyGoalMin),
+    }))
+    .sort((a, b) => b.weekMin - a.weekMin);
+
+  const todayBlocks = Object.values(summary.blocksByHabit).reduce((a, b) => a + b, 0);
+  const todayHabitMin = Math.round(Object.values(summary.minutesByHabit).reduce((a, b) => a + b, 0));
+
+  const focusWeek = focusMinutesByTag(sessions, weekAgo);
+  const focusToday = focusMinutesByTag(sessions, startOfToday());
+  const focusRows = (
+    [
+      { key: 'work', label: 'Work', week: Math.round(focusWeek.work), today: Math.round(focusToday.work) },
+      { key: 'study', label: 'Study', week: Math.round(focusWeek.study), today: Math.round(focusToday.study) },
+      { key: 'other', label: 'Other focus', week: Math.round(focusWeek.other), today: Math.round(focusToday.other) },
+    ] as const
+  ).filter((r) => r.key !== 'other' || r.week > 0);
+  const maxFocus = Math.max(1, ...focusRows.map((r) => r.week));
 
   function intensity(min: number): string {
     if (min <= 0) return 'rgb(var(--ink-700))';
@@ -70,9 +91,12 @@ export function Progress() {
       </section>
 
       <section>
-        <h2 className="label mb-2">By habit · this week</h2>
+        <div className="mb-2 flex items-baseline justify-between">
+          <h2 className="label">By habit · today vs goal</h2>
+          <span className="text-xs text-slate-400">Today: {todayBlocks} block{todayBlocks === 1 ? '' : 's'} · {todayHabitMin} min</span>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          {ranked.map(({ h, min, streak }) => {
+          {ranked.map(({ h, weekMin, blocks, goal, streak }) => {
             const color = categoryColor(h.id);
             return (
               <div key={h.id} className="card p-4">
@@ -84,17 +108,39 @@ export function Progress() {
                     {h.name}
                   </span>
                   <span className="flex items-center gap-1 text-slate-400">
-                    {min}m{h.dailyGoalMin ? ` · goal ${h.dailyGoalMin}m/d` : ''}
+                    {weekMin}m this week
                     {streak > 0 && <span className="flex items-center gap-0.5">· <Flame size={12} className="text-amber-500" />{streak}</span>}
                   </span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-ink-700">
-                  <div className="h-full rounded-full" style={{ width: `${(min / maxMin) * 100}%`, backgroundImage: gradient(color.rgb, 1, 0.7) }} />
-                </div>
+                {goal ? (
+                  <BlockBar done={blocks} goal={goal} rgb={color.rgb} />
+                ) : (
+                  <div className="text-xs text-slate-400">{blocks} block{blocks === 1 ? '' : 's'} today · no goal set</div>
+                )}
               </div>
             );
           })}
-          {ranked.every((r) => r.min === 0) && <p className="py-4 text-center text-sm text-slate-500">No sessions this week yet.</p>}
+          {ranked.length === 0 && <p className="py-4 text-center text-sm text-slate-500">No habits yet.</p>}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="label mb-2">Focus · this week</h2>
+        <div className="card space-y-4 p-4">
+          {focusRows.map((r) => (
+            <div key={r.key}>
+              <div className="mb-1.5 flex items-baseline justify-between text-sm">
+                <span>{r.label}</span>
+                <span className="text-slate-400">{r.week}m this week · {r.today}m today</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-ink-700">
+                <div className="h-full rounded-full bg-accent" style={{ width: `${(r.week / maxFocus) * 100}%` }} />
+              </div>
+            </div>
+          ))}
+          {focusRows.every((r) => r.week === 0) && (
+            <p className="text-center text-sm text-slate-500">No focus sessions this week yet.</p>
+          )}
         </div>
       </section>
     </div>
