@@ -60,7 +60,7 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
     else if (p.kind === 'rest') audio.rest();
     else if (p.kind === 'prep') audio.prep();
     else if (p.kind === 'cooldown') audio.cooldown();
-    if (optsRef.current.voice && p.kind !== 'finish') {
+    if (optsRef.current.voice && p.kind !== 'finish' && p.kind !== 'prep') {
       const text = p.kind === 'work' && p.setCount && p.setCount > 1 ? `${p.label}, set ${p.setIndex}` : p.label;
       audio.speak(text);
     }

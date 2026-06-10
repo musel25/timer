@@ -39,7 +39,13 @@ function tone(freq: number, dur: number, type: OscillatorType = 'sine', gain = 0
 
 export const audio = {
   beep: () => tone(880, 0.12, 'sine', 0.25),
-  prep: () => tone(520, 0.14, 'triangle', 0.2),
+  // Race-start cue: three short "ready" beeps, then a longer higher "go" tone — like a track/F1 start.
+  prep: () => {
+    tone(700, 0.12, 'square', 0.2);
+    setTimeout(() => tone(700, 0.12, 'square', 0.2), 500);
+    setTimeout(() => tone(700, 0.12, 'square', 0.2), 1000);
+    setTimeout(() => tone(1100, 0.4, 'square', 0.24), 1500);
+  },
   work: () => {
     tone(660, 0.16, 'square', 0.18);
   },
