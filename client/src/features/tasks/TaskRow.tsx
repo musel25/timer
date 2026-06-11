@@ -5,11 +5,11 @@ import { useToggleTask } from '../../lib/hooks';
 export function TaskRow({ task, onEdit, onHide }: { task: Task; onEdit?: (t: Task) => void; onHide?: (t: Task) => void }) {
   const toggle = useToggleTask();
   return (
-    <div className="group flex items-center gap-3 py-2">
+    <div className="group flex items-start gap-3 py-2">
       <button
         aria-label={task.done ? 'Mark not done' : 'Mark done'}
         onClick={() => toggle.mutate({ id: task.id, done: !task.done })}
-        className={`h-[18px] w-[18px] shrink-0 rounded-md border-[1.6px] transition ${
+        className={`mt-0.5 h-[18px] w-[18px] shrink-0 rounded-md border-[1.6px] transition ${
           task.done ? 'border-transparent bg-accent' : 'border-ink-500 hover:border-accent'
         }`}
       >
@@ -17,7 +17,7 @@ export function TaskRow({ task, onEdit, onHide }: { task: Task; onEdit?: (t: Tas
       </button>
       <button
         onClick={() => onEdit?.(task)}
-        className={`min-w-0 flex-1 truncate text-left text-sm ${task.done ? 'text-slate-500 line-through' : 'text-slate-100'}`}
+        className={`min-w-0 flex-1 break-words text-left text-sm ${task.done ? 'text-slate-500 line-through' : 'text-slate-100'}`}
       >
         {task.title}
       </button>

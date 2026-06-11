@@ -62,8 +62,8 @@ export function TodayView() {
         </div>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className="card p-5 lg:col-span-1">
+      <div className="grid gap-6 lg:grid-cols-5">
+        <section className="card p-5 lg:col-span-2">
           <h2 className="label mb-3">Tasks</h2>
           <div className="divide-y divide-ink-600">
             {today.map((t) => <TaskRow key={t.id} task={t} onEdit={setEditing} onHide={hideTask} />)}
@@ -78,7 +78,7 @@ export function TodayView() {
                 <div className="mt-1 space-y-1">
                   {hiddenTasks.map((t) => (
                     <div key={t.id} className="flex items-center gap-3 py-1 opacity-60">
-                      <span className="min-w-0 flex-1 truncate text-sm text-slate-400">{t.title}</span>
+                      <span className="min-w-0 flex-1 break-words text-sm text-slate-400">{t.title}</span>
                       <button onClick={() => unhideTask(t)} className="shrink-0 text-xs text-accent hover:underline">Unhide</button>
                     </div>
                   ))}
@@ -90,7 +90,7 @@ export function TodayView() {
         </section>
 
         {notArchived.length > 0 && (
-          <section className="lg:col-span-2">
+          <section className="lg:col-span-3">
             <h2 className="label mb-3">Habits</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {active.map((h) => (
