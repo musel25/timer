@@ -69,7 +69,8 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
   const announce = useCallback((p: Phase) => {
     if (p.kind === 'work') audio.work();
     else if (p.kind === 'rest') audio.rest();
-    else if (p.kind === 'prep') audio.prep();
+    // Delay the prep sequence so the GO blast fires exactly at the phase boundary.
+    else if (p.kind === 'prep') audio.prep(Math.max(0, p.seconds - 1.65));
     else if (p.kind === 'cooldown') audio.cooldown();
     if (optsRef.current.voice && p.kind !== 'finish' && p.kind !== 'prep') {
       const text = p.kind === 'work' && p.setCount && p.setCount > 1 ? `${p.label}, set ${p.setIndex}` : p.label;

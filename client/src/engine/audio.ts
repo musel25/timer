@@ -55,14 +55,13 @@ function blast(freq: number, dur: number, gain: number, at = 0, hold = 0): void 
 export const audio = {
   beep: () => tone(880, 0.12, 'sine', 0.25),
   beepAt: (at: number) => tone(880, 0.12, 'sine', 0.25, at),
-  // Race-start cue, loud enough to snap attention from across the room:
-  // three hard same-pitch "ready" blasts, then a long sustained octave-up
-  // "GO" blast — the cadence of a track/swimming start signal.
-  prep: () => {
-    blast(740, 0.22, 0.5, 0);
-    blast(740, 0.22, 0.5, 0.55);
-    blast(740, 0.22, 0.5, 1.1);
-    blast(1480, 0.9, 0.6, 1.65, 0.35);
+  // Race-start cue: three "ready" blasts then a sustained "GO" blast.
+  // `at` delays the whole sequence so the GO blast lands at the phase boundary.
+  prep: (at = 0) => {
+    blast(740, 0.22, 0.5, at + 0);
+    blast(740, 0.22, 0.5, at + 0.55);
+    blast(740, 0.22, 0.5, at + 1.1);
+    blast(1480, 0.9, 0.6, at + 1.65, 0.35);
   },
   work: () => {
     tone(660, 0.16, 'square', 0.18);
