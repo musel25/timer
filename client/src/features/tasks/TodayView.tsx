@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { useTasks, useHabits, useSessions, useSettings, useSaveTask, useSaveHabit } from '../../lib/hooks';
+import { useTasks, useHabits, useSessions, useSettings, useSaveTask, useSaveHabit, useCalendarEvents } from '../../lib/hooks';
+import { eventsByDay } from '../../lib/calendar';
+import { EventChip } from '../../components/EventChip';
 import type { Habit, Task } from '../../lib/types';
 import { currentStreak, todaySummary } from '../../lib/stats';
 import { Flame, Timer as TimerIcon, Clock } from 'lucide-react';
@@ -24,6 +26,8 @@ export function TodayView() {
   const [showHiddenHabits, setShowHiddenHabits] = useState(false);
 
   const tk = todayKey();
+  const { data: events = [] } = useCalendarEvents(tk, tk);
+  const todayEvents = eventsByDay(events).get(tk) ?? [];
   const todays = tasks.filter((t) => t.date === tk).sort((a, b) => Number(a.done) - Number(b.done) || a.sortOrder - b.sortOrder);
   const today = todays.filter((t) => t.hiddenOn !== tk);
   const hiddenTasks = todays.filter((t) => t.hiddenOn === tk);
@@ -65,6 +69,11 @@ export function TodayView() {
       <div className="grid gap-6 lg:grid-cols-5">
         <section className="card p-5 lg:col-span-2">
           <h2 className="label mb-3">Tasks</h2>
+          {todayEvents.length > 0 && (
+            <div className="mb-3 space-y-1">
+              {todayEvents.map((e) => <EventChip key={e.id} event={e} />)}
+            </div>
+          )}
           <div className="divide-y divide-ink-600">
             {today.map((t) => <TaskRow key={t.id} task={t} onEdit={setEditing} onHide={hideTask} />)}
           </div>

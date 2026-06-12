@@ -134,3 +134,12 @@ export interface Task {
   sortOrder: number;
   createdAt: number;
 }
+
+export interface CalendarEvent {
+  id: string;
+  calendarId: string;
+  title: string;
+  start: string; // ISO datetime, or 'YYYY-MM-DD' when allDay
+  end: string;   // exclusive for all-day events
+  allDay: boolean;
+}

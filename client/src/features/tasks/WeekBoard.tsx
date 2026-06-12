@@ -2,8 +2,10 @@ import { useRef, useState } from 'react';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
-import { useTasks, useSaveTask, useToggleTask } from '../../lib/hooks';
-import type { Task } from '../../lib/types';
+import { useTasks, useSaveTask, useToggleTask, useCalendarEvents } from '../../lib/hooks';
+import type { CalendarEvent, Task } from '../../lib/types';
+import { eventsByDay } from '../../lib/calendar';
+import { EventChip } from '../../components/EventChip';
 import { weekDays, todayKey, addDaysKey, keyToDate } from '../../lib/date';
 import { QuickAdd } from './QuickAdd';
 import { TaskEditor } from './TaskEditor';
@@ -54,7 +56,7 @@ function DropColumn({ id, children, layout = 'space-y-1.5' }: { id: string; chil
   );
 }
 
-function DayColumn({ dayKey, tasks, onEdit, dragHappened }: { dayKey: string; tasks: Task[]; onEdit: (t: Task) => void; dragHappened: React.MutableRefObject<boolean> }) {
+function DayColumn({ dayKey, tasks, events, onEdit, dragHappened }: { dayKey: string; tasks: Task[]; events: CalendarEvent[]; onEdit: (t: Task) => void; dragHappened: React.MutableRefObject<boolean> }) {
   const d = keyToDate(dayKey);
   const isToday = dayKey === todayKey();
   return (
@@ -66,6 +68,11 @@ function DayColumn({ dayKey, tasks, onEdit, dragHappened }: { dayKey: string; ta
         <span className="text-xs font-bold uppercase tracking-wide">{d.toLocaleDateString(undefined, { weekday: 'short' })}</span>
         <span className="text-lg font-bold">{d.getDate()}</span>
       </div>
+      {events.length > 0 && (
+        <div className="mb-1.5 space-y-1 px-1">
+          {events.map((e) => <EventChip key={e.id} event={e} />)}
+        </div>
+      )}
       <DropColumn id={dayKey}>
         {tasks.map((t) => <DraggableTask key={t.id} task={t} onEdit={onEdit} dragHappened={dragHappened} />)}
       </DropColumn>
@@ -86,6 +93,8 @@ export function WeekBoard() {
 
   // Always Monday-first here so the 2×4 board reads Mon–Thu / Fri–Sun + Inbox.
   const days = weekDays(anchor, 1);
+  const { data: events = [] } = useCalendarEvents(days[0], days[6]);
+  const evByDay = eventsByDay(events);
   const inbox = tasks.filter((t) => t.date === null && !t.done);
   const byDateMap = new Map<string, Task[]>();
   for (const t of tasks) if (t.date) { const arr = byDateMap.get(t.date) ?? []; arr.push(t); byDateMap.set(t.date, arr); }
@@ -124,7 +133,7 @@ export function WeekBoard() {
       >
         {/* 2×4 board: Mon–Thu on the first row, Fri/Sat/Sun + Inbox on the second. */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {days.map((key) => <DayColumn key={key} dayKey={key} tasks={byDate(key)} onEdit={setEditing} dragHappened={dragHappened} />)}
+          {days.map((key) => <DayColumn key={key} dayKey={key} tasks={byDate(key)} events={evByDay.get(key) ?? []} onEdit={setEditing} dragHappened={dragHappened} />)}
 
           <div className="card flex flex-col p-3">
             <div className="mb-2 flex items-baseline justify-between px-1 text-slate-400">

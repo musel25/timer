@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
-import type { Habit, HabitGroup, Session, Settings, Task, TimerPreset } from './types';
+import type { CalendarEvent, Habit, HabitGroup, Session, Settings, Task, TimerPreset } from './types';
 
 export interface Me {
   user: { id: string; email: string } | null;
@@ -99,6 +99,17 @@ export function useDeleteTask() {
   return useMutation({
     mutationFn: (id: string) => api.del(`/tasks/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+  });
+}
+
+/* ---- calendar (read-only Google events) ---- */
+export function useCalendarEvents(from: string, to: string) {
+  return useQuery({
+    queryKey: ['calendar-events', from, to],
+    queryFn: () => api.get<{ configured: boolean; events: CalendarEvent[] }>(`/calendar/events?from=${from}&to=${to}`),
+    select: (d) => d.events,
+    staleTime: 5 * 60 * 1000,
+    retry: false, // unconfigured/unreachable calendar should fail quietly, not retry-spam
   });
 }
 
