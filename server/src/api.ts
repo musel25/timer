@@ -8,6 +8,7 @@ import {
 } from './auth';
 import { DEFAULT_SETTINGS } from './seed';
 import { calendar } from './calendar';
+import { queueTaskDelete, queueTaskSync } from './gcalSync';
 
 type Env = { Variables: { userId: string } };
 
@@ -266,6 +267,7 @@ api.post('/tasks', async (c) => {
     sortOrder: p.data.sortOrder ?? now, createdAt: now,
   };
   db.insert(tasks).values(row).run();
+  queueTaskSync(uid(c), row.id);
   return c.json(row, 201);
 });
 
@@ -279,11 +281,15 @@ api.patch('/tasks/:id', async (c) => {
   const res = db.update(tasks).set(patch)
     .where(and(eq(tasks.id, id), eq(tasks.userId, uid(c)))).run();
   if (res.changes === 0) return c.json({ error: 'not_found' }, 404);
+  queueTaskSync(uid(c), id);
   return c.json(db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, uid(c)))).get());
 });
 
 api.delete('/tasks/:id', (c) => {
-  db.delete(tasks).where(and(eq(tasks.id, c.req.param('id')), eq(tasks.userId, uid(c)))).run();
+  const id = c.req.param('id');
+  const row = db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, uid(c)))).get();
+  db.delete(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, uid(c)))).run();
+  queueTaskDelete(uid(c), row?.gcalEventId ?? null);
   return c.json({ ok: true });
 });
 

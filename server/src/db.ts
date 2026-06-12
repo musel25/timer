@@ -121,6 +121,7 @@ export function migrate(): void {
   // Idempotent column additions for databases created before a column existed.
   addColumnIfMissing('habits', 'hidden_on', 'TEXT');
   addColumnIfMissing('tasks', 'hidden_on', 'TEXT');
+  addColumnIfMissing('tasks', 'gcal_event_id', 'TEXT');
 
   // Pre-existing DBs: add the flag and mark the conventional 'Work' group once.
   if (addColumnIfMissing('habit_groups', 'weekdays_only', 'INTEGER NOT NULL DEFAULT 0')) {

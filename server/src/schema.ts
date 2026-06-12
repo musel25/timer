@@ -89,6 +89,8 @@ export const tasks = sqliteTable('tasks', {
   // local calendar date 'YYYY-MM-DD' on which this task was hidden from Today; NULL = not hidden
   hiddenOn: text('hidden_on'),
   sortOrder: integer('sort_order').notNull().default(0),
+  // Google Calendar event mirroring this task on the Planner calendar, or NULL
+  gcalEventId: text('gcal_event_id'),
   createdAt: integer('created_at').notNull(),
 });
 

@@ -7,9 +7,11 @@ import { logger } from 'hono/logger';
 import { migrate } from './db';
 import { bootstrap } from './seed';
 import { api } from './api';
+import { startCalendarSync } from './gcalSync';
 
 migrate();
 bootstrap();
+startCalendarSync();
 
 const app = new Hono();
 app.use('*', logger());
