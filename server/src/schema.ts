@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, primaryKey } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
@@ -91,3 +91,15 @@ export const tasks = sqliteTable('tasks', {
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: integer('created_at').notNull(),
 });
+
+/** Per-user external-service configs (e.g. kind='gcal'). The config JSON can
+ *  hold secrets — API routes must return it only through redactConfig(). */
+export const integrations = sqliteTable(
+  'integrations',
+  {
+    userId: text('user_id').notNull(),
+    kind: text('kind').notNull(),
+    config: text('config', { mode: 'json' }).notNull(),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.userId, t.kind] }) }),
+);

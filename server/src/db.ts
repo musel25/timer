@@ -109,6 +109,13 @@ export function migrate(): void {
     );
     CREATE INDEX IF NOT EXISTS idx_tasks_user ON tasks(user_id);
     CREATE INDEX IF NOT EXISTS idx_tasks_user_date ON tasks(user_id, date);
+
+    CREATE TABLE IF NOT EXISTS integrations (
+      user_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      config TEXT NOT NULL,
+      PRIMARY KEY (user_id, kind)
+    );
   `);
 
   // Idempotent column additions for databases created before a column existed.

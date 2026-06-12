@@ -7,6 +7,7 @@ import {
   createSession, currentUserId, destroySession, hashPassword, newId, requireAuth, verifyPassword,
 } from './auth';
 import { DEFAULT_SETTINGS } from './seed';
+import { calendar } from './calendar';
 
 type Env = { Variables: { userId: string } };
 
@@ -66,6 +67,7 @@ api.use('/sessions', requireAuth); api.use('/sessions/*', requireAuth);
 api.use('/settings', requireAuth);
 api.use('/export', requireAuth); api.use('/import', requireAuth);
 api.use('/tasks', requireAuth); api.use('/tasks/*', requireAuth);
+api.use('/calendar', requireAuth); api.use('/calendar/*', requireAuth);
 
 /* ---------- timers ---------- */
 const timerInput = z.object({
@@ -284,6 +286,9 @@ api.delete('/tasks/:id', (c) => {
   db.delete(tasks).where(and(eq(tasks.id, c.req.param('id')), eq(tasks.userId, uid(c)))).run();
   return c.json({ ok: true });
 });
+
+/* ---------- calendar (Google Calendar integration) ---------- */
+api.route('/calendar', calendar);
 
 /* ---------- settings ---------- */
 api.get('/settings', (c) => {
