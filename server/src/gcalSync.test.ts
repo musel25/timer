@@ -54,6 +54,10 @@ describe('taskToEventBody', () => {
       end: { date: '2026-06-13' },
     });
   });
+
+  it('throws on an undated task', () => {
+    expect(() => sync.taskToEventBody(task({ date: null }))).toThrow();
+  });
 });
 
 describe('planReconcile', () => {
