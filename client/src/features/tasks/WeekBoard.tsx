@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
@@ -10,11 +10,12 @@ import { TaskEditor } from './TaskEditor';
 
 const INBOX = 'inbox';
 
-function DraggableTask({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
+function DraggableTask({ task, onEdit, dragHappened }: { task: Task; onEdit: (t: Task) => void; dragHappened: React.MutableRefObject<boolean> }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
   const toggle = useToggleTask();
-  // The whole card is the drag source; the checkbox and title stop pointer
-  // propagation so a tap toggles/edits instead of starting a drag.
+  // The whole card is the drag source, checkbox and title included — the
+  // sensor's activation distance means a plain tap still clicks. After a real
+  // drag, `dragHappened` swallows the click that fires on pointer-up.
   return (
     <div
       ref={setNodeRef}
@@ -25,16 +26,14 @@ function DraggableTask({ task, onEdit }: { task: Task; onEdit: (t: Task) => void
       }`}
     >
       <button
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={() => toggle.mutate({ id: task.id, done: !task.done })}
+        onClick={() => { if (!dragHappened.current) toggle.mutate({ id: task.id, done: !task.done }); }}
         aria-label={task.done ? 'Mark not done' : 'Mark done'}
         className={`mt-0.5 h-[17px] w-[17px] shrink-0 rounded border-[1.5px] ${task.done ? 'border-transparent bg-accent' : 'border-ink-500 hover:border-accent'}`}
       >
         {task.done && <Check size={13} strokeWidth={3} className="mx-auto text-white" />}
       </button>
       <button
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={() => onEdit(task)}
+        onClick={() => { if (!dragHappened.current) onEdit(task); }}
         className={`min-w-0 flex-1 break-words text-left leading-snug ${task.done ? 'text-slate-500 line-through' : 'text-slate-100'}`}
       >
         {task.title}
@@ -55,7 +54,7 @@ function DropColumn({ id, children, layout = 'space-y-1.5' }: { id: string; chil
   );
 }
 
-function DayColumn({ dayKey, tasks, onEdit }: { dayKey: string; tasks: Task[]; onEdit: (t: Task) => void }) {
+function DayColumn({ dayKey, tasks, onEdit, dragHappened }: { dayKey: string; tasks: Task[]; onEdit: (t: Task) => void; dragHappened: React.MutableRefObject<boolean> }) {
   const d = keyToDate(dayKey);
   const isToday = dayKey === todayKey();
   return (
@@ -68,7 +67,7 @@ function DayColumn({ dayKey, tasks, onEdit }: { dayKey: string; tasks: Task[]; o
         <span className="text-lg font-bold">{d.getDate()}</span>
       </div>
       <DropColumn id={dayKey}>
-        {tasks.map((t) => <DraggableTask key={t.id} task={t} onEdit={onEdit} />)}
+        {tasks.map((t) => <DraggableTask key={t.id} task={t} onEdit={onEdit} dragHappened={dragHappened} />)}
       </DropColumn>
       <div className="mt-2"><QuickAdd date={dayKey} placeholder="Add task" compact /></div>
     </div>
@@ -81,6 +80,9 @@ export function WeekBoard() {
   const [anchor, setAnchor] = useState(todayKey());
   const [editing, setEditing] = useState<Task | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  // True while a drag is in flight; cleared a tick after drop so the click
+  // that follows pointer-up doesn't toggle/edit the dragged task.
+  const dragHappened = useRef(false);
 
   // Always Monday-first here so the 2×4 board reads Mon–Thu / Fri–Sun + Inbox.
   const days = weekDays(anchor, 1);
@@ -89,7 +91,12 @@ export function WeekBoard() {
   for (const t of tasks) if (t.date) { const arr = byDateMap.get(t.date) ?? []; arr.push(t); byDateMap.set(t.date, arr); }
   const byDate = (key: string) => (byDateMap.get(key) ?? []).slice().sort((a, b) => Number(a.done) - Number(b.done) || a.sortOrder - b.sortOrder);
 
+  function clearDragSoon() {
+    setTimeout(() => { dragHappened.current = false; }, 0);
+  }
+
   function onDragEnd(e: DragEndEvent) {
+    clearDragSoon();
     const taskId = String(e.active.id);
     const over = e.over?.id ? String(e.over.id) : null;
     if (!over) return;
@@ -109,10 +116,15 @@ export function WeekBoard() {
         </div>
       </header>
 
-      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+      <DndContext
+        sensors={sensors}
+        onDragStart={() => { dragHappened.current = true; }}
+        onDragCancel={clearDragSoon}
+        onDragEnd={onDragEnd}
+      >
         {/* 2×4 board: Mon–Thu on the first row, Fri/Sat/Sun + Inbox on the second. */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {days.map((key) => <DayColumn key={key} dayKey={key} tasks={byDate(key)} onEdit={setEditing} />)}
+          {days.map((key) => <DayColumn key={key} dayKey={key} tasks={byDate(key)} onEdit={setEditing} dragHappened={dragHappened} />)}
 
           <div className="card flex flex-col p-3">
             <div className="mb-2 flex items-baseline justify-between px-1 text-slate-400">
@@ -120,7 +132,7 @@ export function WeekBoard() {
               {inbox.length > 0 && <span className="text-lg font-bold">{inbox.length}</span>}
             </div>
             <DropColumn id={INBOX}>
-              {inbox.map((t) => <DraggableTask key={t.id} task={t} onEdit={setEditing} />)}
+              {inbox.map((t) => <DraggableTask key={t.id} task={t} onEdit={setEditing} dragHappened={dragHappened} />)}
               {inbox.length === 0 && <p className="px-1 py-2 text-sm text-slate-500">Drop undated tasks here.</p>}
             </DropColumn>
             <div className="mt-2"><QuickAdd date={null} placeholder="Capture a task…" compact /></div>
