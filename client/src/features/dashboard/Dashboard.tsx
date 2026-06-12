@@ -37,7 +37,7 @@ export function Dashboard() {
         <div>
           <h1 className="text-3xl font-bold md:text-4xl">Habits</h1>
           <div className="mt-1 text-sm text-slate-300">
-            {today.count > 0 ? `Today · ${today.count} done · ${today.minutes} min` : 'Tap a habit to start a 10-minute block'}
+            {today.count > 0 ? `Today · ${today.count} done · ${today.minutes} min` : 'Tap a duration to start a focus block'}
           </div>
         </div>
         <Link to="/timers" className="flex items-center rounded-full border border-ink-600/60 bg-ink-900/30 p-2.5 text-slate-300 backdrop-blur hover:text-slate-100" title="Timer presets"><Timer size={18} /></Link>

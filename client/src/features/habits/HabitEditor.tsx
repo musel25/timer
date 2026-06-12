@@ -5,6 +5,9 @@ import { Stepper } from '../../components/Stepper';
 import { useDeleteHabit, useGroups, useHabits, useSaveGroup, useSaveHabit } from '../../lib/hooks';
 import { HabitIcon, HABIT_ICONS, HABIT_ICON_NAMES, DEFAULT_HABIT_ICON } from '../../lib/habitIcons';
 
+const DURATION_CHOICES = [5, 10, 15, 20, 25, 30, 45, 60]; // minutes
+const DEFAULT_DURATIONS = [5, 10, 20];
+
 export function HabitEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -20,6 +23,8 @@ export function HabitEditor() {
   const [note, setNote] = useState('');
   const [groupId, setGroupId] = useState<string | null>(null);
   const [goal, setGoal] = useState(0); // daily goal in 10-min blocks
+  const [durations, setDurations] = useState<number[]>(DEFAULT_DURATIONS);
+  const [defaultMin, setDefaultMin] = useState(10);
 
   useEffect(() => {
     if (!existing) return;
@@ -28,7 +33,22 @@ export function HabitEditor() {
     setNote(existing.note ?? '');
     setGroupId(existing.groupId);
     setGoal(existing.dailyGoalMin ? Math.round(existing.dailyGoalMin / 10) : 0);
+    const dur = existing.durations?.length ? existing.durations : [10];
+    setDurations(dur);
+    setDefaultMin(existing.defaultDurationMin && dur.includes(existing.defaultDurationMin) ? existing.defaultDurationMin : dur[0]);
   }, [existing?.id]);
+
+  function toggleDuration(min: number) {
+    setDurations((cur) => {
+      if (cur.includes(min)) {
+        if (cur.length === 1) return cur; // keep at least one
+        const next = cur.filter((m) => m !== min);
+        if (defaultMin === min) setDefaultMin(next[0]);
+        return next;
+      }
+      return [...cur, min].sort((a, b) => a - b);
+    });
+  }
 
   async function newGroup() {
     const name = window.prompt('New group name (e.g. Morning)');
@@ -45,8 +65,8 @@ export function HabitEditor() {
       emoji: icon,
       note: note.trim() || null,
       groupId,
-      durations: [10],
-      defaultDurationMin: 10,
+      durations,
+      defaultDurationMin: defaultMin,
       dailyGoalMin: goal > 0 ? goal * 10 : null,
       timerType: 'simple',
     });
@@ -92,6 +112,39 @@ export function HabitEditor() {
           </select>
           <button className="btn-outline px-3" onClick={newGroup}><Plus size={16} /></button>
         </div>
+      </div>
+
+      <div className="card space-y-3 p-4">
+        <div>
+          <label className="label">Timer lengths</label>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {DURATION_CHOICES.map((min) => (
+              <button
+                key={min}
+                onClick={() => toggleDuration(min)}
+                className={`chip px-3 py-1.5 ${durations.includes(min) ? 'chip-active' : ''}`}
+              >
+                {min}m
+              </button>
+            ))}
+          </div>
+        </div>
+        {durations.length > 1 && (
+          <div>
+            <label className="label">Default</label>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {durations.map((min) => (
+                <button
+                  key={min}
+                  onClick={() => setDefaultMin(min)}
+                  className={`chip px-3 py-1.5 ${defaultMin === min ? 'chip-active' : ''}`}
+                >
+                  {min}m
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="card p-4">
