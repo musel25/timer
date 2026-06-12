@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { CalendarIntegration } from './CalendarIntegration';
 import { Moon, Sun, Plus } from 'lucide-react';
 import { ACCENTS, THEMES, applyAccent, applyTheme } from '../../lib/theme';
 import { HabitIcon } from '../../lib/habitIcons';
@@ -156,6 +157,8 @@ export function SettingsPage() {
           ))}
         </div>
       </section>
+
+      <CalendarIntegration />
 
       <section className="card space-y-2 p-4">
         <h2 className="label">Data</h2>
