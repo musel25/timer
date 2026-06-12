@@ -163,4 +163,12 @@ describe('goalStreak with weekdaysOnly', () => {
     const s = [h(at(2026, 6, 12)), h(at(2026, 6, 11))]; // Fri + Thu
     expect(goalStreak(s, 'h1', null, true)).toBe(2);
   });
+
+  it('does not count a weekend session even when today is that weekend day', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 5, 14, 12)); // Sunday 2026-06-14
+    // Sessions only on Sun + Sat; Friday was missed → anchor must skip to Friday and find nothing.
+    const s = [h(at(2026, 6, 14)), h(at(2026, 6, 13))];
+    expect(goalStreak(s, 'h1', null, true)).toBe(0);
+  });
 });
