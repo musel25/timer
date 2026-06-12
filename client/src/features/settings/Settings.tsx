@@ -131,7 +131,16 @@ export function SettingsPage() {
           {groups.map((g) => (
             <div key={g.id} className="card flex items-center justify-between p-3 text-sm">
               <span className="flex items-center gap-2"><HabitIcon name={g.emoji} size={16} className="text-slate-300" /> {g.name}</span>
-              <div className="flex gap-3 text-xs text-slate-500">
+              <div className="flex items-center gap-3 text-xs text-slate-500">
+                <label className="flex items-center gap-1.5" title="Streaks skip Sat/Sun for habits in this group">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-accent"
+                    checked={!!g.weekdaysOnly}
+                    onChange={(e) => saveGroup.mutate({ id: g.id, weekdaysOnly: e.target.checked })}
+                  />
+                  Mon–Fri
+                </label>
                 <button
                   className="hover:text-slate-300"
                   onClick={() => {
