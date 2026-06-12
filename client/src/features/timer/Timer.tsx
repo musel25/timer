@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Pencil, Play, X } from 'lucide-react';
 import { Stepper } from '../../components/Stepper';
-import { useSaveTimer, useSettings, useTimers } from '../../lib/hooks';
+import { useDeleteTimer, useSaveTimer, useSettings, useTimers } from '../../lib/hooks';
 import type { PomodoroConfig, SimpleConfig, TimerPreset } from '../../lib/types';
 import { buildPomodoroPhases, totalSeconds, workSeconds } from '../../engine/buildPhases';
 import { humanDuration } from '../../lib/time';
@@ -39,18 +39,28 @@ function PresetChips({
   presets,
   selectedId,
   onPick,
+  onDelete,
 }: {
   presets: TimerPreset[];
   selectedId: string | null;
   onPick: (p: TimerPreset) => void;
+  onDelete: (p: TimerPreset) => void;
 }) {
   if (presets.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-2">
       {presets.map((p) => (
-        <button key={p.id} className={`chip ${selectedId === p.id ? 'chip-active' : ''}`} onClick={() => onPick(p)}>
-          {p.name}
-        </button>
+        <div key={p.id} className={`chip gap-1 pr-1.5 ${selectedId === p.id ? 'chip-active' : ''}`}>
+          <button onClick={() => onPick(p)}>{p.name}</button>
+          <button
+            aria-label={`Delete preset ${p.name}`}
+            title="Delete preset"
+            className={`rounded p-0.5 transition ${selectedId === p.id ? 'text-white/70 hover:text-white' : 'text-slate-500 hover:text-rose-400'}`}
+            onClick={() => onDelete(p)}
+          >
+            <X size={13} />
+          </button>
+        </div>
       ))}
     </div>
   );
@@ -69,6 +79,7 @@ function FocusBlockBuilder() {
   const { data: settings } = useSettings();
   const { data: timers = [] } = useTimers();
   const saveTimer = useSaveTimer();
+  const deleteTimer = useDeleteTimer();
   const presets = timers.filter((t) => !t.archived && t.type === 'pomodoro');
 
   const [task, setTask] = useState('');
@@ -84,12 +95,17 @@ function FocusBlockBuilder() {
   }, [settings?.pomodoro]);
 
   function loadPreset(p: TimerPreset) {
+    if (presetId === p.id) { setPresetId(null); return; } // tap again to deselect
     setCfg(p.config as PomodoroConfig);
     setPresetId(p.id);
   }
+  // Editing keeps the preset selected so "Update preset" writes the changes back.
   function update(patch: Partial<PomodoroConfig>) {
     setCfg((c) => ({ ...c, ...patch }));
-    setPresetId(null); // edited values are a custom config, not the preset
+  }
+  function deletePreset(p: TimerPreset) {
+    deleteTimer.mutate(p.id);
+    if (presetId === p.id) setPresetId(null);
   }
 
   const totalFocus = cfg.work * cfg.rounds;
@@ -110,7 +126,7 @@ function FocusBlockBuilder() {
   }
 
   function savePreset() {
-    saveTimer.mutate({ name: `${cfg.work}/${cfg.short} × ${cfg.rounds}`, type: 'pomodoro', config: cfg });
+    saveTimer.mutate({ id: presetId ?? undefined, name: `${cfg.work}/${cfg.short} × ${cfg.rounds}`, type: 'pomodoro', config: cfg });
   }
 
   return (
@@ -122,7 +138,7 @@ function FocusBlockBuilder() {
         onChange={(e) => setTask(e.target.value)}
       />
 
-      <PresetChips presets={presets} selectedId={presetId} onPick={loadPreset} />
+      <PresetChips presets={presets} selectedId={presetId} onPick={loadPreset} onDelete={deletePreset} />
 
       <div className="card p-4">
         <div className="flex items-center justify-between gap-3">
@@ -164,7 +180,7 @@ function FocusBlockBuilder() {
           <Play size={16} fill="currentColor" /> Start focus
         </button>
         <button className="btn-outline" onClick={savePreset} disabled={saveTimer.isPending}>
-          Save preset
+          {presetId ? 'Update preset' : 'Save preset'}
         </button>
       </div>
     </div>
@@ -175,6 +191,7 @@ function SimpleTimerBuilder() {
   const { startRun } = useRun();
   const { data: timers = [] } = useTimers();
   const saveTimer = useSaveTimer();
+  const deleteTimer = useDeleteTimer();
   const presets = timers.filter((t) => !t.archived && t.type === 'simple');
 
   const [minutes, setMinutes] = useState(10);
@@ -182,12 +199,17 @@ function SimpleTimerBuilder() {
   const [editing, setEditing] = useState(false);
 
   function loadPreset(p: TimerPreset) {
+    if (presetId === p.id) { setPresetId(null); return; } // tap again to deselect
     setMinutes(Math.round((p.config as SimpleConfig).totalSeconds / 60));
     setPresetId(p.id);
   }
+  // Editing keeps the preset selected so "Update preset" writes the changes back.
   function update(v: number) {
     setMinutes(v);
-    setPresetId(null);
+  }
+  function deletePreset(p: TimerPreset) {
+    deleteTimer.mutate(p.id);
+    if (presetId === p.id) setPresetId(null);
   }
 
   function start() {
@@ -203,12 +225,12 @@ function SimpleTimerBuilder() {
 
   function savePreset() {
     const config: SimpleConfig = { totalSeconds: minutes * 60, prepSeconds: 0 };
-    saveTimer.mutate({ name: `${minutes} min`, type: 'simple', config });
+    saveTimer.mutate({ id: presetId ?? undefined, name: `${minutes} min`, type: 'simple', config });
   }
 
   return (
     <div className="space-y-5">
-      <PresetChips presets={presets} selectedId={presetId} onPick={loadPreset} />
+      <PresetChips presets={presets} selectedId={presetId} onPick={loadPreset} onDelete={deletePreset} />
 
       <div className="card p-4">
         <div className="flex items-center justify-between gap-3">
@@ -227,7 +249,7 @@ function SimpleTimerBuilder() {
           <Play size={16} fill="currentColor" /> Start
         </button>
         <button className="btn-outline" onClick={savePreset} disabled={saveTimer.isPending}>
-          Save preset
+          {presetId ? 'Update preset' : 'Save preset'}
         </button>
       </div>
     </div>
