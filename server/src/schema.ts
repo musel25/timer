@@ -25,6 +25,7 @@ export const habitGroups = sqliteTable('habit_groups', {
   userId: text('user_id').notNull(),
   name: text('name').notNull(),
   emoji: text('emoji'),
+  weekdaysOnly: integer('weekdays_only', { mode: 'boolean' }).notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
 });
 

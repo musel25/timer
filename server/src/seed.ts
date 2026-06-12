@@ -35,10 +35,10 @@ export function bootstrap(): void {
   db.insert(userSettings).values({ userId, data: DEFAULT_SETTINGS }).run();
 
   const groups = [
-    { name: 'Morning', emoji: '☀️' },
-    { name: 'Work', emoji: '💼' },
-    { name: 'Night', emoji: '🌙' },
-  ].map((g, i) => ({ id: newId(), userId, name: g.name, emoji: g.emoji, sortOrder: i }));
+    { name: 'Morning', emoji: '☀️', weekdaysOnly: false },
+    { name: 'Work', emoji: '💼', weekdaysOnly: true },
+    { name: 'Night', emoji: '🌙', weekdaysOnly: false },
+  ].map((g, i) => ({ id: newId(), userId, name: g.name, emoji: g.emoji, weekdaysOnly: g.weekdaysOnly, sortOrder: i }));
   db.insert(habitGroups).values(groups).run();
   const [morning, work, night] = groups;
 

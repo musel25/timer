@@ -40,6 +40,7 @@ export function migrate(): void {
       user_id TEXT NOT NULL,
       name TEXT NOT NULL,
       emoji TEXT,
+      weekdays_only INTEGER NOT NULL DEFAULT 0,
       sort_order INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS idx_habit_groups_user ON habit_groups(user_id);
@@ -113,12 +114,20 @@ export function migrate(): void {
   // Idempotent column additions for databases created before a column existed.
   addColumnIfMissing('habits', 'hidden_on', 'TEXT');
   addColumnIfMissing('tasks', 'hidden_on', 'TEXT');
+
+  // Pre-existing DBs: add the flag and mark the conventional 'Work' group once.
+  if (addColumnIfMissing('habit_groups', 'weekdays_only', 'INTEGER NOT NULL DEFAULT 0')) {
+    sqlite.exec("UPDATE habit_groups SET weekdays_only = 1 WHERE name = 'Work'");
+  }
 }
 
-/** Add a column only when it's not already present (SQLite ALTER has no IF NOT EXISTS). */
-function addColumnIfMissing(table: string, column: string, type: string): void {
+/** Add a column only when it's not already present (SQLite ALTER has no IF NOT EXISTS).
+ *  Returns true when the column was just added — callers use this to run one-time backfills. */
+function addColumnIfMissing(table: string, column: string, type: string): boolean {
   const cols = sqlite.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
   if (!cols.some((c) => c.name === column)) {
     sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+    return true;
   }
+  return false;
 }

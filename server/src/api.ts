@@ -107,7 +107,12 @@ api.delete('/timers/:id', (c) => {
 });
 
 /* ---------- habit groups ---------- */
-const groupInput = z.object({ name: z.string().min(1), emoji: z.string().nullable().optional(), sortOrder: z.number().int().optional() });
+const groupInput = z.object({
+  name: z.string().min(1),
+  emoji: z.string().nullable().optional(),
+  weekdaysOnly: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+});
 
 api.get('/habit-groups', (c) =>
   c.json(db.select().from(habitGroups).where(eq(habitGroups.userId, uid(c))).orderBy(asc(habitGroups.sortOrder)).all()));
@@ -115,7 +120,7 @@ api.get('/habit-groups', (c) =>
 api.post('/habit-groups', async (c) => {
   const p = groupInput.safeParse(await body(c));
   if (!p.success) return c.json({ error: 'invalid_input' }, 400);
-  const row = { id: newId(), userId: uid(c), name: p.data.name, emoji: p.data.emoji ?? null, sortOrder: p.data.sortOrder ?? 0 };
+  const row = { id: newId(), userId: uid(c), name: p.data.name, emoji: p.data.emoji ?? null, weekdaysOnly: p.data.weekdaysOnly ?? false, sortOrder: p.data.sortOrder ?? 0 };
   db.insert(habitGroups).values(row).run();
   return c.json(row, 201);
 });
