@@ -19,7 +19,9 @@ export function eventsByDay(events: CalendarEvent[]): Map<string, CalendarEvent[
     }
   }
   for (const arr of map.values()) {
-    arr.sort((a, b) => Number(!a.allDay) - Number(!b.allDay) || a.start.localeCompare(b.start));
+    // Epoch comparison for the time tiebreak: ISO strings from different
+    // calendars can carry different UTC offsets, where lexicographic order lies.
+    arr.sort((a, b) => Number(!a.allDay) - Number(!b.allDay) || new Date(a.start).getTime() - new Date(b.start).getTime());
   }
   return map;
 }
