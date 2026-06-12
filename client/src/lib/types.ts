@@ -25,6 +25,7 @@ export interface HabitGroup {
   id: string;
   name: string;
   emoji: string | null;
+  weekdaysOnly: boolean;
   sortOrder: number;
 }
 

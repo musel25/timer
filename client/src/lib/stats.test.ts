@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { currentStreak, focusMinutes, goalBlocks, goalStreak, todaySummary } from './stats';
 import { startOfToday, addDays } from './time';
 import type { Session } from './types';
@@ -116,5 +116,51 @@ describe('focusMinutes', () => {
       session(addDays(noon, -10), { actualSeconds: 600 }), // out of range
     ];
     expect(Math.round(focusMinutes(s, startOfToday()))).toBe(35);
+  });
+});
+
+describe('goalStreak with weekdaysOnly', () => {
+  afterEach(() => vi.useRealTimers());
+
+  // Local-noon timestamp for a calendar date.
+  const at = (y: number, m: number, d: number) => new Date(y, m - 1, d, 12).getTime();
+  const h = (ts: number) => session(ts, { habitId: 'h1' }); // 600s = 1 block, meets the no-goal need of 1
+
+  it('bridges the weekend: Friday met + Monday met = streak of 2', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 5, 8, 12)); // Monday 2026-06-08
+    const s = [h(at(2026, 6, 8)), h(at(2026, 6, 5))]; // Mon + previous Fri
+    expect(goalStreak(s, 'h1', null, true)).toBe(2);
+    expect(goalStreak(s, 'h1', null, false)).toBe(1); // sanity: weekend gap still breaks the normal streak
+  });
+
+  it('ignores weekend sessions entirely (no break, no bonus)', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 5, 8, 12)); // Monday
+    // Monday met, Saturday session logged, Friday NOT met → streak is just Monday.
+    const s = [h(at(2026, 6, 8)), h(at(2026, 6, 6))];
+    expect(goalStreak(s, 'h1', null, true)).toBe(1);
+  });
+
+  it('still breaks on a missed weekday', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 5, 10, 12)); // Wednesday 2026-06-10
+    // Wed met, Tue missed, Mon met → only Wednesday counts.
+    const s = [h(at(2026, 6, 10)), h(at(2026, 6, 8))];
+    expect(goalStreak(s, 'h1', null, true)).toBe(1);
+  });
+
+  it('grants the not-yet-met-today grace across a weekend (Monday morning sees Friday)', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 5, 8, 12)); // Monday, nothing logged yet today
+    const s = [h(at(2026, 6, 5)), h(at(2026, 6, 4))]; // Fri + Thu
+    expect(goalStreak(s, 'h1', null, true)).toBe(2);
+  });
+
+  it('anchors on Friday when today is a weekend day', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 5, 13, 12)); // Saturday 2026-06-13
+    const s = [h(at(2026, 6, 12)), h(at(2026, 6, 11))]; // Fri + Thu
+    expect(goalStreak(s, 'h1', null, true)).toBe(2);
   });
 });

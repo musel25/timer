@@ -99,12 +99,18 @@ export function goalBlocks(dailyGoalMin: number | null): number | null {
   return dailyGoalMin ? Math.max(1, Math.round(dailyGoalMin / 10)) : null;
 }
 
+const isWeekend = (ts: number) => {
+  const day = new Date(ts).getDay();
+  return day === 0 || day === 6;
+};
+
 /**
  * Consecutive days (ending today, or yesterday when today isn't met yet) on
  * which the habit completed `goalBlocks` blocks — or at least one block when
- * it has no goal.
+ * it has no goal. With `weekdaysOnly`, Saturdays and Sundays are invisible:
+ * they never break the streak and never count toward it.
  */
-export function goalStreak(sessions: Session[], habitId: string, dailyGoalMin: number | null): number {
+export function goalStreak(sessions: Session[], habitId: string, dailyGoalMin: number | null, weekdaysOnly = false): number {
   const need = goalBlocks(dailyGoalMin) ?? 1;
   const minByDay: Record<string, number> = {};
   for (const s of sessions) {
@@ -113,15 +119,21 @@ export function goalStreak(sessions: Session[], habitId: string, dailyGoalMin: n
     minByDay[k] = (minByDay[k] ?? 0) + s.actualSeconds / 60;
   }
   const met = (ts: number) => Math.floor((minByDay[dayKey(ts)] ?? 0) / 10) >= need;
+  const back = (ts: number) => {
+    let c = addDays(ts, -1);
+    while (weekdaysOnly && isWeekend(c)) c = addDays(c, -1);
+    return c;
+  };
   let cursor = startOfToday();
+  while (weekdaysOnly && isWeekend(cursor)) cursor = addDays(cursor, -1);
   if (!met(cursor)) {
-    cursor = addDays(cursor, -1);
+    cursor = back(cursor);
     if (!met(cursor)) return 0;
   }
   let streak = 0;
   while (met(cursor)) {
     streak += 1;
-    cursor = addDays(cursor, -1);
+    cursor = back(cursor);
   }
   return streak;
 }

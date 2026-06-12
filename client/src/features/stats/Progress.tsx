@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Flame, Clock, CalendarRange } from 'lucide-react';
-import { useHabits, useSessions, useSettings } from '../../lib/hooks';
+import { useGroups, useHabits, useSessions, useSettings } from '../../lib/hooks';
 import { HabitIcon } from '../../lib/habitIcons';
 import { categoryColor, gradient, tint, solid } from '../../lib/palette';
 import { currentStreak, focusMinutes, goalBlocks, goalStreak, heatmap, minutesByHabitInRange, minutesInRange, todaySummary } from '../../lib/stats';
@@ -13,6 +13,8 @@ export function Progress() {
   const { data: sessions = [] } = useSessions();
   const { data: habits = [] } = useHabits();
   const { data: settings } = useSettings();
+  const { data: groups = [] } = useGroups();
+  const weekdaysOnlyGroups = new Set(groups.filter((g) => g.weekdaysOnly).map((g) => g.id));
   const weekStart = settings?.weekStart ?? 1;
 
   const streak = currentStreak(sessions);
@@ -34,7 +36,7 @@ export function Progress() {
       weekMin: Math.round(byHabit[h.id] ?? 0),
       blocks: summary.blocksByHabit[h.id] ?? 0,
       goal: goalBlocks(h.dailyGoalMin),
-      streak: goalStreak(sessions, h.id, h.dailyGoalMin),
+      streak: goalStreak(sessions, h.id, h.dailyGoalMin, !!h.groupId && weekdaysOnlyGroups.has(h.groupId)),
     }))
     .sort((a, b) => b.weekMin - a.weekMin);
 
