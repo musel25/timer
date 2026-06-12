@@ -19,6 +19,9 @@ offline, syncs across devices behind a private login.
   optional spoken cues.
 - **PWA** — installable, offline-capable, **Wake Lock** keeps the screen on during a workout.
 - **Accounts** — single private account (closed signup), cross-device cloud sync, JSON export/import.
+- **Google Calendar** — events show up in the Week planner and Today view; dated
+  tasks mirror to a dedicated Planner calendar (service-account setup: see
+  [docs/gcal-setup.md](docs/gcal-setup.md)).
 
 ## Stack
 
