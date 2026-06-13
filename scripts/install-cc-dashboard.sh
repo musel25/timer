@@ -62,7 +62,10 @@ WantedBy=default.target
 EOF
 
 systemctl --user daemon-reload
-systemctl --user enable --now cc-dashboard.service
+systemctl --user enable cc-dashboard.service >/dev/null 2>&1 || true
+# `restart` (not `enable --now`) so a rebuild is actually picked up by an
+# already-running service — start it if it's stopped, reload it if it's up.
+systemctl --user restart cc-dashboard.service
 loginctl enable-linger "$USER" >/dev/null 2>&1 || true
 
 echo

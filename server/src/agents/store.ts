@@ -10,6 +10,7 @@ export interface RegistryInfo {
   entrypoint?: string;
   version?: string;
   startedAt?: number;
+  status?: string; // CLI writes 'busy'; VS Code writes nothing
 }
 
 export type Delta =
@@ -68,7 +69,7 @@ export function applyRegistry(info: RegistryInfo, now: number): SessionCard {
   if (info.pid != null) {
     for (const c of cards.values()) {
       if (c.pid === info.pid && c.sessionId !== info.sessionId && c.state !== 'finished') {
-        finishCard(c.sessionId, now);
+        finishCard(c.sessionId, now, `supersede-by-${info.sessionId.slice(0, 8)}(pid ${info.pid})`);
       }
     }
   }
@@ -104,26 +105,40 @@ export function applyRegistry(info: RegistryInfo, now: number): SessionCard {
     source,
   };
 
-  // Only the registry seeds state when no hook has spoken for this session yet.
+  // The registry only seeds state when no hook has spoken for this session yet.
+  // It has no precise signal, so don't blindly claim "running": trust the CLI's
+  // 'busy' flag, and otherwise (VS Code, which reports no status, or an idle CLI)
+  // treat the session as idle/waiting rather than actively working.
   if (base.lastEventAt === 0 && base.state !== 'finished') {
-    next.state = 'running';
+    if (info.status === 'busy') {
+      next.state = 'running';
+      next.subState = undefined;
+    } else {
+      next.state = 'waiting';
+      next.subState = 'idle';
+    }
+  }
+
+  // reconcile only calls applyRegistry for LIVE processes (pid + procStart verified),
+  // so a card that hooks marked terminal is a false end — SessionEnd fires on /clear,
+  // resume, and VS Code panel reloads while the session keeps running. The registry is
+  // authoritative for existence: bring a live-but-"finished/stale" session back.
+  if (prev && (prev.state === 'finished' || prev.state === 'stale')) {
+    next.endedAt = undefined;
+    next.isStale = false;
+    next.state = info.status === 'busy' ? 'running' : 'waiting';
+    next.subState = info.status === 'busy' ? undefined : 'idle';
   }
 
   return put(next);
 }
 
-/** Mark a session finished (clean end, supersede, or confirmed-dead pid). */
-export function finishCard(sessionId: string, now: number): void {
+/** Mark a session finished — its process is gone (dead pid) or it was superseded. */
+export function finishCard(sessionId: string, now: number, reason = ''): void {
   const c = cards.get(sessionId);
   if (!c || c.state === 'finished') return;
+  if (process.env.CC_DASH_LOG) console.error('[cc] finish', sessionId.slice(0, 8), `pid=${c.pid}`, reason);
   put({ ...c, state: 'finished', subState: undefined, question: undefined, endedAt: now, updatedAt: now });
-}
-
-/** Mark a session stale (pid dead / no longer in registry but not cleanly ended). */
-export function markStale(sessionId: string, now: number): void {
-  const c = cards.get(sessionId);
-  if (!c || c.isStale || c.state === 'finished') return;
-  put({ ...c, isStale: true, state: 'stale', endedAt: c.endedAt ?? now, updatedAt: now });
 }
 
 export function removeCard(sessionId: string): void {

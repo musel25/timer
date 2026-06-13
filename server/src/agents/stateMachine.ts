@@ -69,7 +69,10 @@ export function classifyEvent(p: RawHookPayload): EventKind {
     case 'Stop':
       return 'turn-end';
     case 'SessionEnd':
-      return 'finished';
+      // Unreliable for existence: also fires on /clear, resume, and VS Code panel
+      // reloads while the session keeps running. Whether a session is really gone is
+      // decided by the registry (pid liveness), not this event — so ignore it.
+      return 'ignore';
     default:
       return 'ignore';
   }
@@ -109,8 +112,10 @@ export function applyHookEvent(
   const kind = classifyEvent(p);
   if (kind === 'ignore') return prev ?? null;
 
-  // Finished is terminal — ignore further hook chatter for the same session id.
-  if (prev?.state === 'finished') return prev;
+  // A finished card stays finished UNLESS a newer running-class event proves the
+  // session is active again — SessionEnd also fires on /clear and resume, after which
+  // the session keeps going. Non-activity events (idle/turn-end) don't resurrect it.
+  if (prev?.state === 'finished' && kind !== 'running') return prev;
 
   // Monotonic guard: drop events that arrived out of order (older than last applied),
   // except a 'finished' which always wins.
@@ -121,8 +126,10 @@ export function applyHookEvent(
 
   const next: SessionCard = {
     ...base,
-    cwd: p.cwd ?? base.cwd,
-    project: p.cwd ? deriveProject(p.cwd) : base.project,
+    // The spawn cwd (set on creation / by the registry) is authoritative for
+    // grouping — don't relabel the project if the session later cd's elsewhere.
+    cwd: base.cwd || p.cwd || '',
+    project: base.cwd ? base.project : deriveProject(p.cwd || ''),
     version: p.version ?? base.version,
     source,
     isStale: false,
@@ -159,8 +166,15 @@ export function applyHookEvent(
       next.endedAt = receivedAt;
       break;
     case 'turn-end':
-      // Stop = end of a turn. Don't change the displayed state; just record it.
+      // Stop = the agent finished responding and is now waiting for you. Record the
+      // turn boundary and flip to waiting/idle — UNLESS a question is still pending
+      // (an unanswered Elicitation must stay 'question', not be downgraded to idle).
       next.lastStopAt = receivedAt;
+      if (!(prev && prev.state === 'waiting' && prev.subState === 'question')) {
+        next.state = 'waiting';
+        next.subState = 'idle';
+        next.question = undefined;
+      }
       break;
   }
 

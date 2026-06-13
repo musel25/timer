@@ -1,7 +1,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import { readFileSync, readdirSync, watch, type FSWatcher } from 'node:fs';
-import { applyRegistry, getCard, markStale, snapshot } from './store';
+import { applyRegistry, finishCard, getCard, snapshot } from './store';
 import type { RegistryInfo } from './store';
 
 const SESSIONS_DIR = path.join(os.homedir(), '.claude', 'sessions');
@@ -34,6 +34,7 @@ export function parseRegistryFile(content: string, pidFromName: number): Registr
     entrypoint: typeof o.entrypoint === 'string' ? o.entrypoint : undefined,
     version: typeof o.version === 'string' ? o.version : undefined,
     startedAt: typeof o.startedAt === 'number' ? o.startedAt : undefined,
+    status: typeof o.status === 'string' ? o.status : undefined,
   };
 }
 
@@ -70,18 +71,20 @@ export function reconcile({ now, files, readStat = defaultReadStat }: ReconcileD
     const info = parseRegistryFile(f.content, pidFromName);
     if (!info) continue; // skip mid-write / malformed files; next pass catches them
     seen.add(info.sessionId);
-    if (isAlive(info.pid, info.procStart, readStat)) {
+    const alive = isAlive(info.pid, info.procStart, readStat);
+    if (process.env.CC_DASH_LOG) console.error('[cc] reg', f.name, info.sessionId.slice(0, 8), 'pid', info.pid, 'alive', alive, 'status', info.status || '-');
+    if (alive) {
       applyRegistry(info, now);
     } else if (getCard(info.sessionId)) {
-      // lingering file after a crash — only act on sessions we already track
-      markStale(info.sessionId, now);
+      // lingering file but the process is gone → the session has ended
+      finishCard(info.sessionId, now, 'dead-lingering-file');
     }
   }
-  // Sessions whose registry file vanished: if the pid is dead, finalize as stale.
+  // Sessions whose registry file vanished: if the pid is dead, the session has ended.
   for (const c of snapshot()) {
     if (c.pid == null || seen.has(c.sessionId)) continue;
-    if (c.state === 'finished' || c.state === 'stale') continue;
-    if (!isAlive(c.pid, c.procStart, readStat)) markStale(c.sessionId, now);
+    if (c.state === 'finished') continue;
+    if (!isAlive(c.pid, c.procStart, readStat)) finishCard(c.sessionId, now, 'dead-file-vanished');
   }
 }
 

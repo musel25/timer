@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { newlyWaiting } from './alerts';
+import { newlyAsking, askingIds } from './alerts';
 import type { SessionCard } from './types';
 
 function card(p: Partial<SessionCard>): SessionCard {
@@ -10,20 +10,19 @@ function card(p: Partial<SessionCard>): SessionCard {
   };
 }
 
-describe('newlyWaiting', () => {
-  it('returns sessions that just entered the waiting state', () => {
-    const cards = [card({ sessionId: 'a', state: 'waiting' }), card({ sessionId: 'b', state: 'running' })];
-    expect(newlyWaiting(new Set(), cards)).toEqual(['a']);
+describe('newlyAsking', () => {
+  it('only counts sessions blocked on a question, not idle-waiting ones', () => {
+    const cards = [
+      card({ sessionId: 'ask', state: 'waiting', subState: 'question' }),
+      card({ sessionId: 'idle', state: 'waiting', subState: 'idle' }),
+      card({ sessionId: 'run', state: 'running' }),
+    ];
+    expect(askingIds(cards).sort()).toEqual(['ask']);
+    expect(newlyAsking(new Set(), cards)).toEqual(['ask']);
   });
 
-  it('does not re-alert for a session already known to be waiting', () => {
-    const cards = [card({ sessionId: 'a', state: 'waiting' })];
-    expect(newlyWaiting(new Set(['a']), cards)).toEqual([]);
-  });
-
-  it('re-alerts when a session re-enters waiting after leaving it', () => {
-    // prev reflects the last computed waiting set — empty after it went running
-    const cards = [card({ sessionId: 'a', state: 'waiting' })];
-    expect(newlyWaiting(new Set(), cards)).toEqual(['a']);
+  it('does not re-alert for a question already known', () => {
+    const cards = [card({ sessionId: 'ask', state: 'waiting', subState: 'question' })];
+    expect(newlyAsking(new Set(['ask']), cards)).toEqual([]);
   });
 });

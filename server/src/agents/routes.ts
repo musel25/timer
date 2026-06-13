@@ -26,6 +26,7 @@ export function createAgentsRoutes(): Hono {
     let payload: any;
     try { payload = await c.req.json(); } catch { return c.json({ error: 'bad_json' }, 400); }
     if (payload && typeof payload.session_id === 'string' && typeof payload.hook_event_name === 'string') {
+      if (process.env.CC_DASH_LOG) console.error('[cc] ingest', payload.hook_event_name, (payload.session_id as string).slice(0, 8), payload.notification_type || '');
       applyHook(payload, Date.now());
     }
     return c.json({ ok: true });

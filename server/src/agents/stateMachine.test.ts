@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { classifyEvent, deriveProject, applyHookEvent } from './stateMachine';
-import type { RawHookPayload } from './stateMachine';
+import type { RawHookPayload, SessionCard } from './stateMachine';
 
 function ev(p: Partial<RawHookPayload>): RawHookPayload {
   return { hook_event_name: 'PreToolUse', session_id: 's1', cwd: '/home/musel/Github/timer', ...p };
@@ -34,8 +34,8 @@ describe('classifyEvent', () => {
   it('treats Stop as a turn boundary, not finished/waiting', () => {
     expect(classifyEvent(ev({ hook_event_name: 'Stop' }))).toBe('turn-end');
   });
-  it('treats SessionEnd as finished', () => {
-    expect(classifyEvent(ev({ hook_event_name: 'SessionEnd' }))).toBe('finished');
+  it('ignores SessionEnd (existence is decided by the registry, not this event)', () => {
+    expect(classifyEvent(ev({ hook_event_name: 'SessionEnd' }))).toBe('ignore');
   });
   it('ignores unknown events', () => {
     expect(classifyEvent(ev({ hook_event_name: 'PreCompact' }))).toBe('ignore');
@@ -81,21 +81,46 @@ describe('applyHookEvent', () => {
     expect(card.question).toBeUndefined();
   });
 
-  it('Stop records a turn boundary without changing a running state to waiting', () => {
+  it('Stop ends the turn → waiting/idle (the agent is now waiting for you)', () => {
     const running = applyHookEvent(undefined, ev({ hook_event_name: 'PreToolUse' }), 100)!;
     const card = applyHookEvent(running, ev({ hook_event_name: 'Stop' }), 200)!;
-    expect(card.state).toBe('running');
+    expect(card.state).toBe('waiting');
+    expect(card.subState).toBe('idle');
     expect(card.lastStopAt).toBe(200);
   });
 
-  it('SessionEnd finalizes the card as finished and is terminal', () => {
+  it('Stop does not downgrade a pending question to idle', () => {
+    const asking = applyHookEvent(undefined, ev({ hook_event_name: 'Elicitation', message: 'q?' }), 100)!;
+    const card = applyHookEvent(asking, ev({ hook_event_name: 'Stop' }), 200)!;
+    expect(card.state).toBe('waiting');
+    expect(card.subState).toBe('question');
+    expect(card.question).toBe('q?');
+  });
+
+  it('keeps the spawn cwd; a later hook from a different dir does not relabel the project', () => {
+    const a = applyHookEvent(undefined, ev({ hook_event_name: 'PreToolUse', cwd: '/home/musel/Github' }), 100)!;
+    expect(a.project).toBe('Github');
+    const b = applyHookEvent(a, ev({ hook_event_name: 'PreToolUse', cwd: '/home/musel/Github/timer/server' }), 200)!;
+    expect(b.cwd).toBe('/home/musel/Github');
+    expect(b.project).toBe('Github');
+  });
+
+  it('ignores SessionEnd — keeps current state (the registry decides if it really ended)', () => {
     const running = applyHookEvent(undefined, ev({ hook_event_name: 'PreToolUse' }), 100)!;
-    const ended = applyHookEvent(running, ev({ hook_event_name: 'SessionEnd' }), 200)!;
-    expect(ended.state).toBe('finished');
-    expect(ended.endedAt).toBe(200);
-    // a stray later tool event must not resurrect a finished session
-    const after = applyHookEvent(ended, ev({ hook_event_name: 'PreToolUse' }), 300)!;
-    expect(after.state).toBe('finished');
+    const after = applyHookEvent(running, ev({ hook_event_name: 'SessionEnd' }), 200)!;
+    expect(after.state).toBe('running');
+    expect(after.endedAt).toBeUndefined();
+  });
+
+  it('a finished card is resurrected by a newer activity event, but not an older (out-of-order) one', () => {
+    const finished: SessionCard = {
+      ...applyHookEvent(undefined, ev({ hook_event_name: 'PreToolUse' }), 100)!,
+      state: 'finished', endedAt: 200, lastEventAt: 200,
+    };
+    expect(applyHookEvent(finished, ev({ hook_event_name: 'PreToolUse' }), 150)!.state).toBe('finished');
+    const resumed = applyHookEvent(finished, ev({ hook_event_name: 'PreToolUse' }), 300)!;
+    expect(resumed.state).toBe('running');
+    expect(resumed.endedAt).toBeUndefined();
   });
 
   it('ignores out-of-order waiting events older than the last applied event', () => {

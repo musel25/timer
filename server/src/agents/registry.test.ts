@@ -21,13 +21,14 @@ describe('parseRegistryFile', () => {
   it('parses a real-shaped registry file', () => {
     const content = JSON.stringify({
       pid: 32325, sessionId: 'abc', cwd: '/home/musel/Github', startedAt: 123,
-      procStart: '432646', version: '2.1.177', entrypoint: 'cli',
+      procStart: '432646', version: '2.1.177', entrypoint: 'cli', status: 'busy',
     });
     const info = parseRegistryFile(content, 32325)!;
     expect(info.sessionId).toBe('abc');
     expect(info.pid).toBe(32325);
     expect(info.entrypoint).toBe('cli');
     expect(info.procStart).toBe('432646');
+    expect(info.status).toBe('busy');
   });
   it('falls back to the filename pid when the body omits it', () => {
     const info = parseRegistryFile(JSON.stringify({ sessionId: 'x', cwd: '/p' }), 777)!;
@@ -64,24 +65,24 @@ describe('reconcile', () => {
   const aliveStat = statWith;
   const file = (o: object) => ({ name: 'p.json', content: JSON.stringify(o) });
 
-  it('creates a running card for a live registry file', () => {
+  it('creates a card for a live registry file (busy → running)', () => {
     reconcile({
       now: 1000,
-      files: [file({ pid: 100, sessionId: 's1', cwd: '/home/musel/Github/timer', procStart: '111', entrypoint: 'cli' })],
+      files: [file({ pid: 100, sessionId: 's1', cwd: '/home/musel/Github/timer', procStart: '111', entrypoint: 'cli', status: 'busy' })],
       readStat: () => aliveStat('111'),
     });
     expect(getCard('s1')!.state).toBe('running');
     expect(getCard('s1')!.entrypoint).toBe('cli');
   });
 
-  it('marks an existing card stale when its registry file lingers but the pid is dead', () => {
+  it('finishes an existing card when its registry file lingers but the pid is dead', () => {
     applyHook({ hook_event_name: 'PreToolUse', session_id: 's1', cwd: '/p' }, 500);
     reconcile({
       now: 1000,
       files: [file({ pid: 100, sessionId: 's1', cwd: '/p', procStart: '111' })],
       readStat: () => null, // process gone
     });
-    expect(getCard('s1')!.state).toBe('stale');
+    expect(getCard('s1')!.state).toBe('finished');
   });
 
   it('does not create a card for a dead lingering file we never saw', () => {
@@ -89,11 +90,11 @@ describe('reconcile', () => {
     expect(snapshot()).toHaveLength(0);
   });
 
-  it('marks a card stale when its registry file disappears and the pid is dead', () => {
-    reconcile({ now: 1000, files: [file({ pid: 100, sessionId: 's1', cwd: '/p', procStart: '111' })], readStat: () => aliveStat('111') });
+  it('finishes a card when its registry file disappears and the pid is dead', () => {
+    reconcile({ now: 1000, files: [file({ pid: 100, sessionId: 's1', cwd: '/p', procStart: '111', status: 'busy' })], readStat: () => aliveStat('111') });
     expect(getCard('s1')!.state).toBe('running');
     // next cycle: file gone, process dead
     reconcile({ now: 2000, files: [], readStat: () => null });
-    expect(getCard('s1')!.state).toBe('stale');
+    expect(getCard('s1')!.state).toBe('finished');
   });
 });

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Bot, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react';
 import { categoryColor, solid } from '../../lib/palette';
 import { useAgents } from './AgentsContext';
-import { countByState, groupByProject } from './sessionView';
+import { tally, groupByProject } from './sessionView';
 import { enableNotifications } from './alerts';
 import { AgentSessionCard } from './AgentSessionCard';
 
@@ -22,7 +22,7 @@ export function AgentsDashboard() {
 
   const visible = cards.filter((c) => !dismissed.has(c.sessionId));
   const groups = groupByProject(visible);
-  const counts = countByState(visible);
+  const counts = tally(visible);
 
   function toggleMute() {
     const next = !muted;
@@ -53,9 +53,10 @@ export function AgentsDashboard() {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <span className="stat-pill" style={{ color: solid('217 144 30') }}>⚠ {counts.waiting} waiting</span>
+          <span className="stat-pill" style={{ color: solid('217 144 30') }}>⚠ {counts.asking} asking</span>
+          <span className="stat-pill text-slate-300">⏸ {counts.idle} idle</span>
           <span className="stat-pill" style={{ color: solid('58 109 240') }}>▶ {counts.running} running</span>
-          <span className="stat-pill text-slate-300">✓ {counts.finished} done</span>
+          <span className="stat-pill text-slate-400">✓ {counts.finished} done</span>
           {counts.stale > 0 && <span className="stat-pill" style={{ color: solid('225 45 85') }}>✕ {counts.stale} lost</span>}
         </div>
       </header>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sortCards, groupByProject, countByState, waitingCount } from './sessionView';
+import { sortCards, groupByProject, countByState, waitingCount, askingCount, tally } from './sessionView';
 import type { SessionCard } from './types';
 
 function card(p: Partial<SessionCard>): SessionCard {
@@ -48,5 +48,27 @@ describe('countByState / waitingCount', () => {
     const cards = [card({ state: 'waiting' }), card({ state: 'waiting' }), card({ state: 'running' }), card({ state: 'finished' })];
     expect(countByState(cards)).toEqual({ waiting: 2, running: 1, finished: 1, stale: 0 });
     expect(waitingCount(cards)).toBe(2);
+  });
+});
+
+describe('asking vs idle', () => {
+  it('sorts a question above an idle-waiting session', () => {
+    const cards = [
+      card({ sessionId: 'idle', state: 'waiting', subState: 'idle' }),
+      card({ sessionId: 'ask', state: 'waiting', subState: 'question' }),
+    ];
+    expect(sortCards(cards).map((c) => c.sessionId)).toEqual(['ask', 'idle']);
+  });
+
+  it('tally splits waiting into asking vs idle; askingCount counts only questions', () => {
+    const cards = [
+      card({ state: 'waiting', subState: 'question' }),
+      card({ state: 'waiting', subState: 'idle' }),
+      card({ state: 'waiting', subState: 'idle' }),
+      card({ state: 'running' }),
+      card({ state: 'finished' }),
+    ];
+    expect(tally(cards)).toEqual({ asking: 1, idle: 2, running: 1, finished: 1, stale: 0 });
+    expect(askingCount(cards)).toBe(1);
   });
 });

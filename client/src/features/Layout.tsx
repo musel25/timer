@@ -3,7 +3,7 @@ import {
   Star, CalendarDays, CalendarRange, Inbox, Timer, Repeat, BarChart3, Settings, Bot, type LucideIcon,
 } from 'lucide-react';
 import { useAgentsOptional } from './agents/AgentsContext';
-import { waitingCount } from './agents/sessionView';
+import { askingCount } from './agents/sessionView';
 import { CC_DASH_ENABLED } from './agents/enabled';
 
 const groups: { title: string; tabs: { to: string; label: string; icon: LucideIcon; end?: boolean }[] }[] = [
@@ -38,7 +38,7 @@ const mobileTabs: { to: string; label: string; icon: LucideIcon; end?: boolean }
 
 export function Layout() {
   const agents = useAgentsOptional();
-  const waiting = agents ? waitingCount(agents.cards) : 0;
+  const waiting = agents ? askingCount(agents.cards) : 0;
   // Add the Claude Code dashboard tab only in dev (it's mounted under AgentsProvider).
   const navGroups = groups.map((g) =>
     g.title === 'Tools' && CC_DASH_ENABLED
