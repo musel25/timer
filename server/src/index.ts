@@ -8,6 +8,7 @@ import { migrate } from './db';
 import { bootstrap } from './seed';
 import { api } from './api';
 import { startCalendarSync } from './gcalSync';
+import { startAgents } from './agents';
 
 migrate();
 bootstrap();
@@ -15,6 +16,17 @@ startCalendarSync();
 
 const app = new Hono();
 app.use('*', logger());
+
+// Local-dev only: Claude Code multi-session dashboard. Mounted OUTSIDE the /api
+// router (and before it) so no /api auth middleware can ever reach it — POST /cc/ingest
+// is intentionally unauthenticated (localhost + shared CC_DASH_TOKEN); the read
+// endpoints inside enforce requireAuth. Reads this machine's ~/.claude, so it's
+// meaningless on a remote prod host and stays off in production.
+if (process.env.NODE_ENV !== 'production') {
+  const agents = startAgents();
+  app.route('/cc', agents.routes);
+  console.log('[timer] Claude Code dashboard mounted at /cc (dev only)');
+}
 
 // API first so it always wins over the static fallback.
 app.route('/api', api);

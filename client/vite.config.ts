@@ -41,6 +41,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': 'http://localhost:8080',
+      // Claude Code dashboard collector (dev only). SSE streams through http-proxy fine.
+      '/cc': 'http://localhost:8080',
     },
   },
   test: {

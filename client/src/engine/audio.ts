@@ -87,11 +87,13 @@ export const audio = {
       /* ignore */
     }
   },
-  /** System notification + vibration — fires even when the tab/page isn't visible. */
-  notify: (title: string, body: string) => {
+  /** System notification + vibration — fires even when the tab/page isn't visible.
+   *  `tag` dedupes notifications: reusing a tag replaces the previous one (pass a
+   *  per-session id so each session gets its own, distinct notification). */
+  notify: (title: string, body: string, tag = 'timer-finish') => {
     try {
       if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-      const opts = { body, tag: 'timer-finish', icon: '/pwa-192.png', vibrate: [200, 100, 200] } as NotificationOptions;
+      const opts = { body, tag, icon: '/pwa-192.png', vibrate: [200, 100, 200] } as NotificationOptions;
       // A PWA notification via the service worker is the only kind that reliably shows on mobile in the background.
       if ('serviceWorker' in navigator) {
         void navigator.serviceWorker.ready.then((reg) => reg.showNotification(title, opts)).catch(() => {
