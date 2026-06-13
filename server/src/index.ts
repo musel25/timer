@@ -22,10 +22,10 @@ app.use('*', logger());
 // is intentionally unauthenticated (localhost + shared CC_DASH_TOKEN); the read
 // endpoints inside enforce requireAuth. Reads this machine's ~/.claude, so it's
 // meaningless on a remote prod host and stays off in production.
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production' || process.env.CC_DASH === '1') {
   const agents = startAgents();
   app.route('/cc', agents.routes);
-  console.log('[timer] Claude Code dashboard mounted at /cc (dev only)');
+  console.log('[timer] Claude Code dashboard mounted at /cc');
 }
 
 // API first so it always wins over the static fallback.
@@ -46,6 +46,8 @@ app.get('*', (c) => {
 });
 
 const port = Number(process.env.PORT || 8080);
-serve({ fetch: app.fetch, port }, (info) => {
-  console.log(`[timer] listening on http://localhost:${info.port}`);
+// HOST lets the local always-on service bind to 127.0.0.1 only; prod leaves it unset
+// (binds all interfaces, behind nginx).
+serve({ fetch: app.fetch, port, hostname: process.env.HOST || undefined }, (info) => {
+  console.log(`[timer] listening on http://${process.env.HOST || 'localhost'}:${info.port}`);
 });

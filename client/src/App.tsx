@@ -18,6 +18,7 @@ import { Progress } from './features/stats/Progress';
 import { SettingsPage } from './features/settings/Settings';
 import { AgentsProvider } from './features/agents/AgentsContext';
 import { AgentsDashboard } from './features/agents/AgentsDashboard';
+import { CC_DASH_ENABLED } from './features/agents/enabled';
 
 function Splash() {
   return (
@@ -54,15 +55,15 @@ function AuthedApp() {
         <Route path="/habits/:id" element={<HabitEditor />} />
         <Route path="/stats" element={<Progress />} />
         <Route path="/settings" element={<SettingsPage />} />
-        {import.meta.env.DEV && <Route path="/agents" element={<AgentsDashboard />} />}
+        {CC_DASH_ENABLED && <Route path="/agents" element={<AgentsDashboard />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );
 
-  // The Claude Code dashboard is a local-dev tool — wrap the app in its provider only
-  // in dev so a session needing attention alerts you anywhere (not just on /agents).
-  return import.meta.env.DEV ? <AgentsProvider>{routes}</AgentsProvider> : routes;
+  // Wrap the app in the dashboard provider only when enabled, so a session needing
+  // attention alerts you anywhere (not just on /agents).
+  return CC_DASH_ENABLED ? <AgentsProvider>{routes}</AgentsProvider> : routes;
 }
 
 export function App() {
