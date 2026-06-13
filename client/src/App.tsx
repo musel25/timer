@@ -16,6 +16,8 @@ import { TimerEditor } from './features/timers/TimerEditor';
 import { HabitEditor } from './features/habits/HabitEditor';
 import { Progress } from './features/stats/Progress';
 import { SettingsPage } from './features/settings/Settings';
+import { AgentsProvider } from './features/agents/AgentsContext';
+import { AgentsDashboard } from './features/agents/AgentsDashboard';
 
 function Splash() {
   return (
@@ -34,7 +36,7 @@ function AuthedApp() {
     if (settings?.theme) applyTheme(settings.theme);
   }, [settings?.theme]);
 
-  return (
+  const routes = (
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<TodayView />} />
@@ -52,10 +54,15 @@ function AuthedApp() {
         <Route path="/habits/:id" element={<HabitEditor />} />
         <Route path="/stats" element={<Progress />} />
         <Route path="/settings" element={<SettingsPage />} />
+        {import.meta.env.DEV && <Route path="/agents" element={<AgentsDashboard />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );
+
+  // The Claude Code dashboard is a local-dev tool — wrap the app in its provider only
+  // in dev so a session needing attention alerts you anywhere (not just on /agents).
+  return import.meta.env.DEV ? <AgentsProvider>{routes}</AgentsProvider> : routes;
 }
 
 export function App() {

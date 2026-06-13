@@ -1,7 +1,9 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import {
-  Star, CalendarDays, CalendarRange, Inbox, Timer, Repeat, BarChart3, Settings, type LucideIcon,
+  Star, CalendarDays, CalendarRange, Inbox, Timer, Repeat, BarChart3, Settings, Bot, type LucideIcon,
 } from 'lucide-react';
+import { useAgentsOptional } from './agents/AgentsContext';
+import { waitingCount } from './agents/sessionView';
 
 const groups: { title: string; tabs: { to: string; label: string; icon: LucideIcon; end?: boolean }[] }[] = [
   {
@@ -34,13 +36,22 @@ const mobileTabs: { to: string; label: string; icon: LucideIcon; end?: boolean }
 ];
 
 export function Layout() {
+  const agents = useAgentsOptional();
+  const waiting = agents ? waitingCount(agents.cards) : 0;
+  // Add the Claude Code dashboard tab only in dev (it's mounted under AgentsProvider).
+  const navGroups = groups.map((g) =>
+    g.title === 'Tools' && import.meta.env.DEV
+      ? { ...g, tabs: [...g.tabs, { to: '/agents', label: 'Agents', icon: Bot }] }
+      : g,
+  );
+
   return (
     <div className="flex h-full w-full">
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-1 border-r border-ink-600/70 bg-ink-900/40 px-3 py-5 backdrop-blur-xl md:flex">
         <div className="mb-5 flex items-center gap-2.5 px-3 text-lg font-bold tracking-tight">
           <span className="flex h-8 w-8 items-center justify-center rounded-xl text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(135deg, rgb(var(--accent)), rgb(124 92 246))', boxShadow: '0 6px 16px rgb(var(--accent) / 0.4)' }}><Timer size={17} /></span>Timer
         </div>
-        {groups.map((g) => (
+        {navGroups.map((g) => (
           <div key={g.title} className="mt-2">
             <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{g.title}</div>
             {g.tabs.map((t) => (
@@ -58,6 +69,9 @@ export function Layout() {
               >
                 <t.icon size={18} className="shrink-0" />
                 {t.label}
+                {t.to === '/agents' && waiting > 0 && (
+                  <span className="ml-auto rounded-full px-1.5 text-[11px] font-bold text-white" style={{ backgroundColor: 'rgb(217 144 30)' }}>{waiting}</span>
+                )}
               </NavLink>
             ))}
           </div>
