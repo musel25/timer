@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
+import { buildManualSession } from './sessionLog';
 import type { CalendarEvent, Habit, HabitGroup, Session, Settings, Task, TimerPreset } from './types';
 
 export interface Me {
@@ -13,6 +14,16 @@ export const useTimers = () => useQuery({ queryKey: ['timers'], queryFn: () => a
 export const useSettings = () => useQuery({ queryKey: ['settings'], queryFn: () => api.get<Settings>('/settings') });
 export const useSessions = () =>
   useQuery({ queryKey: ['sessions'], queryFn: () => api.get<Session[]>('/sessions') });
+
+/** Log a habit by hand (no timer): POST a completed session, refresh today's stats. */
+export function useLogSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ habitId, minutes }: { habitId: string; minutes: number }) =>
+      api.post('/sessions', buildManualSession(habitId, minutes, Date.now())),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['sessions'] }),
+  });
+}
 
 export function useInvalidate(key: string) {
   const qc = useQueryClient();

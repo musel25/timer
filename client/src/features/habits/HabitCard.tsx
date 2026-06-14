@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { EyeOff, Pencil, Play } from 'lucide-react';
+import { Check, EyeOff, ListPlus, Pencil, Play } from 'lucide-react';
 import type { Habit } from '../../lib/types';
 import { HabitIcon } from '../../lib/habitIcons';
 import { categoryColor, gradient, tint, solid } from '../../lib/palette';
@@ -10,18 +11,21 @@ import { BlockBar } from '../../components/BlockBar';
  * A habit as a colorful card: category-tinted icon chip, name, one start
  * button per configured duration (default highlighted), and today's block
  * progress. Shared by the Today dashboard and the Habits page. Pass `onHide`
- * for the Today hide-for-today control, or `editTo` for an edit link.
+ * for the Today hide-for-today control, or `editTo` for an edit link. Pass
+ * `onLog` to enable the manual "Log" control (record time without a timer).
  */
 export function HabitCard({
   habit,
   blocksToday,
   onStart,
+  onLog,
   onHide,
   editTo,
 }: {
   habit: Habit;
   blocksToday: number;
   onStart: (h: Habit, min: number) => void;
+  onLog?: (h: Habit, min: number) => void;
   onHide?: (h: Habit) => void;
   editTo?: string;
 }) {
@@ -29,6 +33,15 @@ export function HabitCard({
   const goal = goalBlocks(habit.dailyGoalMin);
   const durations = habit.durations?.length ? habit.durations : [10];
   const defaultMin = habit.defaultDurationMin ?? durations[0];
+  const [logging, setLogging] = useState(false);
+  const [customMin, setCustomMin] = useState(String(defaultMin));
+
+  function log(min: number) {
+    if (!onLog || !Number.isFinite(min) || min <= 0) return;
+    onLog(habit, min);
+    setLogging(false);
+    setCustomMin(String(defaultMin));
+  }
   return (
     <div className="card group relative overflow-hidden p-4">
       <div className="absolute inset-x-0 top-0 h-1" style={{ backgroundImage: gradient(color.rgb) }} />
@@ -43,6 +56,16 @@ export function HabitCard({
           <div className="truncate font-semibold">{habit.name}</div>
           {habit.note && <div className="truncate text-xs text-slate-400">{habit.note}</div>}
         </div>
+        {onLog && (
+          <button
+            aria-label="Log time"
+            title="Log time without a timer"
+            onClick={() => setLogging((v) => !v)}
+            className={`shrink-0 transition hover:text-slate-200 ${logging ? 'text-slate-200' : 'text-slate-500'}`}
+          >
+            <ListPlus size={16} />
+          </button>
+        )}
         {editTo && (
           <Link to={editTo} className="shrink-0 text-slate-500 opacity-0 transition hover:text-slate-200 group-hover:opacity-100" title="Edit">
             <Pencil size={15} />
@@ -83,6 +106,42 @@ export function HabitCard({
               {min === defaultMin && <Play size={12} fill="currentColor" />} {min}m
             </button>
           ))}
+        </div>
+      )}
+      {onLog && logging && (
+        <div className="mt-2 rounded-xl border border-ink-600/60 bg-ink-900/40 p-2">
+          <div className="mb-1.5 text-xs text-slate-400">Log without a timer</div>
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {durations.map((min) => (
+              <button
+                key={min}
+                onClick={() => log(min)}
+                className="chip flex-1 justify-center py-1.5 text-sm font-medium"
+                style={{ borderColor: tint(color.rgb, 0.3), backgroundColor: tint(color.rgb, 0.06), color: solid(color.rgb) }}
+              >
+                {min}m
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-1.5">
+            <input
+              type="number"
+              min={1}
+              inputMode="numeric"
+              value={customMin}
+              onChange={(e) => setCustomMin(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && log(Number(customMin))}
+              aria-label="Minutes"
+              className="input w-20 py-1.5 text-sm"
+            />
+            <button
+              onClick={() => log(Number(customMin))}
+              className="chip flex-1 justify-center gap-1 py-1.5 text-sm font-medium"
+              style={{ borderColor: tint(color.rgb, 0.6), backgroundColor: tint(color.rgb, 0.18), color: solid(color.rgb) }}
+            >
+              <Check size={13} /> Log {customMin || '0'} min
+            </button>
+          </div>
         </div>
       )}
       {goal ? (

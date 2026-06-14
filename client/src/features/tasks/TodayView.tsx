@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTasks, useHabits, useSessions, useSettings, useSaveTask, useSaveHabit, useCalendarEvents } from '../../lib/hooks';
+import { useTasks, useHabits, useSessions, useSettings, useSaveTask, useSaveHabit, useCalendarEvents, useLogSession } from '../../lib/hooks';
 import { eventsByDay } from '../../lib/calendar';
 import { EventChip } from '../../components/EventChip';
 import type { Habit, Task } from '../../lib/types';
@@ -21,6 +21,7 @@ export function TodayView() {
   const { startRun } = useRun();
   const saveTask = useSaveTask();
   const saveHabit = useSaveHabit();
+  const logSession = useLogSession();
   const [editing, setEditing] = useState<Task | null>(null);
   const [showHiddenTasks, setShowHiddenTasks] = useState(false);
   const [showHiddenHabits, setShowHiddenHabits] = useState(false);
@@ -43,6 +44,7 @@ export function TodayView() {
     startRun({ type: 'simple', label: habit.name, habitId: habit.id, plannedSeconds: min * 60, config: { totalSeconds: min * 60, prepSeconds: prep } });
   }
 
+  const logHabit = (habit: Habit, min: number) => logSession.mutate({ habitId: habit.id, minutes: min });
   const hideTask = (t: Task) => saveTask.mutate({ id: t.id, hiddenOn: tk });
   const unhideTask = (t: Task) => saveTask.mutate({ id: t.id, hiddenOn: null });
   const hideHabit = (h: Habit) => saveHabit.mutate({ id: h.id, hiddenOn: tk });
@@ -103,7 +105,7 @@ export function TodayView() {
             <h2 className="label mb-3">Habits</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {active.map((h) => (
-                <HabitCard key={h.id} habit={h} blocksToday={summary.blocksByHabit[h.id] ?? 0} onStart={startHabit} onHide={hideHabit} />
+                <HabitCard key={h.id} habit={h} blocksToday={summary.blocksByHabit[h.id] ?? 0} onStart={startHabit} onLog={logHabit} onHide={hideHabit} />
               ))}
             </div>
             {active.length === 0 && <p className="py-1 text-sm text-slate-500">All habits hidden for today.</p>}

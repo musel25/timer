@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useHabits, useGroups, useSessions, useSettings } from '../../lib/hooks';
+import { useHabits, useGroups, useSessions, useSettings, useLogSession } from '../../lib/hooks';
 import type { Habit } from '../../lib/types';
 import { Timer, Plus } from 'lucide-react';
 import { todaySummary } from '../../lib/stats';
@@ -13,6 +13,7 @@ export function Dashboard() {
   const { data: sessions = [] } = useSessions();
   const { data: settings } = useSettings();
   const { startRun } = useRun();
+  const logSession = useLogSession();
 
   const today = todaySummary(sessions);
   const active = habits.filter((h) => !h.archived);
@@ -27,6 +28,8 @@ export function Dashboard() {
       config: { totalSeconds: min * 60, prepSeconds: prep },
     });
   }
+
+  const log = (habit: Habit, min: number) => logSession.mutate({ habitId: habit.id, minutes: min });
 
   const ordered = [...groups].sort((a, b) => a.sortOrder - b.sortOrder);
   const ungrouped = active.filter((h) => !h.groupId || !groups.some((g) => g.id === h.groupId));
@@ -53,7 +56,7 @@ export function Dashboard() {
             </h2>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {list.map((h) => (
-                <HabitCard key={h.id} habit={h} blocksToday={today.blocksByHabit[h.id] ?? 0} onStart={start} editTo={`/habits/${h.id}`} />
+                <HabitCard key={h.id} habit={h} blocksToday={today.blocksByHabit[h.id] ?? 0} onStart={start} onLog={log} editTo={`/habits/${h.id}`} />
               ))}
             </div>
           </section>
@@ -65,7 +68,7 @@ export function Dashboard() {
           <h2 className="label mb-2">Other</h2>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {ungrouped.map((h) => (
-              <HabitCard key={h.id} habit={h} blocksToday={today.blocksByHabit[h.id] ?? 0} onStart={start} editTo={`/habits/${h.id}`} />
+              <HabitCard key={h.id} habit={h} blocksToday={today.blocksByHabit[h.id] ?? 0} onStart={start} onLog={log} editTo={`/habits/${h.id}`} />
             ))}
           </div>
         </section>
