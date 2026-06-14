@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, EyeOff, Flame, ListPlus, Pencil, Play, ShieldCheck } from 'lucide-react';
+import { Check, ChevronDown, EyeOff, Flame, ListPlus, Pencil, Play, ShieldCheck } from 'lucide-react';
 import type { Habit } from '../../lib/types';
 import { HabitIcon } from '../../lib/habitIcons';
 import { categoryColor, gradient, tint, solid } from '../../lib/palette';
 import { GoalBar } from '../../components/GoalBar';
 
 /**
- * A habit as a colorful card. Time habits show a start button per duration
- * (default highlighted) plus today's progress toward the daily goal (minutes).
+ * A habit as a colorful card. Time habits show a single Start button for the
+ * default duration (a caret reveals the other lengths on demand) plus today's
+ * progress toward the daily goal (minutes).
  * Abstinence habits ('abstain' kind) instead show an end-of-day "stayed off
  * today" toggle and a clean-day streak. Shared by the Today dashboard and the
  * Habits page. Pass `onHide` for the Today hide-for-today control, `editTo` for
@@ -41,6 +42,7 @@ export function HabitCard({
   const durations = habit.durations?.length ? habit.durations : [10];
   const defaultMin = habit.defaultDurationMin ?? durations[0];
   const [logging, setLogging] = useState(false);
+  const [pickLength, setPickLength] = useState(false);
   const [customMin, setCustomMin] = useState(String(defaultMin));
 
   function log(min: number) {
@@ -120,28 +122,43 @@ export function HabitCard({
     <div className="card group relative overflow-hidden p-4">
       <div className="absolute inset-x-0 top-0 h-1" style={{ backgroundImage: gradient(color.rgb) }} />
       {header}
-      {durations.length === 1 ? (
+      <div className="flex gap-1.5">
         <button
-          onClick={() => onStart(habit, durations[0])}
-          className="chip w-full justify-center gap-1.5 py-2 font-medium"
+          onClick={() => onStart(habit, defaultMin)}
+          className="chip flex-1 justify-center gap-1.5 py-2 font-medium"
           style={{ borderColor: tint(color.rgb, 0.5), backgroundColor: tint(color.rgb, 0.1), color: solid(color.rgb) }}
         >
-          <Play size={13} fill="currentColor" /> Start · {durations[0]} min
+          <Play size={13} fill="currentColor" /> Start · {defaultMin} min
         </button>
-      ) : (
-        <div className="flex gap-1.5">
+        {durations.length > 1 && (
+          <button
+            onClick={() => setPickLength((v) => !v)}
+            aria-label="Choose a different length"
+            aria-expanded={pickLength}
+            className="chip shrink-0 justify-center px-2.5 py-2"
+            style={{ borderColor: tint(color.rgb, 0.5), backgroundColor: tint(color.rgb, 0.1), color: solid(color.rgb) }}
+          >
+            <ChevronDown size={15} className={`transition ${pickLength ? 'rotate-180' : ''}`} />
+          </button>
+        )}
+      </div>
+      {pickLength && durations.length > 1 && (
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
           {durations.map((min) => (
             <button
               key={min}
-              onClick={() => onStart(habit, min)}
-              className="chip flex-1 justify-center gap-1 py-2 font-medium"
+              onClick={() => {
+                onStart(habit, min);
+                setPickLength(false);
+              }}
+              className="chip flex-1 justify-center gap-1 py-1.5 text-sm font-medium"
               style={{
                 borderColor: tint(color.rgb, min === defaultMin ? 0.6 : 0.3),
                 backgroundColor: tint(color.rgb, min === defaultMin ? 0.18 : 0.06),
                 color: solid(color.rgb),
               }}
             >
-              {min === defaultMin && <Play size={12} fill="currentColor" />} {min}m
+              {min === defaultMin && <Play size={11} fill="currentColor" />} {min}m
             </button>
           ))}
         </div>
