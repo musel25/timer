@@ -45,7 +45,6 @@ export interface TodaySummary {
   minutes: number;
   doneHabitIds: Set<string>;
   minutesByHabit: Record<string, number>;
-  blocksByHabit: Record<string, number>; // completed 10-min blocks per habit
 }
 
 export function todaySummary(sessions: Session[]): TodaySummary {
@@ -62,9 +61,15 @@ export function todaySummary(sessions: Session[]): TodaySummary {
       minutesByHabit[x.habitId] = (minutesByHabit[x.habitId] ?? 0) + x.actualSeconds / 60;
     }
   }
-  const blocksByHabit: Record<string, number> = {};
-  for (const [id, min] of Object.entries(minutesByHabit)) blocksByHabit[id] = Math.floor(min / 10);
-  return { count: s.length, minutes: Math.round(minutes), doneHabitIds, minutesByHabit, blocksByHabit };
+  return { count: s.length, minutes: Math.round(minutes), doneHabitIds, minutesByHabit };
+}
+
+/** Today's most recent completed session for a habit, or null. Used to toggle an
+ *  abstinence "stayed clean today" check back off by deleting the day's mark. */
+export function todaysHabitSession(sessions: Session[], habitId: string): Session | null {
+  const t0 = startOfToday();
+  const t1 = addDays(t0, 1);
+  return sessions.find((s) => s.habitId === habitId && s.completed && s.startedAt >= t0 && s.startedAt < t1) ?? null;
 }
 
 export function minutesInRange(sessions: Session[], fromTs: number, toTs = Date.now()): number {
@@ -94,11 +99,6 @@ export function heatmap(sessions: Session[], days: number): { date: string; minu
   return out;
 }
 
-/** A habit's daily goal converted to 10-minute blocks, or null when it has no goal. */
-export function goalBlocks(dailyGoalMin: number | null): number | null {
-  return dailyGoalMin ? Math.max(1, Math.round(dailyGoalMin / 10)) : null;
-}
-
 const isWeekend = (ts: number) => {
   const day = new Date(ts).getDay();
   return day === 0 || day === 6;
@@ -106,19 +106,19 @@ const isWeekend = (ts: number) => {
 
 /**
  * Consecutive days (ending today, or yesterday when today isn't met yet) on
- * which the habit completed `goalBlocks` blocks — or at least one block when
- * it has no goal. With `weekdaysOnly`, Saturdays and Sundays are invisible:
+ * which the habit reached its daily goal in minutes — or at least 10 minutes
+ * when it has no goal. With `weekdaysOnly`, Saturdays and Sundays are invisible:
  * they never break the streak and never count toward it.
  */
 export function goalStreak(sessions: Session[], habitId: string, dailyGoalMin: number | null, weekdaysOnly = false): number {
-  const need = goalBlocks(dailyGoalMin) ?? 1;
+  const need = dailyGoalMin && dailyGoalMin > 0 ? dailyGoalMin : 10; // no goal → any 10-min day
   const minByDay: Record<string, number> = {};
   for (const s of sessions) {
     if (!s.completed || s.habitId !== habitId) continue;
     const k = dayKey(s.startedAt);
     minByDay[k] = (minByDay[k] ?? 0) + s.actualSeconds / 60;
   }
-  const met = (ts: number) => Math.floor((minByDay[dayKey(ts)] ?? 0) / 10) >= need;
+  const met = (ts: number) => (minByDay[dayKey(ts)] ?? 0) >= need - 1e-9;
   const back = (ts: number) => {
     let c = addDays(ts, -1);
     while (weekdaysOnly && isWeekend(c)) c = addDays(c, -1);

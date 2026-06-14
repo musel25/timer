@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { currentStreak, focusMinutes, goalBlocks, goalStreak, todaySummary } from './stats';
+import { currentStreak, focusMinutes, goalStreak, todaySummary, todaysHabitSession } from './stats';
 import { startOfToday, addDays } from './time';
 import type { Session } from './types';
 
@@ -44,30 +44,35 @@ describe('currentStreak', () => {
 });
 
 describe('todaySummary', () => {
-  it('aggregates completed sessions and counts 10-min blocks', () => {
+  it('aggregates completed sessions into minutes per habit', () => {
     const noon = startOfToday() + 12 * 3600_000;
     const s = [
       session(noon, { habitId: 'h1', plannedSeconds: 600, actualSeconds: 600 }),
       session(noon + 3600_000, { habitId: 'h1', plannedSeconds: 600, actualSeconds: 600 }),
-      session(noon + 7200_000, { habitId: 'h2', plannedSeconds: 1500, actualSeconds: 1500 }), // legacy 25-min session
+      session(noon + 7200_000, { habitId: 'h2', plannedSeconds: 1500, actualSeconds: 1500 }), // 25-min session
       session(addDays(noon, -1), { habitId: 'h1' }), // yesterday — excluded
     ];
     const t = todaySummary(s);
     expect(t.count).toBe(3);
     expect(t.minutes).toBe(45);
     expect(t.doneHabitIds.has('h1')).toBe(true);
-    expect(t.blocksByHabit['h1']).toBe(2);
-    expect(t.blocksByHabit['h2']).toBe(2); // floor(25 / 10)
+    expect(t.minutesByHabit['h1']).toBe(20);
+    expect(t.minutesByHabit['h2']).toBe(25);
   });
 });
 
-describe('goalBlocks', () => {
-  it('converts goal minutes to blocks', () => {
-    expect(goalBlocks(30)).toBe(3);
-    expect(goalBlocks(25)).toBe(3); // rounds
-    expect(goalBlocks(5)).toBe(1); // at least one block when a goal exists
-    expect(goalBlocks(null)).toBeNull();
-    expect(goalBlocks(0)).toBeNull();
+describe('todaysHabitSession', () => {
+  const noon = startOfToday() + 12 * 3600_000;
+
+  it("returns today's completed session for the habit (for un-marking)", () => {
+    const mark = session(noon, { id: 'today', habitId: 'h1', actualSeconds: 0 });
+    const s = [mark, session(addDays(noon, -1), { habitId: 'h1' })];
+    expect(todaysHabitSession(s, 'h1')?.id).toBe('today');
+  });
+
+  it('returns null when nothing was logged today for the habit', () => {
+    expect(todaysHabitSession([session(addDays(noon, -1), { habitId: 'h1' })], 'h1')).toBeNull();
+    expect(todaysHabitSession([session(noon, { habitId: 'h2' })], 'h1')).toBeNull();
   });
 });
 

@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
-import { useHabits, useGroups, useSessions, useSettings, useLogSession } from '../../lib/hooks';
+import { useHabits, useGroups, useSessions, useSettings, useLogSession, useDeleteSession } from '../../lib/hooks';
 import type { Habit } from '../../lib/types';
 import { Timer, Plus } from 'lucide-react';
-import { todaySummary } from '../../lib/stats';
+import { currentStreak, todaySummary, todaysHabitSession } from '../../lib/stats';
 import { HabitIcon } from '../../lib/habitIcons';
 import { useRun } from '../run/RunContext';
 import { HabitCard } from '../habits/HabitCard';
@@ -14,6 +14,7 @@ export function Dashboard() {
   const { data: settings } = useSettings();
   const { startRun } = useRun();
   const logSession = useLogSession();
+  const deleteSession = useDeleteSession();
 
   const today = todaySummary(sessions);
   const active = habits.filter((h) => !h.archived);
@@ -30,6 +31,25 @@ export function Dashboard() {
   }
 
   const log = (habit: Habit, min: number) => logSession.mutate({ habitId: habit.id, minutes: min });
+  const toggleAbstain = (habit: Habit) => {
+    const existing = todaysHabitSession(sessions, habit.id);
+    if (existing) deleteSession.mutate(existing.id);
+    else logSession.mutate({ habitId: habit.id, minutes: 0 });
+  };
+
+  const card = (h: Habit) => (
+    <HabitCard
+      key={h.id}
+      habit={h}
+      minutesToday={today.minutesByHabit[h.id] ?? 0}
+      onStart={start}
+      onLog={log}
+      editTo={`/habits/${h.id}`}
+      markedToday={today.doneHabitIds.has(h.id)}
+      streak={currentStreak(sessions, h.id)}
+      onToggle={toggleAbstain}
+    />
+  );
 
   const ordered = [...groups].sort((a, b) => a.sortOrder - b.sortOrder);
   const ungrouped = active.filter((h) => !h.groupId || !groups.some((g) => g.id === h.groupId));
@@ -55,9 +75,7 @@ export function Dashboard() {
               <HabitIcon name={group.emoji} size={16} /> {group.name}
             </h2>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {list.map((h) => (
-                <HabitCard key={h.id} habit={h} blocksToday={today.blocksByHabit[h.id] ?? 0} onStart={start} onLog={log} editTo={`/habits/${h.id}`} />
-              ))}
+              {list.map(card)}
             </div>
           </section>
         );
@@ -67,9 +85,7 @@ export function Dashboard() {
         <section>
           <h2 className="label mb-2">Other</h2>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {ungrouped.map((h) => (
-              <HabitCard key={h.id} habit={h} blocksToday={today.blocksByHabit[h.id] ?? 0} onStart={start} onLog={log} editTo={`/habits/${h.id}`} />
-            ))}
+            {ungrouped.map(card)}
           </div>
         </section>
       )}

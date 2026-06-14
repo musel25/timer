@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { useTasks, useHabits, useSessions, useSettings, useSaveTask, useSaveHabit, useCalendarEvents, useLogSession } from '../../lib/hooks';
+import { useTasks, useHabits, useSessions, useSettings, useSaveTask, useSaveHabit, useCalendarEvents, useLogSession, useDeleteSession } from '../../lib/hooks';
 import { eventsByDay } from '../../lib/calendar';
 import { EventChip } from '../../components/EventChip';
 import type { Habit, Task } from '../../lib/types';
-import { currentStreak, todaySummary } from '../../lib/stats';
+import { currentStreak, todaySummary, todaysHabitSession } from '../../lib/stats';
 import { Flame, Timer as TimerIcon, Clock } from 'lucide-react';
 import { todayKey } from '../../lib/date';
 import { HabitIcon } from '../../lib/habitIcons';
@@ -22,6 +22,7 @@ export function TodayView() {
   const saveTask = useSaveTask();
   const saveHabit = useSaveHabit();
   const logSession = useLogSession();
+  const deleteSession = useDeleteSession();
   const [editing, setEditing] = useState<Task | null>(null);
   const [showHiddenTasks, setShowHiddenTasks] = useState(false);
   const [showHiddenHabits, setShowHiddenHabits] = useState(false);
@@ -45,6 +46,11 @@ export function TodayView() {
   }
 
   const logHabit = (habit: Habit, min: number) => logSession.mutate({ habitId: habit.id, minutes: min });
+  const toggleAbstain = (habit: Habit) => {
+    const existing = todaysHabitSession(sessions, habit.id);
+    if (existing) deleteSession.mutate(existing.id);
+    else logSession.mutate({ habitId: habit.id, minutes: 0 });
+  };
   const hideTask = (t: Task) => saveTask.mutate({ id: t.id, hiddenOn: tk });
   const unhideTask = (t: Task) => saveTask.mutate({ id: t.id, hiddenOn: null });
   const hideHabit = (h: Habit) => saveHabit.mutate({ id: h.id, hiddenOn: tk });
@@ -105,7 +111,17 @@ export function TodayView() {
             <h2 className="label mb-3">Habits</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {active.map((h) => (
-                <HabitCard key={h.id} habit={h} blocksToday={summary.blocksByHabit[h.id] ?? 0} onStart={startHabit} onLog={logHabit} onHide={hideHabit} />
+                <HabitCard
+                  key={h.id}
+                  habit={h}
+                  minutesToday={summary.minutesByHabit[h.id] ?? 0}
+                  onStart={startHabit}
+                  onLog={logHabit}
+                  onHide={hideHabit}
+                  markedToday={summary.doneHabitIds.has(h.id)}
+                  streak={currentStreak(sessions, h.id)}
+                  onToggle={toggleAbstain}
+                />
               ))}
             </div>
             {active.length === 0 && <p className="py-1 text-sm text-slate-500">All habits hidden for today.</p>}

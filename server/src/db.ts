@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import * as schema from './schema';
@@ -52,6 +53,7 @@ export function migrate(): void {
       name TEXT NOT NULL,
       emoji TEXT,
       note TEXT,
+      kind TEXT NOT NULL DEFAULT 'time',
       durations TEXT NOT NULL,
       default_duration_min INTEGER,
       daily_goal_min INTEGER,
@@ -127,6 +129,52 @@ export function migrate(): void {
   if (addColumnIfMissing('habit_groups', 'weekdays_only', 'INTEGER NOT NULL DEFAULT 0')) {
     sqlite.exec("UPDATE habit_groups SET weekdays_only = 1 WHERE name = 'Work'");
   }
+
+  // Pre-existing DBs: introduce the habit `kind` and, one time only, apply the
+  // default daily goals (20 min, 5 for Math Training) and the two end-of-day
+  // doomscroll-abstinence habits. New installs get all of this from seed.ts.
+  if (addColumnIfMissing('habits', 'kind', "TEXT NOT NULL DEFAULT 'time'")) {
+    backfillDefaults();
+  }
+}
+
+/** One-time backfill for the single pre-existing account: default goals + the
+ *  two abstinence habits. No-op on a fresh DB (no user/habits yet → seed runs). */
+function backfillDefaults(): void {
+  sqlite.exec("UPDATE habits SET daily_goal_min = 20 WHERE daily_goal_min IS NULL AND kind = 'time'");
+  sqlite.exec("UPDATE habits SET daily_goal_min = 5 WHERE name = 'Math Training'");
+
+  const user = sqlite.prepare('SELECT id FROM users LIMIT 1').get() as { id: string } | undefined;
+  if (!user) return;
+  const night = sqlite.prepare("SELECT id FROM habit_groups WHERE user_id = ? AND name = 'Night'").get(user.id) as
+    | { id: string }
+    | undefined;
+  const groupId = night?.id ?? null;
+  const maxSort = (sqlite.prepare('SELECT MAX(sort_order) AS m FROM habits WHERE user_id = ?').get(user.id) as { m: number | null }).m ?? 0;
+  const now = Date.now();
+  const insert = sqlite.prepare(
+    `INSERT INTO habits (id, user_id, group_id, name, emoji, note, kind, durations, default_duration_min, daily_goal_min, timer_type, default_timer_id, sort_order, archived, hidden_on, created_at)
+     VALUES (@id, @userId, @groupId, @name, @emoji, @note, 'abstain', @durations, NULL, NULL, 'simple', NULL, @sortOrder, 0, NULL, @createdAt)`,
+  );
+  const abstainers = [
+    { name: 'App P', emoji: 'phone-off', note: "End of day: confirm you didn't doomscroll" },
+    { name: 'App I', emoji: 'phone-off', note: "End of day: confirm you didn't doomscroll" },
+  ];
+  abstainers.forEach((a, i) => {
+    const exists = sqlite.prepare('SELECT 1 FROM habits WHERE user_id = ? AND name = ?').get(user.id, a.name);
+    if (exists) return;
+    insert.run({
+      id: randomBytes(16).toString('hex'),
+      userId: user.id,
+      groupId,
+      name: a.name,
+      emoji: a.emoji,
+      note: a.note,
+      durations: JSON.stringify([20]),
+      sortOrder: maxSort + 1 + i,
+      createdAt: now,
+    });
+  });
 }
 
 /** Add a column only when it's not already present (SQLite ALTER has no IF NOT EXISTS).

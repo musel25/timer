@@ -22,7 +22,8 @@ export function HabitEditor() {
   const [icon, setIcon] = useState(DEFAULT_HABIT_ICON);
   const [note, setNote] = useState('');
   const [groupId, setGroupId] = useState<string | null>(null);
-  const [goal, setGoal] = useState(0); // daily goal in 10-min blocks
+  const [kind, setKind] = useState<'time' | 'abstain'>('time');
+  const [goal, setGoal] = useState(20); // daily goal in minutes (0 = none)
   const [durations, setDurations] = useState<number[]>(DEFAULT_DURATIONS);
   const [defaultMin, setDefaultMin] = useState(10);
 
@@ -32,7 +33,8 @@ export function HabitEditor() {
     setIcon(existing.emoji ?? DEFAULT_HABIT_ICON);
     setNote(existing.note ?? '');
     setGroupId(existing.groupId);
-    setGoal(existing.dailyGoalMin ? Math.round(existing.dailyGoalMin / 10) : 0);
+    setKind(existing.kind ?? 'time');
+    setGoal(existing.dailyGoalMin ?? 0);
     const dur = existing.durations?.length ? existing.durations : [10];
     setDurations(dur);
     setDefaultMin(existing.defaultDurationMin && dur.includes(existing.defaultDurationMin) ? existing.defaultDurationMin : dur[0]);
@@ -65,9 +67,10 @@ export function HabitEditor() {
       emoji: icon,
       note: note.trim() || null,
       groupId,
+      kind,
       durations,
-      defaultDurationMin: defaultMin,
-      dailyGoalMin: goal > 0 ? goal * 10 : null,
+      defaultDurationMin: kind === 'abstain' ? null : defaultMin,
+      dailyGoalMin: kind === 'time' && goal > 0 ? goal : null,
       timerType: 'simple',
     });
     navigate('/');
@@ -102,6 +105,27 @@ export function HabitEditor() {
       <input className="input" placeholder="Note (e.g. in French)" value={note} onChange={(e) => setNote(e.target.value)} />
 
       <div>
+        <label className="label">Type</label>
+        <div className="mt-1 flex gap-1.5">
+          <button
+            onClick={() => setKind('time')}
+            className={`chip flex-1 justify-center px-3 py-1.5 ${kind === 'time' ? 'chip-active' : ''}`}
+          >
+            Focus time
+          </button>
+          <button
+            onClick={() => setKind('abstain')}
+            className={`chip flex-1 justify-center px-3 py-1.5 ${kind === 'abstain' ? 'chip-active' : ''}`}
+          >
+            Avoid (daily check)
+          </button>
+        </div>
+        {kind === 'abstain' && (
+          <p className="mt-1.5 text-xs text-slate-400">No timer — mark "stayed off it" at the end of each day to build a clean streak.</p>
+        )}
+      </div>
+
+      <div>
         <label className="label">Group</label>
         <div className="mt-1 flex gap-2">
           <select className="input flex-1" value={groupId ?? ''} onChange={(e) => setGroupId(e.target.value || null)}>
@@ -114,6 +138,7 @@ export function HabitEditor() {
         </div>
       </div>
 
+      {kind === 'time' && (
       <div className="card space-y-3 p-4">
         <div>
           <label className="label">Timer lengths</label>
@@ -146,15 +171,18 @@ export function HabitEditor() {
           </div>
         )}
       </div>
+      )}
 
+      {kind === 'time' && (
       <div className="card p-4">
-        <Stepper label="Daily goal (10-min blocks, 0 = none)" value={goal} onChange={setGoal} min={0} max={12} />
-        {goal > 0 && (
-          <p className="mt-2 text-xs text-slate-400">
-            {goal} block{goal === 1 ? '' : 's'} = {goal * 10} min/day
-          </p>
+        <Stepper label="Daily goal" value={goal} onChange={setGoal} min={0} max={120} step={5} suffix="min" />
+        {goal > 0 ? (
+          <p className="mt-2 text-xs text-slate-400">{goal} min/day</p>
+        ) : (
+          <p className="mt-2 text-xs text-slate-400">No daily goal</p>
         )}
       </div>
+      )}
 
       <div className="flex gap-3">
         <button className="btn-accent flex-1" onClick={onSave} disabled={save.isPending}>Save</button>

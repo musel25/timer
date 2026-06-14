@@ -33,12 +33,17 @@ export type TimerType = 'simple' | 'interval';
 /** Types storable as presets in the timers table. */
 export type PresetType = TimerType | 'pomodoro';
 
+/** 'time' habits are run/logged in minutes; 'abstain' habits are an end-of-day
+ *  "I stayed off it" check whose streak counts consecutive clean days. */
+export type HabitKind = 'time' | 'abstain';
+
 export interface Habit {
   id: string;
   groupId: string | null;
   name: string;
   emoji: string | null;
   note: string | null;
+  kind: HabitKind;
   durations: number[]; // minutes
   defaultDurationMin: number | null;
   dailyGoalMin: number | null;

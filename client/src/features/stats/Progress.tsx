@@ -3,9 +3,9 @@ import { Flame, Clock, CalendarRange } from 'lucide-react';
 import { useGroups, useHabits, useSessions, useSettings } from '../../lib/hooks';
 import { HabitIcon } from '../../lib/habitIcons';
 import { categoryColor, gradient, tint, solid } from '../../lib/palette';
-import { currentStreak, focusMinutes, goalBlocks, goalStreak, heatmap, minutesByHabitInRange, minutesInRange, todaySummary } from '../../lib/stats';
+import { currentStreak, focusMinutes, goalStreak, heatmap, minutesByHabitInRange, minutesInRange, todaySummary } from '../../lib/stats';
 import { startOfToday, addDays } from '../../lib/time';
-import { BlockBar } from '../../components/BlockBar';
+import { GoalBar } from '../../components/GoalBar';
 
 const WEEKS = 18;
 
@@ -34,13 +34,15 @@ export function Progress() {
     .map((h) => ({
       h,
       weekMin: Math.round(byHabit[h.id] ?? 0),
-      blocks: summary.blocksByHabit[h.id] ?? 0,
-      goal: goalBlocks(h.dailyGoalMin),
-      streak: goalStreak(sessions, h.id, h.dailyGoalMin, !!h.groupId && weekdaysOnlyGroups.has(h.groupId)),
+      minutes: summary.minutesByHabit[h.id] ?? 0,
+      goal: h.dailyGoalMin && h.dailyGoalMin > 0 ? h.dailyGoalMin : null,
+      streak:
+        h.kind === 'abstain'
+          ? currentStreak(sessions, h.id)
+          : goalStreak(sessions, h.id, h.dailyGoalMin, !!h.groupId && weekdaysOnlyGroups.has(h.groupId)),
     }))
-    .sort((a, b) => b.weekMin - a.weekMin);
+    .sort((a, b) => Number(b.h.kind !== 'abstain') - Number(a.h.kind !== 'abstain') || b.weekMin - a.weekMin);
 
-  const todayBlocks = Object.values(summary.blocksByHabit).reduce((a, b) => a + b, 0);
   const todayHabitMin = Math.round(Object.values(summary.minutesByHabit).reduce((a, b) => a + b, 0));
 
   const focusWeekMin = Math.round(focusMinutes(sessions, weekAgo));
@@ -87,11 +89,12 @@ export function Progress() {
       <section>
         <div className="mb-2 flex items-baseline justify-between">
           <h2 className="label">By habit · today vs goal</h2>
-          <span className="text-xs text-slate-400">Today: {todayBlocks} block{todayBlocks === 1 ? '' : 's'} · {todayHabitMin} min</span>
+          <span className="text-xs text-slate-400">Today: {todayHabitMin} min</span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          {ranked.map(({ h, weekMin, blocks, goal, streak }) => {
+          {ranked.map(({ h, weekMin, minutes, goal, streak }) => {
             const color = categoryColor(h.id);
+            const abstain = h.kind === 'abstain';
             return (
               <div key={h.id} className="card p-4">
                 <div className="mb-2 flex items-center justify-between text-sm">
@@ -102,14 +105,18 @@ export function Progress() {
                     {h.name}
                   </span>
                   <span className="flex items-center gap-1 text-slate-400">
-                    {weekMin}m this week
+                    {abstain ? 'clean days' : `${weekMin}m this week`}
                     {streak > 0 && <span className="flex items-center gap-0.5">· <Flame size={12} className="text-amber-500" />{streak}</span>}
                   </span>
                 </div>
-                {goal ? (
-                  <BlockBar done={blocks} goal={goal} rgb={color.rgb} />
+                {abstain ? (
+                  <div className="text-xs text-slate-400">
+                    {streak > 0 ? `${streak}-day clean streak` : 'No clean streak yet'}
+                  </div>
+                ) : goal ? (
+                  <GoalBar done={minutes} goal={goal} rgb={color.rgb} />
                 ) : (
-                  <div className="text-xs text-slate-400">{blocks} block{blocks === 1 ? '' : 's'} today · no goal set</div>
+                  <div className="text-xs text-slate-400">{Math.round(minutes)} min today · no goal set</div>
                 )}
               </div>
             );

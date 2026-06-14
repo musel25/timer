@@ -1,7 +1,7 @@
 import {
   Swords, Brain, Code, BookOpen, PenLine, Footprints, Flower2, Guitar, Dumbbell, Salad,
   Moon, Sun, Timer, Pin, Calculator, Languages, Music, Palette, Heart, Briefcase,
-  GraduationCap, Coffee, Bike, Sprout, Flame, Target, type LucideIcon,
+  GraduationCap, Coffee, Bike, Sprout, Flame, Target, PhoneOff, Smartphone, Ban, type LucideIcon,
 } from 'lucide-react';
 
 /** Curated set of habit/group icons, keyed by lucide's kebab-case id. */
@@ -32,6 +32,9 @@ export const HABIT_ICONS: Record<string, LucideIcon> = {
   sprout: Sprout,
   flame: Flame,
   target: Target,
+  'phone-off': PhoneOff,
+  smartphone: Smartphone,
+  ban: Ban,
 };
 
 export const HABIT_ICON_NAMES = Object.keys(HABIT_ICONS);

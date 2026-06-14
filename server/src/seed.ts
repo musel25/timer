@@ -42,14 +42,19 @@ export function bootstrap(): void {
   db.insert(habitGroups).values(groups).run();
   const [morning, work, night] = groups;
 
+  // Time habits get a 20 min/day goal by default; Math Training is a shorter 5.
+  // The two Night abstinence habits ('abstain' kind) are end-of-day doomscroll
+  // checks — no timer, no goal: you mark "stayed off it" to build a clean streak.
   const seedHabits = [
-    { g: morning, name: 'LeetCode', emoji: '⚔️', note: 'study / init implementation', durations: [5, 10, 15, 20, 25, 30], def: 15 },
-    { g: work, name: 'Math Training', emoji: '🧮', note: null, durations: [5, 10, 15, 20], def: 10 },
-    { g: work, name: 'Anki', emoji: '🧠', note: null, durations: [5, 10, 15, 20], def: 15 },
-    { g: work, name: 'Prog. Read', emoji: '💻', note: null, durations: [5, 10, 15, 20], def: 10 },
-    { g: work, name: 'LeetCode', emoji: '⚔️', note: 'review / build from memory', durations: [5, 10, 15, 20, 25, 30], def: 15 },
-    { g: night, name: 'Journaling', emoji: '✍️', note: 'in French', durations: [5, 10, 15, 20], def: 10 },
-    { g: night, name: 'Reading', emoji: '📖', note: 'meaning + pronunciation', durations: [5, 10, 15, 20, 25, 30], def: 20 },
+    { g: morning, name: 'LeetCode', emoji: '⚔️', note: 'study / init implementation', durations: [5, 10, 15, 20, 25, 30], def: 15, kind: 'time', goal: 20 },
+    { g: work, name: 'Math Training', emoji: '🧮', note: null, durations: [5, 10, 15, 20], def: 10, kind: 'time', goal: 5 },
+    { g: work, name: 'Anki', emoji: '🧠', note: null, durations: [5, 10, 15, 20], def: 15, kind: 'time', goal: 20 },
+    { g: work, name: 'Prog. Read', emoji: '💻', note: null, durations: [5, 10, 15, 20], def: 10, kind: 'time', goal: 20 },
+    { g: work, name: 'LeetCode', emoji: '⚔️', note: 'review / build from memory', durations: [5, 10, 15, 20, 25, 30], def: 15, kind: 'time', goal: 20 },
+    { g: night, name: 'Journaling', emoji: '✍️', note: 'in French', durations: [5, 10, 15, 20], def: 10, kind: 'time', goal: 20 },
+    { g: night, name: 'Reading', emoji: '📖', note: 'meaning + pronunciation', durations: [5, 10, 15, 20, 25, 30], def: 20, kind: 'time', goal: 20 },
+    { g: night, name: 'App P', emoji: 'phone-off', note: "End of day: confirm you didn't doomscroll", durations: [20], def: null, kind: 'abstain', goal: null },
+    { g: night, name: 'App I', emoji: 'phone-off', note: "End of day: confirm you didn't doomscroll", durations: [20], def: null, kind: 'abstain', goal: null },
   ];
   db.insert(habits)
     .values(
@@ -60,9 +65,10 @@ export function bootstrap(): void {
         name: h.name,
         emoji: h.emoji,
         note: h.note,
+        kind: h.kind,
         durations: h.durations,
         defaultDurationMin: h.def,
-        dailyGoalMin: null,
+        dailyGoalMin: h.goal,
         timerType: 'simple',
         defaultTimerId: null,
         sortOrder: i,

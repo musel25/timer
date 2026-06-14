@@ -36,6 +36,8 @@ export const habits = sqliteTable('habits', {
   name: text('name').notNull(),
   emoji: text('emoji'),
   note: text('note'),
+  // 'time' = run/log in minutes; 'abstain' = end-of-day "stayed off it" check
+  kind: text('kind').notNull().default('time'),
   // number[] of minutes offered, e.g. [5,10,15,20,25,30]
   durations: text('durations', { mode: 'json' }).notNull().$type<number[]>(),
   defaultDurationMin: integer('default_duration_min'),

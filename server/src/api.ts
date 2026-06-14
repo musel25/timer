@@ -153,6 +153,7 @@ const habitInput = z.object({
   name: z.string().min(1),
   emoji: z.string().nullable().optional(),
   note: z.string().nullable().optional(),
+  kind: z.enum(['time', 'abstain']).optional(),
   durations: z.array(z.number().int().positive()).min(1),
   defaultDurationMin: z.number().int().positive().nullable().optional(),
   dailyGoalMin: z.number().int().positive().nullable().optional(),
@@ -171,7 +172,7 @@ api.post('/habits', async (c) => {
   if (!p.success) return c.json({ error: 'invalid_input' }, 400);
   const row = {
     id: newId(), userId: uid(c), groupId: p.data.groupId ?? null, name: p.data.name,
-    emoji: p.data.emoji ?? null, note: p.data.note ?? null, durations: p.data.durations,
+    emoji: p.data.emoji ?? null, note: p.data.note ?? null, kind: p.data.kind ?? 'time', durations: p.data.durations,
     defaultDurationMin: p.data.defaultDurationMin ?? null, dailyGoalMin: p.data.dailyGoalMin ?? null,
     timerType: p.data.timerType ?? 'simple', defaultTimerId: p.data.defaultTimerId ?? null,
     sortOrder: p.data.sortOrder ?? Date.now(), archived: p.data.archived ?? false, createdAt: Date.now(),

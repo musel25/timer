@@ -25,6 +25,15 @@ export function useLogSession() {
   });
 }
 
+/** Delete one session by id (used to un-mark an abstinence day). */
+export function useDeleteSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.del(`/sessions/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['sessions'] }),
+  });
+}
+
 export function useInvalidate(key: string) {
   const qc = useQueryClient();
   return () => qc.invalidateQueries({ queryKey: [key] });
