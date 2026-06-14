@@ -48,7 +48,7 @@ export function TodayView() {
         </div>
       </header>
 
-      <section className="card mx-auto max-w-2xl p-5">
+      <section className="card p-5">
         <h2 className="label mb-3">Tasks</h2>
         {todayEvents.length > 0 && (
           <div className="mb-3 space-y-1">

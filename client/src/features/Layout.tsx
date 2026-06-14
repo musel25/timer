@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import {
-  Star, CalendarDays, CalendarRange, Inbox, Timer, Repeat, BarChart3, Settings, Bot, type LucideIcon,
+  Star, CalendarDays, CalendarRange, Timer, Repeat, BarChart3, Settings, Bot, type LucideIcon,
 } from 'lucide-react';
 import { useAgentsOptional } from './agents/AgentsContext';
 import { askingCount } from './agents/sessionView';
@@ -13,7 +13,6 @@ const groups: { title: string; tabs: { to: string; label: string; icon: LucideIc
       { to: '/', label: 'Today', icon: Star, end: true },
       { to: '/week', label: 'Week', icon: CalendarDays },
       { to: '/month', label: 'Month', icon: CalendarRange },
-      { to: '/inbox', label: 'Inbox', icon: Inbox },
     ],
   },
   {
