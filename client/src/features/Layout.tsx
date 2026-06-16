@@ -31,6 +31,7 @@ const mobileTabs: { to: string; label: string; icon: LucideIcon; end?: boolean }
   { to: '/', label: 'Today', icon: Star, end: true },
   { to: '/week', label: 'Week', icon: CalendarDays },
   { to: '/timer', label: 'Timer', icon: Timer },
+  { to: '/habits', label: 'Habits', icon: Repeat },
   { to: '/stats', label: 'Progress', icon: BarChart3 },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
@@ -85,7 +86,7 @@ export function Layout() {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md border-t border-ink-600 bg-ink-800/95 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-6">
           {mobileTabs.map((t) => (
             <NavLink
               key={t.to}
