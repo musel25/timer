@@ -422,10 +422,10 @@ api.post('/import', async (c) => {
     if (Array.isArray(data.tasks)) for (const t of reassign(data.tasks)) tx.insert(tasks).values(t).onConflictDoNothing().run();
     if (Array.isArray(data.attachments)) for (const a of data.attachments) {
       tx.insert(taskAttachments).values({
-        id: newId(), userId: u, taskId: a.taskId, mime: a.mime,
+        id: a.id, userId: u, taskId: a.taskId, mime: a.mime,
         width: a.width ?? null, height: a.height ?? null, createdAt: a.createdAt,
         data: Buffer.from(a.dataBase64 ?? '', 'base64'),
-      }).run();
+      }).onConflictDoNothing().run();
     }
     if (data.settings) tx.insert(userSettings).values({ userId: u, data: data.settings })
       .onConflictDoUpdate({ target: userSettings.userId, set: { data: data.settings } }).run();

@@ -216,24 +216,35 @@ describe('export / import attachments', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it('export includes attachments, import restores the blob', async () => {
-    const src = makeUser('gina');
+  it('export includes attachments, import restores the blob (idempotent)', async () => {
+    // Step 1: gina creates a task and uploads one attachment.
+    const gina = makeUser('gina');
     db.insert(tasks).values({ id: 'task-g', userId: 'gina', title: 'G', sortOrder: 1, createdAt: Date.now() }).run();
-    await api.request('/tasks/task-g/attachments', post(src, { dataUrl: PNG, width: 1, height: 1 }));
+    await api.request('/tasks/task-g/attachments', post(gina, { dataUrl: PNG, width: 1, height: 1 }));
 
-    const dump = await (await api.request('/export', { headers: { cookie: src } })).json();
+    // Step 2: Export and verify dump contains the attachment.
+    const dump = await (await api.request('/export', { headers: { cookie: gina } })).json();
     expect(dump.attachments).toHaveLength(1);
     expect(dump.attachments[0].dataBase64).toBeTruthy();
     expect(dump.attachments[0].mime).toBe('image/png');
 
-    const dst = makeUser('harry');
-    const importBody = { tasks: dump.tasks, attachments: dump.attachments };
-    expect((await api.request('/import', post(dst, importBody))).status).toBe(200);
+    // Step 3: Simulate data loss — delete the task (cascades to attachment).
+    expect((await api.request('/tasks/task-g', { method: 'DELETE', headers: { cookie: gina } })).status).toBe(200);
 
-    const list = await (await api.request('/tasks/task-g/attachments', { headers: { cookie: dst } })).json();
+    // Step 4: Re-import as gina (restore from backup).
+    const importBody = { tasks: dump.tasks, attachments: dump.attachments };
+    expect((await api.request('/import', post(gina, importBody))).status).toBe(200);
+
+    // Step 5: Verify the attachment is restored.
+    const list = await (await api.request('/tasks/task-g/attachments', { headers: { cookie: gina } })).json();
     expect(list).toHaveLength(1);
-    const img = await api.request(`/attachments/${list[0].id}`, { headers: { cookie: dst } });
+    const img = await api.request(`/attachments/${list[0].id}`, { headers: { cookie: gina } });
     expect(img.status).toBe(200);
     expect((await img.arrayBuffer()).byteLength).toBeGreaterThan(0);
+
+    // Step 6: Import same payload again — must remain idempotent (no duplicates).
+    expect((await api.request('/import', post(gina, importBody))).status).toBe(200);
+    const list2 = await (await api.request('/tasks/task-g/attachments', { headers: { cookie: gina } })).json();
+    expect(list2).toHaveLength(1);
   });
 });
