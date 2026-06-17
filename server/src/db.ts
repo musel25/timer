@@ -92,6 +92,8 @@ export function migrate(): void {
       started_at INTEGER NOT NULL,
       ended_at INTEGER NOT NULL,
       note TEXT,
+      category TEXT NOT NULL DEFAULT 'habit',
+      parent_session_id TEXT,
       created_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
@@ -124,6 +126,8 @@ export function migrate(): void {
   addColumnIfMissing('habits', 'hidden_on', 'TEXT');
   addColumnIfMissing('tasks', 'hidden_on', 'TEXT');
   addColumnIfMissing('tasks', 'gcal_event_id', 'TEXT');
+  addColumnIfMissing('sessions', 'category', "TEXT NOT NULL DEFAULT 'habit'");
+  addColumnIfMissing('sessions', 'parent_session_id', 'TEXT');
 
   // Pre-existing DBs: add the flag and mark the conventional 'Work' group once.
   if (addColumnIfMissing('habit_groups', 'weekdays_only', 'INTEGER NOT NULL DEFAULT 0')) {
