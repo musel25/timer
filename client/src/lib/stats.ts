@@ -1,10 +1,15 @@
 import type { Session } from './types';
 import { dayKey, startOfToday, addDays } from './time';
 
+/** A focus-session umbrella overlaps the habit runs inside it, so it must be
+ *  excluded from any "time spent" total to avoid double-counting. */
+const isFocusUmbrella = (s: Session) => s.category === 'focus';
+
 /** Minutes per local day, keyed "YYYY-MM-DD" (uses actual time spent). */
 export function minutesByDay(sessions: Session[]): Record<string, number> {
   const out: Record<string, number> = {};
   for (const s of sessions) {
+    if (isFocusUmbrella(s)) continue;
     const k = dayKey(s.startedAt);
     out[k] = (out[k] ?? 0) + s.actualSeconds / 60;
   }
@@ -50,7 +55,7 @@ export interface TodaySummary {
 export function todaySummary(sessions: Session[]): TodaySummary {
   const t0 = startOfToday();
   const t1 = addDays(t0, 1);
-  const s = sessions.filter((x) => x.startedAt >= t0 && x.startedAt < t1 && x.completed);
+  const s = sessions.filter((x) => x.startedAt >= t0 && x.startedAt < t1 && x.completed && !isFocusUmbrella(x));
   const doneHabitIds = new Set<string>();
   const minutesByHabit: Record<string, number> = {};
   let minutes = 0;
@@ -74,7 +79,7 @@ export function todaysHabitSession(sessions: Session[], habitId: string): Sessio
 
 export function minutesInRange(sessions: Session[], fromTs: number, toTs = Date.now()): number {
   let m = 0;
-  for (const s of sessions) if (s.startedAt >= fromTs && s.startedAt <= toTs) m += s.actualSeconds / 60;
+  for (const s of sessions) if (!isFocusUmbrella(s) && s.startedAt >= fromTs && s.startedAt <= toTs) m += s.actualSeconds / 60;
   return Math.round(m);
 }
 

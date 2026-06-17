@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { currentStreak, focusMinutes, goalStreak, todaySummary, todaysHabitSession } from './stats';
+import { currentStreak, focusMinutes, goalStreak, minutesByDay, minutesInRange, todaySummary, todaysHabitSession } from './stats';
 import { startOfToday, addDays } from './time';
 import type { Session } from './types';
 
@@ -20,6 +20,37 @@ function session(startedAt: number, opts: Partial<Session> = {}): Session {
     ...opts,
   };
 }
+
+describe('focus-umbrella exclusion from time totals', () => {
+  const noon = startOfToday() + 12 * 3600_000;
+  // A 60-min focus block containing two 20-min habit runs. Counting the umbrella
+  // would inflate "time spent" to 100 min for a 60-min wall-clock block.
+  const sessions = [
+    session(noon, { category: 'focus', actualSeconds: 3600, habitId: null }),
+    session(noon, { habitId: 'h1', actualSeconds: 1200, parentSessionId: 'focus1' }),
+    session(noon, { habitId: 'h2', actualSeconds: 1200, parentSessionId: 'focus1' }),
+  ];
+
+  it('todaySummary counts habit minutes only, not the umbrella', () => {
+    const t = todaySummary(sessions);
+    expect(t.minutes).toBe(40); // 20 + 20, focus excluded
+    expect(t.count).toBe(2);
+    expect(t.minutesByHabit).toEqual({ h1: 20, h2: 20 });
+  });
+
+  it('minutesByDay excludes the focus umbrella', () => {
+    const k = Object.keys(minutesByDay(sessions))[0];
+    expect(minutesByDay(sessions)[k]).toBe(40);
+  });
+
+  it('minutesInRange excludes the focus umbrella', () => {
+    expect(minutesInRange(sessions, addDays(noon, -1), noon + 3600_000)).toBe(40);
+  });
+
+  it('focusMinutes still surfaces the focus block as focus time', () => {
+    expect(focusMinutes(sessions, addDays(noon, -1))).toBe(60);
+  });
+});
 
 describe('currentStreak', () => {
   const noon = startOfToday() + 12 * 3600_000;

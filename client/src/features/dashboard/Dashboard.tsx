@@ -5,6 +5,7 @@ import { Timer, Plus } from 'lucide-react';
 import { currentStreak, todaySummary, todaysHabitSession } from '../../lib/stats';
 import { HabitIcon } from '../../lib/habitIcons';
 import { useRun } from '../run/RunContext';
+import { FocusStarter } from '../run/FocusStarter';
 import { HabitCard } from '../habits/HabitCard';
 
 export function Dashboard() {
@@ -63,7 +64,10 @@ export function Dashboard() {
             {today.count > 0 ? `Today · ${today.count} done · ${today.minutes} min` : 'Tap a duration to start a focus block'}
           </div>
         </div>
-        <Link to="/timers" className="flex items-center rounded-full border border-ink-600/60 bg-ink-900/30 p-2.5 text-slate-300 backdrop-blur hover:text-slate-100" title="Timer presets"><Timer size={18} /></Link>
+        <div className="flex items-center gap-2">
+          <FocusStarter />
+          <Link to="/timers" className="flex items-center rounded-full border border-ink-600/60 bg-ink-900/30 p-2.5 text-slate-300 backdrop-blur hover:text-slate-100" title="Timer presets"><Timer size={18} /></Link>
+        </div>
       </header>
 
       {ordered.map((group) => {

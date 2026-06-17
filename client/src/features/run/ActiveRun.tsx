@@ -4,9 +4,11 @@ import { useSettings } from '../../lib/hooks';
 import { isTypingTarget } from '../../lib/dom';
 import { logSession } from '../../lib/offlineQueue';
 import { buildPhases, totalSeconds, workSeconds } from '../../engine/buildPhases';
+import { seekToElapsed, completedWorkSeconds } from '../../engine/seek';
 import { useTimerEngine } from '../../engine/useTimerEngine';
 import { unlockAudio } from '../../engine/audio';
 import { releaseWakeLock, reacquireWakeLock, requestWakeLock } from '../../engine/wakeLock';
+import { saveRun } from './activeRunStore';
 import { RunScreen } from './RunScreen';
 import { MiniPlayer } from './MiniPlayer';
 
@@ -16,14 +18,35 @@ import { MiniPlayer } from './MiniPlayer';
  * navigates. Renders the full-screen RunScreen when expanded, or the persistent
  * MiniPlayer when minimized — both are presentational views of this engine.
  */
-export function ActiveRun({ spec, onClose, onAgain }: { spec: RunSpec; onClose: () => void; onAgain: (s: RunSpec) => void }) {
+export function ActiveRun({
+  spec,
+  onClose,
+  onAgain,
+  startedAtEpoch,
+  resumeElapsed = 0,
+  parentFocusId = null,
+}: {
+  spec: RunSpec;
+  onClose: () => void;
+  onAgain: (s: RunSpec) => void;
+  /** Original wall-clock start (for a resumed run); defaults to now. */
+  startedAtEpoch?: number;
+  /** Seconds already elapsed when resuming a persisted run. */
+  resumeElapsed?: number;
+  /** Focus session this run was launched inside of, if any. */
+  parentFocusId?: string | null;
+}) {
   const { data: settings } = useSettings();
   const phases = useMemo(() => spec.phases ?? buildPhases(spec), [spec]);
   const focusMode = spec.trackMode === 'focus';
   const planned = useMemo(() => spec.plannedSeconds || totalSeconds(phases), [phases, spec]);
   const plannedWork = useMemo(() => workSeconds(phases), [phases]);
-  const startedAt = useRef(Date.now());
-  const workDoneRef = useRef(0);
+  const startedAt = useRef(startedAtEpoch ?? Date.now());
+  // On resume, seed work-done with the work phases already completed (the engine
+  // re-adds the current partial work phase in full when it finishes).
+  const workDoneRef = useRef(
+    resumeElapsed > 0 && focusMode ? completedWorkSeconds(phases, seekToElapsed(phases, resumeElapsed).index) : 0,
+  );
   const logged = useRef(false);
   const [muted, setMuted] = useState(false);
   const [minimized, setMinimized] = useState(false);
@@ -44,18 +67,36 @@ export function ActiveRun({ spec, onClose, onAgain }: { spec: RunSpec; onClose: 
       startedAt: startedAt.current,
       endedAt: Date.now(),
       note: null,
+      category: 'habit',
+      parentSessionId: parentFocusId,
       createdAt: Date.now(),
     });
+    saveRun('foreground', null);
   }
 
   const engine = useTimerEngine(phases, {
     beeps: !muted && (settings?.beeps ?? true),
     voice: !muted && (settings?.voice ?? false),
+    resumeElapsedSeconds: resumeElapsed,
     onPhaseComplete: (p) => {
       if (focusMode && p.kind === 'work') workDoneRef.current += p.seconds;
     },
     onFinish: (elapsed, completed) => logRun(completed, elapsed),
   });
+
+  // Persist a snapshot each displayed second so a foreground run resumes after reload.
+  useEffect(() => {
+    if (engine.status === 'running' || engine.status === 'paused') {
+      saveRun('foreground', {
+        spec,
+        startedAtEpoch: startedAt.current,
+        status: engine.status,
+        elapsedMs: engine.elapsed * 1000,
+        snapshotEpoch: Date.now(),
+        parentFocusId,
+      });
+    }
+  }, [engine.status, engine.elapsed, spec, parentFocusId]);
 
   // Auto-start + keep the screen awake for the life of the run.
   useEffect(() => {

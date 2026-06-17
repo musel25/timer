@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Phase } from '../lib/types';
 import { audio } from './audio';
+import { seekToElapsed } from './seek';
 import { setWorkerTimeout, clearWorkerTimeout, setWorkerInterval, clearWorkerInterval } from './workerTimer';
 
 export type EngineStatus = 'idle' | 'running' | 'paused' | 'done';
@@ -11,6 +12,8 @@ export interface EngineOptions {
   onFinish: (elapsedSeconds: number, completed: boolean) => void;
   /** Fired for each phase that finishes by counting down naturally (not via skip). */
   onPhaseComplete?: (phase: Phase) => void;
+  /** Resume a persisted run: seek to this many elapsed seconds on start instead of 0. */
+  resumeElapsedSeconds?: number;
 }
 
 export interface EngineState {
@@ -186,15 +189,28 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
 
   const start = useCallback(() => {
     if (status !== 'idle') return;
-    elapsedRef.current = 0;
     setStatus('running');
     lastRef.current = performance.now();
-    const first = phasesRef.current[0];
-    if (first && first.kind !== 'finish') announce(first);
+    const resume = optsRef.current.resumeElapsedSeconds ?? 0;
+    if (resume > 0) {
+      // Rehydrated run: jump to where wall-clock says we are. If we've already
+      // run past the end (tab was closed long enough), finish + log immediately.
+      const seek = seekToElapsed(phasesRef.current, resume);
+      elapsedRef.current = resume * 1000;
+      if (seek.done) { finish(true); return; }
+      idxRef.current = seek.index;
+      remRef.current = seek.remainingMs;
+      beepSecRef.current = -1;
+      // Deliberately no announce() on resume — re-arming audio after a reload is jarring.
+    } else {
+      elapsedRef.current = 0;
+      const first = phasesRef.current[0];
+      if (first && first.kind !== 'finish') announce(first);
+    }
     scheduleAlarm();
     startHeartbeat();
     rafRef.current = requestAnimationFrame(tick);
-  }, [status, announce, tick, scheduleAlarm, startHeartbeat]);
+  }, [status, announce, tick, scheduleAlarm, startHeartbeat, finish]);
 
   const pause = useCallback(() => {
     if (status !== 'running') return;

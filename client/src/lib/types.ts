@@ -100,6 +100,10 @@ export interface Session {
   startedAt: number;
   endedAt: number;
   note: string | null;
+  /** 'habit' (default) or 'focus' for a focus-session umbrella. */
+  category?: 'habit' | 'focus';
+  /** Focus session id this run was logged inside of, when started during one. */
+  parentSessionId?: string | null;
   createdAt: number;
 }
 
