@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { and, asc, desc, eq, gte, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { db } from './db';
 import { habitGroups, habits, sessions, taskAttachments, tasks, timers, userSettings, users } from './schema';
 import {
@@ -255,11 +255,17 @@ const taskInput = z.object({
   hiddenOn: z.string().regex(DATE_RE).nullable().optional(),
 });
 
-api.get('/tasks', (c) =>
-  c.json(
-    db.select().from(tasks).where(eq(tasks.userId, uid(c)))
-      .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt)).all(),
-  ));
+api.get('/tasks', (c) => {
+  const u = uid(c);
+  const rows = db.select().from(tasks).where(eq(tasks.userId, u))
+    .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt)).all();
+  const counts = db
+    .select({ taskId: taskAttachments.taskId, n: sql<number>`count(*)` })
+    .from(taskAttachments).where(eq(taskAttachments.userId, u))
+    .groupBy(taskAttachments.taskId).all();
+  const byTask = new Map(counts.map((r) => [r.taskId, Number(r.n)]));
+  return c.json(rows.map((r) => ({ ...r, attachmentCount: byTask.get(r.id) ?? 0 })));
+});
 
 api.post('/tasks', async (c) => {
   const p = taskInput.safeParse(await body(c));
@@ -292,9 +298,11 @@ api.patch('/tasks/:id', async (c) => {
 
 api.delete('/tasks/:id', (c) => {
   const id = c.req.param('id');
-  const row = db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, uid(c)))).get();
-  db.delete(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, uid(c)))).run();
-  queueTaskDelete(uid(c), row?.gcalEventId ?? null);
+  const u = uid(c);
+  const row = db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, u))).get();
+  db.delete(taskAttachments).where(and(eq(taskAttachments.taskId, id), eq(taskAttachments.userId, u))).run();
+  db.delete(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, u))).run();
+  queueTaskDelete(u, row?.gcalEventId ?? null);
   return c.json({ ok: true });
 });
 

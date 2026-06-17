@@ -80,8 +80,8 @@ describe('attachment HTTP routes', () => {
   });
 
   afterAll(() => {
-    sqlite.close();
-    rmSync(dir, { recursive: true, force: true });
+    // Teardown moved to the last describe block (task list count + cascade delete)
+    // so the shared DB stays open for all describe blocks.
   });
 
   it('uploads an image and returns metadata without bytes', async () => {
@@ -138,5 +138,49 @@ describe('attachment HTTP routes', () => {
     // owner can delete
     expect((await api.request(`/attachments/${up.id}`, { method: 'DELETE', headers: { cookie: owner } })).status).toBe(200);
     expect((await api.request(`/attachments/${up.id}`, { headers: { cookie: owner } })).status).toBe(404);
+  });
+});
+
+describe('task list count + cascade delete', () => {
+  let sqlite: import('better-sqlite3').Database;
+  let db: typeof import('./db').db;
+  let api: typeof import('./api').api;
+  let users: typeof import('./schema').users;
+  let authSessions: typeof import('./schema').authSessions;
+  let tasks: typeof import('./schema').tasks;
+
+  function makeUser(id: string): string {
+    const now = Date.now();
+    db.insert(users).values({ id, email: `${id}@t.test`, passwordHash: 'x', createdAt: now }).run();
+    db.insert(authSessions).values({ id: `sid_${id}`, userId: id, createdAt: now, expiresAt: now + 1e9, userAgent: null }).run();
+    return `sid=sid_${id}`;
+  }
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  const post = (cookie: string, b: unknown) =>
+    ({ headers: { 'content-type': 'application/json', cookie }, method: 'POST', body: JSON.stringify(b) });
+
+  beforeAll(async () => {
+    ({ sqlite, db } = await import('./db'));
+    ({ api } = await import('./api'));
+    ({ users, authSessions, tasks } = await import('./schema'));
+  });
+
+  afterAll(() => {
+    sqlite.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('GET /tasks includes attachmentCount and DELETE cascades', async () => {
+    const cookie = makeUser('frank');
+    db.insert(tasks).values({ id: 'task-f', userId: 'frank', title: 'F', sortOrder: 1, createdAt: Date.now() }).run();
+    const a1 = await (await api.request('/tasks/task-f/attachments', post(cookie, { dataUrl: PNG }))).json();
+    await api.request('/tasks/task-f/attachments', post(cookie, { dataUrl: PNG }));
+
+    const list = await (await api.request('/tasks', { headers: { cookie } })).json();
+    const row = list.find((t: any) => t.id === 'task-f');
+    expect(row.attachmentCount).toBe(2);
+
+    expect((await api.request('/tasks/task-f', { method: 'DELETE', headers: { cookie } })).status).toBe(200);
+    expect((await api.request(`/attachments/${a1.id}`, { headers: { cookie } })).status).toBe(404);
   });
 });
