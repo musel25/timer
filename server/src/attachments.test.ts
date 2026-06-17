@@ -168,8 +168,8 @@ describe('task list count + cascade delete', () => {
   });
 
   afterAll(() => {
-    sqlite.close();
-    rmSync(dir, { recursive: true, force: true });
+    // Teardown moved to the last describe block (export / import attachments)
+    // so the shared DB stays open for all describe blocks.
   });
 
   it('GET /tasks includes attachmentCount and DELETE cascades', async () => {
@@ -184,5 +184,56 @@ describe('task list count + cascade delete', () => {
 
     expect((await api.request('/tasks/task-f', { method: 'DELETE', headers: { cookie } })).status).toBe(200);
     expect((await api.request(`/attachments/${a1.id}`, { headers: { cookie } })).status).toBe(404);
+  });
+});
+
+describe('export / import attachments', () => {
+  let sqlite: import('better-sqlite3').Database;
+  let db: typeof import('./db').db;
+  let api: typeof import('./api').api;
+  let users: typeof import('./schema').users;
+  let authSessions: typeof import('./schema').authSessions;
+  let tasks: typeof import('./schema').tasks;
+
+  function makeUser(id: string): string {
+    const now = Date.now();
+    db.insert(users).values({ id, email: `${id}@t.test`, passwordHash: 'x', createdAt: now }).run();
+    db.insert(authSessions).values({ id: `sid_${id}`, userId: id, createdAt: now, expiresAt: now + 1e9, userAgent: null }).run();
+    return `sid=sid_${id}`;
+  }
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  const post = (cookie: string, b: unknown) =>
+    ({ headers: { 'content-type': 'application/json', cookie }, method: 'POST', body: JSON.stringify(b) });
+
+  beforeAll(async () => {
+    ({ sqlite, db } = await import('./db'));
+    ({ api } = await import('./api'));
+    ({ users, authSessions, tasks } = await import('./schema'));
+  });
+
+  afterAll(() => {
+    sqlite.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('export includes attachments, import restores the blob', async () => {
+    const src = makeUser('gina');
+    db.insert(tasks).values({ id: 'task-g', userId: 'gina', title: 'G', sortOrder: 1, createdAt: Date.now() }).run();
+    await api.request('/tasks/task-g/attachments', post(src, { dataUrl: PNG, width: 1, height: 1 }));
+
+    const dump = await (await api.request('/export', { headers: { cookie: src } })).json();
+    expect(dump.attachments).toHaveLength(1);
+    expect(dump.attachments[0].dataBase64).toBeTruthy();
+    expect(dump.attachments[0].mime).toBe('image/png');
+
+    const dst = makeUser('harry');
+    const importBody = { tasks: dump.tasks, attachments: dump.attachments };
+    expect((await api.request('/import', post(dst, importBody))).status).toBe(200);
+
+    const list = await (await api.request('/tasks/task-g/attachments', { headers: { cookie: dst } })).json();
+    expect(list).toHaveLength(1);
+    const img = await api.request(`/attachments/${list[0].id}`, { headers: { cookie: dst } });
+    expect(img.status).toBe(200);
+    expect((await img.arrayBuffer()).byteLength).toBeGreaterThan(0);
   });
 });

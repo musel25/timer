@@ -402,6 +402,11 @@ api.get('/export', (c) => {
     timers: db.select().from(timers).where(eq(timers.userId, u)).all(),
     sessions: db.select().from(sessions).where(eq(sessions.userId, u)).all(),
     tasks: db.select().from(tasks).where(eq(tasks.userId, u)).all(),
+    attachments: db.select().from(taskAttachments).where(eq(taskAttachments.userId, u)).all()
+      .map((a) => ({
+        id: a.id, taskId: a.taskId, mime: a.mime, width: a.width, height: a.height,
+        createdAt: a.createdAt, dataBase64: Buffer.from(a.data as Buffer).toString('base64'),
+      })),
   });
 });
 
@@ -415,6 +420,13 @@ api.post('/import', async (c) => {
     if (Array.isArray(data.habits)) for (const h of reassign(data.habits)) tx.insert(habits).values(h).onConflictDoNothing().run();
     if (Array.isArray(data.sessions)) for (const s of reassign(data.sessions)) tx.insert(sessions).values(s).onConflictDoNothing().run();
     if (Array.isArray(data.tasks)) for (const t of reassign(data.tasks)) tx.insert(tasks).values(t).onConflictDoNothing().run();
+    if (Array.isArray(data.attachments)) for (const a of data.attachments) {
+      tx.insert(taskAttachments).values({
+        id: newId(), userId: u, taskId: a.taskId, mime: a.mime,
+        width: a.width ?? null, height: a.height ?? null, createdAt: a.createdAt,
+        data: Buffer.from(a.dataBase64 ?? '', 'base64'),
+      }).run();
+    }
     if (data.settings) tx.insert(userSettings).values({ userId: u, data: data.settings })
       .onConflictDoUpdate({ target: userSettings.userId, set: { data: data.settings } }).run();
   });
