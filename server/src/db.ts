@@ -120,6 +120,19 @@ export function migrate(): void {
       config TEXT NOT NULL,
       PRIMARY KEY (user_id, kind)
     );
+
+    CREATE TABLE IF NOT EXISTS task_attachments (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      task_id TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      data BLOB NOT NULL,
+      width INTEGER,
+      height INTEGER,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_task_attachments_task ON task_attachments(task_id);
+    CREATE INDEX IF NOT EXISTS idx_task_attachments_user ON task_attachments(user_id);
   `);
 
   // Idempotent column additions for databases created before a column existed.
