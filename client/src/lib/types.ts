@@ -141,6 +141,7 @@ export interface Task {
   completedAt: number | null;
   hiddenOn: string | null; // 'YYYY-MM-DD' the task was hidden from Today, or null
   sortOrder: number;
+  attachmentCount?: number;
   createdAt: number;
 }
 
@@ -151,4 +152,13 @@ export interface CalendarEvent {
   start: string; // ISO datetime, or 'YYYY-MM-DD' when allDay
   end: string;   // exclusive for all-day events
   allDay: boolean;
+}
+
+export interface TaskAttachment {
+  id: string;
+  taskId: string;
+  mime: string;
+  width: number | null;
+  height: number | null;
+  createdAt: number;
 }
