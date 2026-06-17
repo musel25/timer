@@ -163,6 +163,8 @@ describe('task list count + cascade delete', () => {
     ({ sqlite, db } = await import('./db'));
     ({ api } = await import('./api'));
     ({ users, authSessions, tasks } = await import('./schema'));
+    // migrate() is idempotent; this keeps the block self-contained regardless of run order.
+    (await import('./db')).migrate();
   });
 
   afterAll(() => {
@@ -174,7 +176,7 @@ describe('task list count + cascade delete', () => {
     const cookie = makeUser('frank');
     db.insert(tasks).values({ id: 'task-f', userId: 'frank', title: 'F', sortOrder: 1, createdAt: Date.now() }).run();
     const a1 = await (await api.request('/tasks/task-f/attachments', post(cookie, { dataUrl: PNG }))).json();
-    await api.request('/tasks/task-f/attachments', post(cookie, { dataUrl: PNG }));
+    expect((await api.request('/tasks/task-f/attachments', post(cookie, { dataUrl: PNG }))).status).toBe(201);
 
     const list = await (await api.request('/tasks', { headers: { cookie } })).json();
     const row = list.find((t: any) => t.id === 'task-f');
