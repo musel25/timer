@@ -9,6 +9,7 @@ import {
   useDeleteGroup, useGroups, useMe, useSaveGroup, useSaveSettings, useSettings,
 } from '../../lib/hooks';
 import { Stepper } from '../../components/Stepper';
+import { audio, setVolume, unlockAudio } from '../../engine/audio';
 
 export function SettingsPage() {
   const qc = useQueryClient();
@@ -110,6 +111,24 @@ export function SettingsPage() {
         <Toggle k="beeps" label="Countdown beeps" />
         <Toggle k="voice" label="Spoken cues" />
         <Toggle k="keepAwake" label="Keep screen awake during a run" />
+        <div className="mt-3 border-t border-ink-700 pt-3">
+          <Stepper
+            label="Volume"
+            value={s?.volume ?? 100}
+            onChange={(v) => {
+              // Apply + preview instantly (this click is the gesture that unlocks audio),
+              // then persist so it carries across all timers.
+              unlockAudio();
+              setVolume(v);
+              audio.beep();
+              save.mutate({ volume: v });
+            }}
+            min={0}
+            max={200}
+            step={10}
+            suffix="%"
+          />
+        </div>
         <div className="mt-3 border-t border-ink-700 pt-3">
           <Stepper label="Default prep countdown" value={s?.prepSeconds ?? 5} onChange={(v) => save.mutate({ prepSeconds: v })} min={0} max={30} suffix="s" />
         </div>

@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { Timer as TimerIcon } from 'lucide-react';
 import { useMe, useSettings } from './lib/hooks';
 import { applyAccent, applyTheme } from './lib/theme';
+import { setVolume } from './engine/audio';
 import { Login } from './features/auth/Login';
 import { Layout } from './features/Layout';
 import { Dashboard } from './features/dashboard/Dashboard';
@@ -35,6 +36,9 @@ function AuthedApp() {
   useEffect(() => {
     if (settings?.theme) applyTheme(settings.theme);
   }, [settings?.theme]);
+  useEffect(() => {
+    if (settings?.volume != null) setVolume(settings.volume);
+  }, [settings?.volume]);
 
   const routes = (
     <Routes>

@@ -8,6 +8,7 @@ export interface Settings {
   voice: boolean;
   beeps: boolean;
   keepAwake: boolean;
+  volume: number; // master output level, percent (0–200); 100 is the default
   prepSeconds: number; // "get ready" countdown before a focus habit starts
   weekStart: number; // 0=Sun, 1=Mon
   pomodoro: PomodoroConfig;
