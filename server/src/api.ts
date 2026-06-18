@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { and, asc, desc, eq, gte, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { db } from './db';
-import { habitGroups, habits, sessions, tasks, timers, userSettings, users } from './schema';
+import { habitGroups, habits, sessions, taskAttachments, tasks, timers, userSettings, users } from './schema';
 import {
   createSession, currentUserId, destroySession, hashPassword, newId, requireAuth, verifyPassword,
 } from './auth';
@@ -68,6 +68,7 @@ api.use('/sessions', requireAuth); api.use('/sessions/*', requireAuth);
 api.use('/settings', requireAuth);
 api.use('/export', requireAuth); api.use('/import', requireAuth);
 api.use('/tasks', requireAuth); api.use('/tasks/*', requireAuth);
+api.use('/attachments', requireAuth); api.use('/attachments/*', requireAuth);
 api.use('/calendar', requireAuth); api.use('/calendar/*', requireAuth);
 
 /* ---------- timers ---------- */
@@ -254,11 +255,17 @@ const taskInput = z.object({
   hiddenOn: z.string().regex(DATE_RE).nullable().optional(),
 });
 
-api.get('/tasks', (c) =>
-  c.json(
-    db.select().from(tasks).where(eq(tasks.userId, uid(c)))
-      .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt)).all(),
-  ));
+api.get('/tasks', (c) => {
+  const u = uid(c);
+  const rows = db.select().from(tasks).where(eq(tasks.userId, u))
+    .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt)).all();
+  const counts = db
+    .select({ taskId: taskAttachments.taskId, n: sql<number>`count(*)` })
+    .from(taskAttachments).where(eq(taskAttachments.userId, u))
+    .groupBy(taskAttachments.taskId).all();
+  const byTask = new Map(counts.map((r) => [r.taskId, Number(r.n)]));
+  return c.json(rows.map((r) => ({ ...r, attachmentCount: byTask.get(r.id) ?? 0 })));
+});
 
 api.post('/tasks', async (c) => {
   const p = taskInput.safeParse(await body(c));
@@ -291,9 +298,78 @@ api.patch('/tasks/:id', async (c) => {
 
 api.delete('/tasks/:id', (c) => {
   const id = c.req.param('id');
-  const row = db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, uid(c)))).get();
-  db.delete(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, uid(c)))).run();
-  queueTaskDelete(uid(c), row?.gcalEventId ?? null);
+  const u = uid(c);
+  const row = db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, u))).get();
+  db.delete(taskAttachments).where(and(eq(taskAttachments.taskId, id), eq(taskAttachments.userId, u))).run();
+  db.delete(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, u))).run();
+  queueTaskDelete(u, row?.gcalEventId ?? null);
+  return c.json({ ok: true });
+});
+
+/* ---------- task attachments (pasted images) ---------- */
+const ATTACH_DATA_URL_RE = /^data:(image\/(?:png|jpeg|webp|gif));base64,(.+)$/;
+const MAX_ATTACH_BYTES = 3 * 1024 * 1024;
+const attachInput = z.object({
+  dataUrl: z.string().min(1),
+  width: z.number().int().positive().optional(),
+  height: z.number().int().positive().optional(),
+});
+
+api.post('/tasks/:id/attachments', async (c) => {
+  const taskId = c.req.param('id');
+  const u = uid(c);
+  const task = db.select().from(tasks).where(and(eq(tasks.id, taskId), eq(tasks.userId, u))).get();
+  if (!task) return c.json({ error: 'not_found' }, 404);
+
+  const p = attachInput.safeParse(await body(c));
+  if (!p.success) return c.json({ error: 'invalid_input' }, 400);
+  const m = ATTACH_DATA_URL_RE.exec(p.data.dataUrl);
+  if (!m) return c.json({ error: 'invalid_image' }, 400);
+  const mime = m[1];
+  const buf = Buffer.from(m[2], 'base64');
+  if (buf.length === 0 || buf.length > MAX_ATTACH_BYTES) return c.json({ error: 'too_large' }, 400);
+
+  const meta = {
+    id: newId(), taskId, mime,
+    width: p.data.width ?? null, height: p.data.height ?? null,
+    createdAt: Date.now(),
+  };
+  db.insert(taskAttachments).values({ ...meta, userId: u, data: buf }).run();
+  return c.json(meta, 201);
+});
+
+api.get('/tasks/:id/attachments', (c) => {
+  const taskId = c.req.param('id');
+  const u = uid(c);
+  const rows = db
+    .select({
+      id: taskAttachments.id, taskId: taskAttachments.taskId, mime: taskAttachments.mime,
+      width: taskAttachments.width, height: taskAttachments.height, createdAt: taskAttachments.createdAt,
+    })
+    .from(taskAttachments)
+    .where(and(eq(taskAttachments.taskId, taskId), eq(taskAttachments.userId, u)))
+    .orderBy(asc(taskAttachments.createdAt))
+    .all();
+  return c.json(rows);
+});
+
+api.get('/attachments/:id', (c) => {
+  const id = c.req.param('id');
+  const u = uid(c);
+  const row = db.select().from(taskAttachments)
+    .where(and(eq(taskAttachments.id, id), eq(taskAttachments.userId, u))).get();
+  if (!row) return c.json({ error: 'not_found' }, 404);
+  return new Response(new Uint8Array(row.data as Buffer), {
+    headers: { 'Content-Type': row.mime, 'Cache-Control': 'private, max-age=31536000, immutable' },
+  });
+});
+
+api.delete('/attachments/:id', (c) => {
+  const id = c.req.param('id');
+  const u = uid(c);
+  const res = db.delete(taskAttachments)
+    .where(and(eq(taskAttachments.id, id), eq(taskAttachments.userId, u))).run();
+  if (res.changes === 0) return c.json({ error: 'not_found' }, 404);
   return c.json({ ok: true });
 });
 
@@ -326,6 +402,11 @@ api.get('/export', (c) => {
     timers: db.select().from(timers).where(eq(timers.userId, u)).all(),
     sessions: db.select().from(sessions).where(eq(sessions.userId, u)).all(),
     tasks: db.select().from(tasks).where(eq(tasks.userId, u)).all(),
+    attachments: db.select().from(taskAttachments).where(eq(taskAttachments.userId, u)).all()
+      .map((a) => ({
+        id: a.id, taskId: a.taskId, mime: a.mime, width: a.width, height: a.height,
+        createdAt: a.createdAt, dataBase64: Buffer.from(a.data as Buffer).toString('base64'),
+      })),
   });
 });
 
@@ -339,6 +420,13 @@ api.post('/import', async (c) => {
     if (Array.isArray(data.habits)) for (const h of reassign(data.habits)) tx.insert(habits).values(h).onConflictDoNothing().run();
     if (Array.isArray(data.sessions)) for (const s of reassign(data.sessions)) tx.insert(sessions).values(s).onConflictDoNothing().run();
     if (Array.isArray(data.tasks)) for (const t of reassign(data.tasks)) tx.insert(tasks).values(t).onConflictDoNothing().run();
+    if (Array.isArray(data.attachments)) for (const a of data.attachments) {
+      tx.insert(taskAttachments).values({
+        id: a.id, userId: u, taskId: a.taskId, mime: a.mime,
+        width: a.width ?? null, height: a.height ?? null, createdAt: a.createdAt,
+        data: Buffer.from(a.dataBase64 ?? '', 'base64'),
+      }).onConflictDoNothing().run();
+    }
     if (data.settings) tx.insert(userSettings).values({ userId: u, data: data.settings })
       .onConflictDoUpdate({ target: userSettings.userId, set: { data: data.settings } }).run();
   });

@@ -8,6 +8,7 @@ export interface Settings {
   voice: boolean;
   beeps: boolean;
   keepAwake: boolean;
+  volume: number; // master output level, percent (0–200); 100 is the default
   prepSeconds: number; // "get ready" countdown before a focus habit starts
   weekStart: number; // 0=Sun, 1=Mon
   pomodoro: PomodoroConfig;
@@ -141,6 +142,7 @@ export interface Task {
   completedAt: number | null;
   hiddenOn: string | null; // 'YYYY-MM-DD' the task was hidden from Today, or null
   sortOrder: number;
+  attachmentCount?: number;
   createdAt: number;
 }
 
@@ -151,4 +153,13 @@ export interface CalendarEvent {
   start: string; // ISO datetime, or 'YYYY-MM-DD' when allDay
   end: string;   // exclusive for all-day events
   allDay: boolean;
+}
+
+export interface TaskAttachment {
+  id: string;
+  taskId: string;
+  mime: string;
+  width: number | null;
+  height: number | null;
+  createdAt: number;
 }

@@ -1,5 +1,15 @@
 let ctx: AudioContext | null = null;
 
+// Master volume multiplier applied to every tone. The user-facing scale is a
+// percentage where 100% is a comfortable default and 200% matches the original
+// (pre-volume-control) loudness — so the linear multiplier is `percent / 200`.
+let masterVolume = 0.5;
+
+/** Set the global output level from a 0–200(%) user setting. Applies to all timers. */
+export function setVolume(percent: number): void {
+  masterVolume = Math.max(0, percent) / 200;
+}
+
 function getCtx(): AudioContext {
   if (!ctx) {
     const Ctor = window.AudioContext || (window as any).webkitAudioContext;
@@ -24,6 +34,9 @@ export function unlockAudio(): void {
  */
 function tone(freq: number, dur: number, type: OscillatorType = 'sine', gain = 0.22, at = 0, hold = 0): void {
   try {
+    const peak = gain * masterVolume;
+    // Muted (volume 0) or below the exponential-ramp floor: nothing audible to play.
+    if (peak <= 0.0001) return;
     const c = getCtx();
     // Background tabs (Safari especially) suspend the context; the Start click
     // gave the page sticky activation, so resuming here is allowed.
@@ -35,8 +48,8 @@ function tone(freq: number, dur: number, type: OscillatorType = 'sine', gain = 0
     o.connect(g);
     g.connect(c.destination);
     const t = c.currentTime + at;
-    g.gain.setValueAtTime(gain, t);
-    if (hold > 0) g.gain.setValueAtTime(gain, t + hold);
+    g.gain.setValueAtTime(peak, t);
+    if (hold > 0) g.gain.setValueAtTime(peak, t + hold);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.start(t);
     o.stop(t + dur);

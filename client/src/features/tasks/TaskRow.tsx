@@ -1,4 +1,4 @@
-import { EyeOff, Check } from 'lucide-react';
+import { EyeOff, Check, Paperclip } from 'lucide-react';
 import type { Task } from '../../lib/types';
 import { useToggleTask } from '../../lib/hooks';
 
@@ -21,6 +21,12 @@ export function TaskRow({ task, onEdit, onHide }: { task: Task; onEdit?: (t: Tas
       >
         {task.title}
       </button>
+      {!!task.attachmentCount && (
+        <span className="mt-0.5 flex shrink-0 items-center gap-0.5 text-xs text-slate-500" title={`${task.attachmentCount} image${task.attachmentCount > 1 ? 's' : ''}`}>
+          <Paperclip size={13} />
+          {task.attachmentCount}
+        </span>
+      )}
       {onHide && (
         <button
           aria-label="Hide from today"

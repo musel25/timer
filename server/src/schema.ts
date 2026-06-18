@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, primaryKey, blob } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
@@ -113,3 +113,14 @@ export const integrations = sqliteTable(
   },
   (t) => ({ pk: primaryKey({ columns: [t.userId, t.kind] }) }),
 );
+
+export const taskAttachments = sqliteTable('task_attachments', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  taskId: text('task_id').notNull(),
+  mime: text('mime').notNull(),
+  data: blob('data', { mode: 'buffer' }).notNull(),
+  width: integer('width'),
+  height: integer('height'),
+  createdAt: integer('created_at').notNull(),
+});

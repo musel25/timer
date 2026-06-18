@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 import { buildManualSession } from './sessionLog';
-import type { CalendarEvent, Habit, HabitGroup, Session, Settings, Task, TimerPreset } from './types';
+import type { CalendarEvent, Habit, HabitGroup, Session, Settings, Task, TaskAttachment, TimerPreset } from './types';
 
 export interface Me {
   user: { id: string; email: string } | null;
@@ -119,6 +119,36 @@ export function useDeleteTask() {
   return useMutation({
     mutationFn: (id: string) => api.del(`/tasks/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+  });
+}
+
+/* ---- task attachments (pasted images) ---- */
+export const useTaskAttachments = (taskId: string) =>
+  useQuery({
+    queryKey: ['task-attachments', taskId],
+    queryFn: () => api.get<TaskAttachment[]>(`/tasks/${taskId}/attachments`),
+  });
+
+export function useUploadAttachment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { taskId: string; dataUrl: string; width: number; height: number }) =>
+      api.post<TaskAttachment>(`/tasks/${v.taskId}/attachments`, { dataUrl: v.dataUrl, width: v.width, height: v.height }),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ['task-attachments', v.taskId] });
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+export function useDeleteAttachment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: string; taskId: string }) => api.del(`/attachments/${v.id}`),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ['task-attachments', v.taskId] });
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
   });
 }
 

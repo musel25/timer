@@ -1,0 +1,250 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { eq } from 'drizzle-orm';
+
+// Point the DB at a throwaway file BEFORE importing db.ts (reads TIMER_DB at import time).
+const dir = mkdtempSync(join(tmpdir(), 'timer-attach-'));
+process.env.TIMER_DB = join(dir, 'test.db');
+
+describe('task_attachments migration + blob round-trip', () => {
+  let sqlite: import('better-sqlite3').Database;
+  let db: typeof import('./db').db;
+  let migrate: typeof import('./db').migrate;
+  let taskAttachments: typeof import('./schema').taskAttachments;
+
+  beforeAll(async () => {
+    ({ sqlite, db, migrate } = await import('./db'));
+    ({ taskAttachments } = await import('./schema'));
+    migrate();
+  });
+
+  afterAll(() => {
+    // sqlite stays open; the HTTP-routes describe below also uses this DB.
+    // Final cleanup (close + rmSync) is done in that describe's afterAll.
+  });
+
+  it('creates task_attachments with the expected columns', () => {
+    const cols = (sqlite.prepare('PRAGMA table_info(task_attachments)').all() as { name: string }[]).map((c) => c.name);
+    for (const col of ['id', 'user_id', 'task_id', 'mime', 'data', 'width', 'height', 'created_at']) {
+      expect(cols).toContain(col);
+    }
+  });
+
+  it('migrate() is idempotent (running twice does not throw)', () => {
+    expect(() => migrate()).not.toThrow();
+  });
+
+  it('round-trips a binary blob', () => {
+    const now = Date.now();
+    const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x01, 0x02, 0xff]);
+    db.insert(taskAttachments).values({
+      id: 'a1', userId: 'u1', taskId: 't1', mime: 'image/png', data: bytes, width: 1, height: 1, createdAt: now,
+    }).run();
+    const got = db.select().from(taskAttachments).where(eq(taskAttachments.id, 'a1')).get();
+    expect(got?.mime).toBe('image/png');
+    expect(Buffer.from(got!.data as Buffer).equals(bytes)).toBe(true);
+    expect(got?.width).toBe(1);
+  });
+});
+
+// 1x1 transparent PNG.
+const PNG_1x1 =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+describe('attachment HTTP routes', () => {
+  let sqlite: import('better-sqlite3').Database;
+  let db: typeof import('./db').db;
+  let api: typeof import('./api').api;
+  let users: typeof import('./schema').users;
+  let authSessions: typeof import('./schema').authSessions;
+  let tasks: typeof import('./schema').tasks;
+
+  // Insert a user + a future-dated session; return a Cookie header for it.
+  function makeUser(id: string): string {
+    const now = Date.now();
+    db.insert(users).values({ id, email: `${id}@t.test`, passwordHash: 'x', createdAt: now }).run();
+    const sid = `sid_${id}`;
+    db.insert(authSessions).values({ id: sid, userId: id, createdAt: now, expiresAt: now + 1e9, userAgent: null }).run();
+    return `sid=${sid}`;
+  }
+  const json = (cookie: string, body: unknown) =>
+    ({ headers: { 'content-type': 'application/json', cookie }, method: 'POST', body: JSON.stringify(body) });
+
+  beforeAll(async () => {
+    ({ sqlite, db } = await import('./db'));
+    ({ api } = await import('./api'));
+    ({ users, authSessions, tasks } = await import('./schema'));
+    (await import('./db')).migrate();
+  });
+
+  afterAll(() => {
+    // Teardown moved to the last describe block (task list count + cascade delete)
+    // so the shared DB stays open for all describe blocks.
+  });
+
+  it('uploads an image and returns metadata without bytes', async () => {
+    const cookie = makeUser('alice');
+    db.insert(tasks).values({ id: 'task-a', userId: 'alice', title: 'A', sortOrder: 1, createdAt: Date.now() }).run();
+    const res = await api.request('/tasks/task-a/attachments', json(cookie, { dataUrl: PNG_1x1, width: 1, height: 1 }));
+    expect(res.status).toBe(201);
+    const meta = await res.json();
+    expect(meta.taskId).toBe('task-a');
+    expect(meta.mime).toBe('image/png');
+    expect(meta.id).toBeTruthy();
+    expect(meta.data).toBeUndefined();
+  });
+
+  it('rejects a disallowed mime', async () => {
+    const cookie = makeUser('bob');
+    db.insert(tasks).values({ id: 'task-b', userId: 'bob', title: 'B', sortOrder: 1, createdAt: Date.now() }).run();
+    const bad = 'data:application/pdf;base64,JVBERi0=';
+    const res = await api.request('/tasks/task-b/attachments', json(cookie, { dataUrl: bad }));
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects an oversize image', async () => {
+    const cookie = makeUser('carol');
+    db.insert(tasks).values({ id: 'task-c', userId: 'carol', title: 'C', sortOrder: 1, createdAt: Date.now() }).run();
+    const bigB64 = Buffer.alloc(3 * 1024 * 1024 + 10, 0).toString('base64');
+    const res = await api.request('/tasks/task-c/attachments', json(cookie, { dataUrl: `data:image/png;base64,${bigB64}` }));
+    expect(res.status).toBe(400);
+  });
+
+  it('serves bytes with the right content-type and lists metadata', async () => {
+    const cookie = makeUser('dave');
+    db.insert(tasks).values({ id: 'task-d', userId: 'dave', title: 'D', sortOrder: 1, createdAt: Date.now() }).run();
+    const up = await (await api.request('/tasks/task-d/attachments', json(cookie, { dataUrl: PNG_1x1 }))).json();
+
+    const list = await (await api.request('/tasks/task-d/attachments', { headers: { cookie } })).json();
+    expect(list).toHaveLength(1);
+    expect(list[0].id).toBe(up.id);
+
+    const img = await api.request(`/attachments/${up.id}`, { headers: { cookie } });
+    expect(img.status).toBe(200);
+    expect(img.headers.get('content-type')).toBe('image/png');
+    expect((await img.arrayBuffer()).byteLength).toBeGreaterThan(0);
+  });
+
+  it('forbids cross-user read and delete (404)', async () => {
+    const owner = makeUser('eve');
+    const other = makeUser('mallory');
+    db.insert(tasks).values({ id: 'task-e', userId: 'eve', title: 'E', sortOrder: 1, createdAt: Date.now() }).run();
+    const up = await (await api.request('/tasks/task-e/attachments', json(owner, { dataUrl: PNG_1x1 }))).json();
+
+    expect((await api.request(`/attachments/${up.id}`, { headers: { cookie: other } })).status).toBe(404);
+    expect((await api.request(`/attachments/${up.id}`, { method: 'DELETE', headers: { cookie: other } })).status).toBe(404);
+    // owner can delete
+    expect((await api.request(`/attachments/${up.id}`, { method: 'DELETE', headers: { cookie: owner } })).status).toBe(200);
+    expect((await api.request(`/attachments/${up.id}`, { headers: { cookie: owner } })).status).toBe(404);
+  });
+});
+
+describe('task list count + cascade delete', () => {
+  let sqlite: import('better-sqlite3').Database;
+  let db: typeof import('./db').db;
+  let api: typeof import('./api').api;
+  let users: typeof import('./schema').users;
+  let authSessions: typeof import('./schema').authSessions;
+  let tasks: typeof import('./schema').tasks;
+
+  function makeUser(id: string): string {
+    const now = Date.now();
+    db.insert(users).values({ id, email: `${id}@t.test`, passwordHash: 'x', createdAt: now }).run();
+    db.insert(authSessions).values({ id: `sid_${id}`, userId: id, createdAt: now, expiresAt: now + 1e9, userAgent: null }).run();
+    return `sid=sid_${id}`;
+  }
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  const post = (cookie: string, b: unknown) =>
+    ({ headers: { 'content-type': 'application/json', cookie }, method: 'POST', body: JSON.stringify(b) });
+
+  beforeAll(async () => {
+    ({ sqlite, db } = await import('./db'));
+    ({ api } = await import('./api'));
+    ({ users, authSessions, tasks } = await import('./schema'));
+    // migrate() is idempotent; this keeps the block self-contained regardless of run order.
+    (await import('./db')).migrate();
+  });
+
+  afterAll(() => {
+    // Teardown moved to the last describe block (export / import attachments)
+    // so the shared DB stays open for all describe blocks.
+  });
+
+  it('GET /tasks includes attachmentCount and DELETE cascades', async () => {
+    const cookie = makeUser('frank');
+    db.insert(tasks).values({ id: 'task-f', userId: 'frank', title: 'F', sortOrder: 1, createdAt: Date.now() }).run();
+    const a1 = await (await api.request('/tasks/task-f/attachments', post(cookie, { dataUrl: PNG }))).json();
+    expect((await api.request('/tasks/task-f/attachments', post(cookie, { dataUrl: PNG }))).status).toBe(201);
+
+    const list = await (await api.request('/tasks', { headers: { cookie } })).json();
+    const row = list.find((t: any) => t.id === 'task-f');
+    expect(row.attachmentCount).toBe(2);
+
+    expect((await api.request('/tasks/task-f', { method: 'DELETE', headers: { cookie } })).status).toBe(200);
+    expect((await api.request(`/attachments/${a1.id}`, { headers: { cookie } })).status).toBe(404);
+  });
+});
+
+describe('export / import attachments', () => {
+  let sqlite: import('better-sqlite3').Database;
+  let db: typeof import('./db').db;
+  let api: typeof import('./api').api;
+  let users: typeof import('./schema').users;
+  let authSessions: typeof import('./schema').authSessions;
+  let tasks: typeof import('./schema').tasks;
+
+  function makeUser(id: string): string {
+    const now = Date.now();
+    db.insert(users).values({ id, email: `${id}@t.test`, passwordHash: 'x', createdAt: now }).run();
+    db.insert(authSessions).values({ id: `sid_${id}`, userId: id, createdAt: now, expiresAt: now + 1e9, userAgent: null }).run();
+    return `sid=sid_${id}`;
+  }
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  const post = (cookie: string, b: unknown) =>
+    ({ headers: { 'content-type': 'application/json', cookie }, method: 'POST', body: JSON.stringify(b) });
+
+  beforeAll(async () => {
+    ({ sqlite, db } = await import('./db'));
+    ({ api } = await import('./api'));
+    ({ users, authSessions, tasks } = await import('./schema'));
+  });
+
+  afterAll(() => {
+    sqlite.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('export includes attachments, import restores the blob (idempotent)', async () => {
+    // Step 1: gina creates a task and uploads one attachment.
+    const gina = makeUser('gina');
+    db.insert(tasks).values({ id: 'task-g', userId: 'gina', title: 'G', sortOrder: 1, createdAt: Date.now() }).run();
+    await api.request('/tasks/task-g/attachments', post(gina, { dataUrl: PNG, width: 1, height: 1 }));
+
+    // Step 2: Export and verify dump contains the attachment.
+    const dump = await (await api.request('/export', { headers: { cookie: gina } })).json();
+    expect(dump.attachments).toHaveLength(1);
+    expect(dump.attachments[0].dataBase64).toBeTruthy();
+    expect(dump.attachments[0].mime).toBe('image/png');
+
+    // Step 3: Simulate data loss — delete the task (cascades to attachment).
+    expect((await api.request('/tasks/task-g', { method: 'DELETE', headers: { cookie: gina } })).status).toBe(200);
+
+    // Step 4: Re-import as gina (restore from backup).
+    const importBody = { tasks: dump.tasks, attachments: dump.attachments };
+    expect((await api.request('/import', post(gina, importBody))).status).toBe(200);
+
+    // Step 5: Verify the attachment is restored.
+    const list = await (await api.request('/tasks/task-g/attachments', { headers: { cookie: gina } })).json();
+    expect(list).toHaveLength(1);
+    const img = await api.request(`/attachments/${list[0].id}`, { headers: { cookie: gina } });
+    expect(img.status).toBe(200);
+    expect((await img.arrayBuffer()).byteLength).toBeGreaterThan(0);
+
+    // Step 6: Import same payload again — must remain idempotent (no duplicates).
+    expect((await api.request('/import', post(gina, importBody))).status).toBe(200);
+    const list2 = await (await api.request('/tasks/task-g/attachments', { headers: { cookie: gina } })).json();
+    expect(list2).toHaveLength(1);
+  });
+});
