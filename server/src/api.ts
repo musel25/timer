@@ -65,6 +65,7 @@ api.use('/timers', requireAuth); api.use('/timers/*', requireAuth);
 api.use('/habits', requireAuth); api.use('/habits/*', requireAuth);
 api.use('/habit-groups', requireAuth); api.use('/habit-groups/*', requireAuth);
 api.use('/sessions', requireAuth); api.use('/sessions/*', requireAuth);
+api.use('/rest-days', requireAuth); api.use('/rest-days/*', requireAuth);
 api.use('/settings', requireAuth);
 api.use('/export', requireAuth); api.use('/import', requireAuth);
 api.use('/tasks', requireAuth); api.use('/tasks/*', requireAuth);

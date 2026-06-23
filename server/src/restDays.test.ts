@@ -55,6 +55,13 @@ describe('rest_days table + idempotent skip', () => {
     db.delete(restDays).where(and(eq(restDays.userId, 'u1'), eq(restDays.date, '2026-06-22'))).run();
     expect(db.select().from(restDays).where(eq(restDays.userId, 'u1')).all()).toHaveLength(0);
   });
+
+  it('requires auth on every /rest-days verb (no cookie → 401)', async () => {
+    const { api } = await import('./api');
+    expect((await api.request('/rest-days')).status).toBe(401);
+    expect((await api.request('/rest-days', { method: 'POST', body: '{}' })).status).toBe(401);
+    expect((await api.request('/rest-days/2026-06-22', { method: 'DELETE' })).status).toBe(401);
+  });
 });
 
 // Imported at the bottom so the TIMER_DB env stub above runs first.
