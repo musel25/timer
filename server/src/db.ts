@@ -133,6 +133,14 @@ export function migrate(): void {
     );
     CREATE INDEX IF NOT EXISTS idx_task_attachments_task ON task_attachments(task_id);
     CREATE INDEX IF NOT EXISTS idx_task_attachments_user ON task_attachments(user_id);
+
+    CREATE TABLE IF NOT EXISTS rest_days (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_rest_days_user_date ON rest_days(user_id, date);
   `);
 
   // Idempotent column additions for databases created before a column existed.

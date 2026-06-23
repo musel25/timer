@@ -114,6 +114,15 @@ export const integrations = sqliteTable(
   (t) => ({ pk: primaryKey({ columns: [t.userId, t.kind] }) }),
 );
 
+/** A whole day the user excused from streaks. One row per (user, date); the
+ *  unique (user_id, date) index is created in db.ts so POST can be idempotent. */
+export const restDays = sqliteTable('rest_days', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  date: text('date').notNull(), // 'YYYY-MM-DD' local key
+  createdAt: integer('created_at').notNull(),
+});
+
 export const taskAttachments = sqliteTable('task_attachments', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),

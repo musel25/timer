@@ -155,6 +155,13 @@ export interface CalendarEvent {
   allDay: boolean;
 }
 
+/** A whole day excused from every habit's streak (a "rest day" / skip). */
+export interface RestDay {
+  id: string;
+  date: string; // 'YYYY-MM-DD' local date that bridges streaks instead of breaking them
+  createdAt: number;
+}
+
 export interface TaskAttachment {
   id: string;
   taskId: string;

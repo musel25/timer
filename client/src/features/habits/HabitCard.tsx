@@ -206,6 +206,10 @@ export function HabitCard({
       ) : minutesToday > 0 ? (
         <div className="mt-3 text-xs text-slate-400">{Math.round(minutesToday)} min today</div>
       ) : null}
+      <div className="mt-2 flex items-center gap-1 text-xs text-slate-400">
+        <Flame size={13} className={streak > 0 ? 'text-amber-500' : ''} />
+        {streak > 0 ? `${streak}-day streak` : 'Start a streak'}
+      </div>
     </div>
   );
 }

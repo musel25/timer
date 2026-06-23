@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, asc, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { db } from './db';
-import { habitGroups, habits, sessions, taskAttachments, tasks, timers, userSettings, users } from './schema';
+import { habitGroups, habits, restDays, sessions, taskAttachments, tasks, timers, userSettings, users } from './schema';
 import {
   createSession, currentUserId, destroySession, hashPassword, newId, requireAuth, verifyPassword,
 } from './auth';
@@ -242,6 +242,25 @@ api.post('/sessions', async (c) => {
 
 api.delete('/sessions/:id', (c) => {
   db.delete(sessions).where(and(eq(sessions.id, c.req.param('id')), eq(sessions.userId, uid(c)))).run();
+  return c.json({ ok: true });
+});
+
+/* ---------- rest days (whole-day streak skips) ---------- */
+api.get('/rest-days', (c) =>
+  c.json(db.select().from(restDays).where(eq(restDays.userId, uid(c))).orderBy(desc(restDays.date)).all()));
+
+api.post('/rest-days', async (c) => {
+  const p = z.object({ date: z.string().regex(DATE_RE) }).safeParse(await body(c));
+  if (!p.success) return c.json({ error: 'invalid_input' }, 400);
+  const existing = db.select().from(restDays).where(and(eq(restDays.userId, uid(c)), eq(restDays.date, p.data.date))).get();
+  if (existing) return c.json(existing); // idempotent: marking an already-rest day is a no-op
+  const row = { id: newId(), userId: uid(c), date: p.data.date, createdAt: Date.now() };
+  db.insert(restDays).values(row).onConflictDoNothing().run();
+  return c.json(row, 201);
+});
+
+api.delete('/rest-days/:date', (c) => {
+  db.delete(restDays).where(and(eq(restDays.userId, uid(c)), eq(restDays.date, c.req.param('date')))).run();
   return c.json({ ok: true });
 });
 

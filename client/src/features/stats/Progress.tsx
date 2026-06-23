@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { Flame, Clock, CalendarRange } from 'lucide-react';
-import { useGroups, useHabits, useSessions, useSettings } from '../../lib/hooks';
+import { useGroups, useHabits, useRestDays, useSessions, useSettings } from '../../lib/hooks';
 import { HabitIcon } from '../../lib/habitIcons';
 import { categoryColor, gradient, tint, solid } from '../../lib/palette';
-import { currentStreak, focusMinutes, goalStreak, heatmap, minutesByHabitInRange, minutesInRange, todaySummary } from '../../lib/stats';
+import { currentStreak, focusMinutes, habitStreak, heatmap, minutesByHabitInRange, minutesInRange, todaySummary } from '../../lib/stats';
 import { startOfToday, addDays } from '../../lib/time';
 import { GoalBar } from '../../components/GoalBar';
 
@@ -14,10 +14,12 @@ export function Progress() {
   const { data: habits = [] } = useHabits();
   const { data: settings } = useSettings();
   const { data: groups = [] } = useGroups();
+  const { data: restDayRows = [] } = useRestDays();
   const weekdaysOnlyGroups = new Set(groups.filter((g) => g.weekdaysOnly).map((g) => g.id));
+  const restDays = new Set(restDayRows.map((r) => r.date));
   const weekStart = settings?.weekStart ?? 1;
 
-  const streak = currentStreak(sessions);
+  const streak = currentStreak(sessions, undefined, restDays);
   const weekAgo = addDays(startOfToday(), -6);
   const monthAgo = addDays(startOfToday(), -29);
   const weekMin = minutesInRange(sessions, weekAgo);
@@ -36,10 +38,7 @@ export function Progress() {
       weekMin: Math.round(byHabit[h.id] ?? 0),
       minutes: summary.minutesByHabit[h.id] ?? 0,
       goal: h.dailyGoalMin && h.dailyGoalMin > 0 ? h.dailyGoalMin : null,
-      streak:
-        h.kind === 'abstain'
-          ? currentStreak(sessions, h.id)
-          : goalStreak(sessions, h.id, h.dailyGoalMin, !!h.groupId && weekdaysOnlyGroups.has(h.groupId)),
+      streak: habitStreak(h, sessions, !!h.groupId && weekdaysOnlyGroups.has(h.groupId), restDays),
     }))
     .sort((a, b) => Number(b.h.kind !== 'abstain') - Number(a.h.kind !== 'abstain') || b.weekMin - a.weekMin);
 

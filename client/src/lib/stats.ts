@@ -1,4 +1,4 @@
-import type { Session } from './types';
+import type { Habit, Session } from './types';
 import { dayKey, startOfToday, addDays } from './time';
 
 /** A focus-session umbrella overlaps the habit runs inside it, so it must be
@@ -26,21 +26,31 @@ function activeDays(sessions: Session[], habitId?: string): Set<string> {
   return set;
 }
 
-/** Consecutive days with at least one completed session, ending today or yesterday. */
-export function currentStreak(sessions: Session[], habitId?: string): number {
+/**
+ * Consecutive days with at least one completed session, ending today or
+ * yesterday. Dates in `restDays` (local 'YYYY-MM-DD' keys) are transparent:
+ * they never break the streak and never add to it — same as a weekend under
+ * `weekdaysOnly` in {@link goalStreak}.
+ */
+export function currentStreak(sessions: Session[], habitId?: string, restDays: Set<string> = new Set()): number {
   const days = activeDays(sessions, habitId);
   if (days.size === 0) return 0;
-  const today = startOfToday();
-  let cursor = today;
-  if (!days.has(dayKey(today))) {
-    const y = addDays(today, -1);
-    if (days.has(dayKey(y))) cursor = y;
-    else return 0;
+  const isRest = (ts: number) => restDays.has(dayKey(ts));
+  const back = (ts: number) => {
+    let c = addDays(ts, -1);
+    while (isRest(c)) c = addDays(c, -1);
+    return c;
+  };
+  let cursor = startOfToday();
+  while (isRest(cursor)) cursor = addDays(cursor, -1); // a rest day today is transparent
+  if (!days.has(dayKey(cursor))) {
+    cursor = back(cursor); // grace: fall back to the nearest non-rest prior day
+    if (!days.has(dayKey(cursor))) return 0;
   }
   let streak = 0;
   while (days.has(dayKey(cursor))) {
     streak += 1;
-    cursor = addDays(cursor, -1);
+    cursor = back(cursor);
   }
   return streak;
 }
@@ -113,9 +123,16 @@ const isWeekend = (ts: number) => {
  * Consecutive days (ending today, or yesterday when today isn't met yet) on
  * which the habit reached its daily goal in minutes — or at least 10 minutes
  * when it has no goal. With `weekdaysOnly`, Saturdays and Sundays are invisible:
- * they never break the streak and never count toward it.
+ * they never break the streak and never count toward it. Dates in `restDays`
+ * (local 'YYYY-MM-DD' keys) are invisible the same way.
  */
-export function goalStreak(sessions: Session[], habitId: string, dailyGoalMin: number | null, weekdaysOnly = false): number {
+export function goalStreak(
+  sessions: Session[],
+  habitId: string,
+  dailyGoalMin: number | null,
+  weekdaysOnly = false,
+  restDays: Set<string> = new Set(),
+): number {
   const need = dailyGoalMin && dailyGoalMin > 0 ? dailyGoalMin : 10; // no goal → any 10-min day
   const minByDay: Record<string, number> = {};
   for (const s of sessions) {
@@ -124,13 +141,14 @@ export function goalStreak(sessions: Session[], habitId: string, dailyGoalMin: n
     minByDay[k] = (minByDay[k] ?? 0) + s.actualSeconds / 60;
   }
   const met = (ts: number) => (minByDay[dayKey(ts)] ?? 0) >= need - 1e-9;
+  const skip = (ts: number) => (weekdaysOnly && isWeekend(ts)) || restDays.has(dayKey(ts));
   const back = (ts: number) => {
     let c = addDays(ts, -1);
-    while (weekdaysOnly && isWeekend(c)) c = addDays(c, -1);
+    while (skip(c)) c = addDays(c, -1);
     return c;
   };
   let cursor = startOfToday();
-  while (weekdaysOnly && isWeekend(cursor)) cursor = addDays(cursor, -1);
+  while (skip(cursor)) cursor = addDays(cursor, -1);
   if (!met(cursor)) {
     cursor = back(cursor);
     if (!met(cursor)) return 0;
@@ -141,6 +159,17 @@ export function goalStreak(sessions: Session[], habitId: string, dailyGoalMin: n
     cursor = back(cursor);
   }
   return streak;
+}
+
+/**
+ * The streak to show for a habit: clean-day {@link currentStreak} for abstinence
+ * habits, goal-met {@link goalStreak} for time habits. `weekdaysOnly` and
+ * `restDays` are forwarded so both kinds bridge the same skipped days.
+ */
+export function habitStreak(habit: Habit, sessions: Session[], weekdaysOnly = false, restDays: Set<string> = new Set()): number {
+  return habit.kind === 'abstain'
+    ? currentStreak(sessions, habit.id, restDays)
+    : goalStreak(sessions, habit.id, habit.dailyGoalMin, weekdaysOnly, restDays);
 }
 
 /** Minutes of habit-less (focus/timer) sessions since `fromTs`. */

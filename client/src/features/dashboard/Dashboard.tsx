@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
-import { useHabits, useGroups, useSessions, useSettings, useLogSession, useDeleteSession } from '../../lib/hooks';
+import { useHabits, useGroups, useSessions, useSettings, useLogSession, useDeleteSession, useRestDays } from '../../lib/hooks';
 import type { Habit } from '../../lib/types';
 import { Timer, Plus } from 'lucide-react';
-import { currentStreak, todaySummary, todaysHabitSession } from '../../lib/stats';
+import { habitStreak, todaySummary, todaysHabitSession } from '../../lib/stats';
 import { HabitIcon } from '../../lib/habitIcons';
 import { useRun } from '../run/RunContext';
 import { FocusStarter } from '../run/FocusStarter';
@@ -13,12 +13,16 @@ export function Dashboard() {
   const { data: groups = [] } = useGroups();
   const { data: sessions = [] } = useSessions();
   const { data: settings } = useSettings();
+  const { data: restDayRows = [] } = useRestDays();
   const { startRun } = useRun();
   const logSession = useLogSession();
   const deleteSession = useDeleteSession();
 
   const today = todaySummary(sessions);
   const active = habits.filter((h) => !h.archived);
+  const restDays = new Set(restDayRows.map((r) => r.date));
+  const weekdaysOnly = new Set(groups.filter((g) => g.weekdaysOnly).map((g) => g.id));
+  const streakFor = (h: Habit) => habitStreak(h, sessions, !!h.groupId && weekdaysOnly.has(h.groupId), restDays);
 
   function start(habit: Habit, min: number) {
     const prep = settings?.prepSeconds ?? 5;
@@ -47,7 +51,7 @@ export function Dashboard() {
       onLog={log}
       editTo={`/habits/${h.id}`}
       markedToday={today.doneHabitIds.has(h.id)}
-      streak={currentStreak(sessions, h.id)}
+      streak={streakFor(h)}
       onToggle={toggleAbstain}
     />
   );

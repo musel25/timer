@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 import { buildManualSession } from './sessionLog';
-import type { CalendarEvent, Habit, HabitGroup, Session, Settings, Task, TaskAttachment, TimerPreset } from './types';
+import type { CalendarEvent, Habit, HabitGroup, RestDay, Session, Settings, Task, TaskAttachment, TimerPreset } from './types';
 
 export interface Me {
   user: { id: string; email: string } | null;
@@ -31,6 +31,19 @@ export function useDeleteSession() {
   return useMutation({
     mutationFn: (id: string) => api.del(`/sessions/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['sessions'] }),
+  });
+}
+
+/* ---- rest days (whole-day streak skips) ---- */
+export const useRestDays = () => useQuery({ queryKey: ['rest-days'], queryFn: () => api.get<RestDay[]>('/rest-days') });
+
+/** Toggle a date's rest-day status: POST to skip it, DELETE to un-skip it. */
+export function useToggleRestDay() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ date, on }: { date: string; on: boolean }) =>
+      on ? api.post('/rest-days', { date }) : api.del(`/rest-days/${date}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['rest-days'] }),
   });
 }
 

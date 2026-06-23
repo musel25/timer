@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { useTasks, useSessions, useSaveTask, useCalendarEvents } from '../../lib/hooks';
+import { useTasks, useSessions, useSaveTask, useCalendarEvents, useRestDays, useToggleRestDay } from '../../lib/hooks';
 import { eventsByDay } from '../../lib/calendar';
 import { EventChip } from '../../components/EventChip';
 import type { Task } from '../../lib/types';
 import { currentStreak, todaySummary } from '../../lib/stats';
-import { Flame, Timer as TimerIcon, Clock } from 'lucide-react';
-import { todayKey } from '../../lib/date';
+import { Flame, Timer as TimerIcon, Clock, Moon } from 'lucide-react';
+import { todayKey, addDaysKey } from '../../lib/date';
 import { TaskRow } from './TaskRow';
 import { QuickAdd } from './QuickAdd';
 import { TaskEditor } from './TaskEditor';
@@ -13,17 +13,23 @@ import { TaskEditor } from './TaskEditor';
 export function TodayView() {
   const { data: tasks = [] } = useTasks();
   const { data: sessions = [] } = useSessions();
+  const { data: restDayRows = [] } = useRestDays();
   const saveTask = useSaveTask();
+  const toggleRest = useToggleRestDay();
   const [editing, setEditing] = useState<Task | null>(null);
   const [showHiddenTasks, setShowHiddenTasks] = useState(false);
 
   const tk = todayKey();
+  const yk = addDaysKey(tk, -1);
   const { data: events = [] } = useCalendarEvents(tk, tk);
   const todayEvents = eventsByDay(events).get(tk) ?? [];
   const todays = tasks.filter((t) => t.date === tk).sort((a, b) => Number(a.done) - Number(b.done) || a.sortOrder - b.sortOrder);
   const today = todays.filter((t) => t.hiddenOn !== tk);
   const hiddenTasks = todays.filter((t) => t.hiddenOn === tk);
-  const streak = currentStreak(sessions);
+  const restDays = new Set(restDayRows.map((r) => r.date));
+  const restingToday = restDays.has(tk);
+  const restingYesterday = restDays.has(yk);
+  const streak = currentStreak(sessions, undefined, restDays);
   const summary = todaySummary(sessions);
   const dateLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 
@@ -45,6 +51,21 @@ export function TodayView() {
           <span className="stat-pill" style={{ color: 'rgb(124 92 246)' }}>
             <Clock size={15} /> {summary.minutes} min
           </span>
+          <button
+            onClick={() => toggleRest.mutate({ date: tk, on: !restingToday })}
+            className="stat-pill transition hover:opacity-80"
+            style={restingToday ? { color: 'rgb(124 92 246)' } : undefined}
+            title="Excuse today from streaks — a rest day bridges them instead of breaking them"
+          >
+            <Moon size={15} /> {restingToday ? 'Resting today' : 'Rest day'}
+          </button>
+          <button
+            onClick={() => toggleRest.mutate({ date: yk, on: !restingYesterday })}
+            className="text-xs text-slate-500 transition hover:text-slate-300"
+            title="Excuse yesterday from streaks"
+          >
+            {restingYesterday ? 'Yesterday: resting' : 'Mark yesterday'}
+          </button>
         </div>
       </header>
 

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { currentStreak, focusMinutes, goalStreak, minutesByDay, minutesInRange, todaySummary, todaysHabitSession } from './stats';
-import { startOfToday, addDays } from './time';
+import { dayKey, startOfToday, addDays } from './time';
 import type { Session } from './types';
 
 function session(startedAt: number, opts: Partial<Session> = {}): Session {
@@ -138,6 +138,41 @@ describe('goalStreak', () => {
       session(noon, { habitId: 'h1', actualSeconds: 1200, completed: false }),
     ];
     expect(goalStreak(s, 'h1', 10)).toBe(0);
+  });
+});
+
+describe('rest days bridge streaks', () => {
+  const noon = startOfToday() + 12 * 3600_000;
+  const k = (n: number) => dayKey(addDays(noon, n));
+
+  it('currentStreak: a rest day on yesterday bridges the gap (no +1)', () => {
+    // today not done; yesterday is a rest day; the two days before were done.
+    const s = [session(addDays(noon, -2)), session(addDays(noon, -3))];
+    expect(currentStreak(s, undefined, new Set([k(-1)]))).toBe(2);
+  });
+
+  it('currentStreak: a rest day is bridged, not counted, when today is done', () => {
+    const s = [session(noon), session(addDays(noon, -2))];
+    expect(currentStreak(s, undefined, new Set([k(-1)]))).toBe(2); // today + day-2, rest day skipped
+  });
+
+  it('currentStreak: a real gap next to a rest day still breaks', () => {
+    // today done, yesterday rest, day-2 missed (real gap), day-3 done.
+    const s = [session(noon), session(addDays(noon, -3))];
+    expect(currentStreak(s, undefined, new Set([k(-1)]))).toBe(1);
+  });
+
+  it('goalStreak: a rest day bridges goal-met days (no +1)', () => {
+    const s = [
+      session(noon, { habitId: 'h1', actualSeconds: 1200 }),
+      session(addDays(noon, -2), { habitId: 'h1', actualSeconds: 1200 }),
+    ];
+    expect(goalStreak(s, 'h1', 20, false, new Set([k(-1)]))).toBe(2);
+  });
+
+  it('goalStreak: a rest day on today is transparent', () => {
+    const s = [session(addDays(noon, -1), { habitId: 'h1', actualSeconds: 1200 })];
+    expect(goalStreak(s, 'h1', 20, false, new Set([k(0)]))).toBe(1);
   });
 });
 
