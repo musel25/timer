@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { currentStreak, effectiveGoal, focusMinutes, goalStreak, habitStreak, minutesByDay, minutesInRange, todaySummary, todaysHabitSession } from './stats';
+import { currentStreak, effectiveGoal, focusMinutes, goalStreak, habitHeatmap, habitStreak, isHabitDoneToday, minutesByDay, minutesInRange, todaySummary, todaysHabitSession } from './stats';
 import { dayKey, startOfToday, addDays } from './time';
-import type { Session } from './types';
+import type { Habit, Session } from './types';
 
 function session(startedAt: number, opts: Partial<Session> = {}): Session {
   return {
@@ -252,5 +252,47 @@ describe('goalStreak honors the per-day effective goal', () => {
     ];
     // yesterday is a vacation day needing 5 min; only 1 logged → it breaks → streak = today only
     expect(goalStreak(below, habit, new Set(), new Set([k]))).toBe(1);
+  });
+});
+
+describe('habitHeatmap', () => {
+  const noon = startOfToday() + 12 * 3600_000;
+
+  it('returns `days` entries oldest-first ending today', () => {
+    const grid = habitHeatmap([], 7, 'h1');
+    expect(grid).toHaveLength(7);
+    expect(grid[6].date).toBe(dayKey(noon));
+    expect(grid[0].date).toBe(dayKey(addDays(noon, -6)));
+  });
+
+  it('sums only the given habit and marks done days', () => {
+    const s = [
+      session(noon, { habitId: 'h1', actualSeconds: 1200 }),
+      session(noon, { habitId: 'h2', actualSeconds: 1200 }),
+      session(noon, { habitId: 'h1', actualSeconds: 0 }), // abstain-style mark, 0 min
+    ];
+    const grid = habitHeatmap(s, 3, 'h1');
+    const today = grid[2];
+    expect(today.minutes).toBe(20);
+    expect(today.done).toBe(true);
+    expect(grid[1].done).toBe(false);
+  });
+});
+
+describe('isHabitDoneToday', () => {
+  const summary = { count: 1, minutes: 20, doneHabitIds: new Set(['a1']), minutesByHabit: { t1: 20 } };
+  const time = (over: Partial<Habit>) => ({ id: 't1', kind: 'time', ...over } as Habit);
+
+  it('time habit is done when minutes reach the effective goal', () => {
+    expect(isHabitDoneToday(time({}), summary as any, 20)).toBe(true);
+    expect(isHabitDoneToday(time({}), summary as any, 30)).toBe(false);
+  });
+
+  it('time habit with no effective goal today is never done', () => {
+    expect(isHabitDoneToday(time({}), summary as any, null)).toBe(false);
+  });
+
+  it('abstain habit is done when marked', () => {
+    expect(isHabitDoneToday({ id: 'a1', kind: 'abstain' } as Habit, summary as any, null)).toBe(true);
   });
 });

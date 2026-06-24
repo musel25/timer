@@ -200,3 +200,32 @@ export function focusMinutes(sessions: Session[], fromTs: number): number {
   }
   return m;
 }
+
+/** Per-habit version of {@link heatmap}: last `days` local days (oldest first),
+ *  each with that habit's minutes and whether any completed session occurred. */
+export function habitHeatmap(sessions: Session[], days: number, habitId: string): { date: string; minutes: number; done: boolean }[] {
+  const minByDay: Record<string, number> = {};
+  const doneDays = new Set<string>();
+  for (const s of sessions) {
+    if (s.habitId !== habitId || !s.completed) continue;
+    const k = dayKey(s.startedAt);
+    minByDay[k] = (minByDay[k] ?? 0) + s.actualSeconds / 60;
+    doneDays.add(k);
+  }
+  const t0 = startOfToday();
+  const out: { date: string; minutes: number; done: boolean }[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const k = dayKey(addDays(t0, -i));
+    out.push({ date: k, minutes: Math.round(minByDay[k] ?? 0), done: doneDays.has(k) });
+  }
+  return out;
+}
+
+/** Whether a habit counts as completed for today (drives the dashboard auto-hide).
+ *  Abstain → marked today. Time → minutes reach today's effective goal; a habit
+ *  with no configured goal today is never auto-completed. */
+export function isHabitDoneToday(habit: Habit, summary: TodaySummary, effectiveGoalToday: number | null): boolean {
+  if (habit.kind === 'abstain') return summary.doneHabitIds.has(habit.id);
+  if (effectiveGoalToday == null) return false;
+  return (summary.minutesByHabit[habit.id] ?? 0) >= effectiveGoalToday - 1e-9;
+}
