@@ -3,9 +3,10 @@ import { Flame, Clock, CalendarRange } from 'lucide-react';
 import { useHabits, useRestDays, useSessions, useSettings, useVacationDays } from '../../lib/hooks';
 import { HabitIcon } from '../../lib/habitIcons';
 import { categoryColor, gradient, tint, solid } from '../../lib/palette';
-import { currentStreak, focusMinutes, habitStreak, heatmap, minutesByHabitInRange, minutesInRange, todaySummary } from '../../lib/stats';
+import { currentStreak, effectiveGoal, focusMinutes, habitStreak, heatmap, minutesByHabitInRange, minutesInRange, todaySummary } from '../../lib/stats';
 import { startOfToday, addDays } from '../../lib/time';
 import { GoalBar } from '../../components/GoalBar';
+import { HabitGrid } from '../../components/HabitGrid';
 
 const WEEKS = 18;
 
@@ -37,7 +38,7 @@ export function Progress() {
       h,
       weekMin: Math.round(byHabit[h.id] ?? 0),
       minutes: summary.minutesByHabit[h.id] ?? 0,
-      goal: h.dailyGoalMin && h.dailyGoalMin > 0 ? h.dailyGoalMin : null,
+      goal: effectiveGoal(h, startOfToday(), vacationDays),
       streak: habitStreak(h, sessions, restDays, vacationDays),
     }))
     .sort((a, b) => Number(b.h.kind !== 'abstain') - Number(a.h.kind !== 'abstain') || b.weekMin - a.weekMin);
@@ -117,6 +118,7 @@ export function Progress() {
                 ) : (
                   <div className="text-xs text-slate-400">{Math.round(minutes)} min today · no goal set</div>
                 )}
+                <HabitGrid habit={h} sessions={sessions} weekStart={weekStart} />
               </div>
             );
           })}
