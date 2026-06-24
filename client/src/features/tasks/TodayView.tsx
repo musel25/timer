@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useTasks, useSessions, useSaveTask, useCalendarEvents, useRestDays, useToggleRestDay } from '../../lib/hooks';
+import { useTasks, useSessions, useSaveTask, useCalendarEvents, useRestDays, useToggleRestDay, useVacationDays, useToggleVacationDay } from '../../lib/hooks';
 import { eventsByDay } from '../../lib/calendar';
 import { EventChip } from '../../components/EventChip';
 import type { Task } from '../../lib/types';
 import { currentStreak, todaySummary } from '../../lib/stats';
-import { Flame, Timer as TimerIcon, Clock, Moon } from 'lucide-react';
+import { Flame, Timer as TimerIcon, Clock, Moon, Palmtree } from 'lucide-react';
 import { todayKey, addDaysKey } from '../../lib/date';
 import { TaskRow } from './TaskRow';
 import { QuickAdd } from './QuickAdd';
@@ -29,6 +29,11 @@ export function TodayView() {
   const restDays = new Set(restDayRows.map((r) => r.date));
   const restingToday = restDays.has(tk);
   const restingYesterday = restDays.has(yk);
+  const { data: vacationRows = [] } = useVacationDays();
+  const toggleVacation = useToggleVacationDay();
+  const vacationDays = new Set(vacationRows.map((r) => r.date));
+  const vacationingToday = vacationDays.has(tk);
+  const vacationingYesterday = vacationDays.has(yk);
   const streak = currentStreak(sessions, undefined, restDays);
   const summary = todaySummary(sessions);
   const dateLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
@@ -65,6 +70,21 @@ export function TodayView() {
             title="Excuse yesterday from streaks"
           >
             {restingYesterday ? 'Yesterday: resting' : 'Mark yesterday'}
+          </button>
+          <button
+            onClick={() => toggleVacation.mutate({ date: tk, on: !vacationingToday })}
+            className="stat-pill transition hover:opacity-80"
+            style={vacationingToday ? { color: 'rgb(34 197 94)' } : undefined}
+            title="Vacation day — habits keep their streak at a lighter goal"
+          >
+            <Palmtree size={15} /> {vacationingToday ? 'On vacation' : 'Vacation'}
+          </button>
+          <button
+            onClick={() => toggleVacation.mutate({ date: yk, on: !vacationingYesterday })}
+            className="text-xs text-slate-500 transition hover:text-slate-300"
+            title="Mark yesterday as a vacation day"
+          >
+            {vacationingYesterday ? 'Yesterday: vacation' : 'Mark yesterday'}
           </button>
         </div>
       </header>
