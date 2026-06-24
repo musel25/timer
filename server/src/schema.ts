@@ -42,6 +42,9 @@ export const habits = sqliteTable('habits', {
   durations: text('durations', { mode: 'json' }).notNull().$type<number[]>(),
   defaultDurationMin: integer('default_duration_min'),
   dailyGoalMin: integer('daily_goal_min'),
+  // Optional lighter goals; NULL = no reduction (use dailyGoalMin that day).
+  weekendGoalMin: integer('weekend_goal_min'),
+  vacationGoalMin: integer('vacation_goal_min'),
   timerType: text('timer_type').notNull().default('simple'),
   defaultTimerId: text('default_timer_id'),
   sortOrder: integer('sort_order').notNull().default(0),
@@ -120,6 +123,13 @@ export const restDays = sqliteTable('rest_days', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
   date: text('date').notNull(), // 'YYYY-MM-DD' local key
+  createdAt: integer('created_at').notNull(),
+});
+
+export const vacationDays = sqliteTable('vacation_days', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  date: text('date').notNull(), // 'YYYY-MM-DD' local key — lighter goal, not a skip
   createdAt: integer('created_at').notNull(),
 });
 

@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, asc, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { db } from './db';
-import { habitGroups, habits, restDays, sessions, taskAttachments, tasks, timers, userSettings, users } from './schema';
+import { habitGroups, habits, restDays, sessions, taskAttachments, tasks, timers, userSettings, users, vacationDays } from './schema';
 import {
   createSession, currentUserId, destroySession, hashPassword, newId, requireAuth, verifyPassword,
 } from './auth';
@@ -66,6 +66,7 @@ api.use('/habits', requireAuth); api.use('/habits/*', requireAuth);
 api.use('/habit-groups', requireAuth); api.use('/habit-groups/*', requireAuth);
 api.use('/sessions', requireAuth); api.use('/sessions/*', requireAuth);
 api.use('/rest-days', requireAuth); api.use('/rest-days/*', requireAuth);
+api.use('/vacation-days', requireAuth); api.use('/vacation-days/*', requireAuth);
 api.use('/settings', requireAuth);
 api.use('/export', requireAuth); api.use('/import', requireAuth);
 api.use('/tasks', requireAuth); api.use('/tasks/*', requireAuth);
@@ -159,6 +160,8 @@ const habitInput = z.object({
   durations: z.array(z.number().int().positive()).min(1),
   defaultDurationMin: z.number().int().positive().nullable().optional(),
   dailyGoalMin: z.number().int().positive().nullable().optional(),
+  weekendGoalMin: z.number().int().positive().nullable().optional(),
+  vacationGoalMin: z.number().int().positive().nullable().optional(),
   timerType: z.enum(['simple', 'interval']).optional(),
   defaultTimerId: z.string().nullable().optional(),
   sortOrder: z.number().int().optional(),
@@ -176,6 +179,7 @@ api.post('/habits', async (c) => {
     id: newId(), userId: uid(c), groupId: p.data.groupId ?? null, name: p.data.name,
     emoji: p.data.emoji ?? null, note: p.data.note ?? null, kind: p.data.kind ?? 'time', durations: p.data.durations,
     defaultDurationMin: p.data.defaultDurationMin ?? null, dailyGoalMin: p.data.dailyGoalMin ?? null,
+    weekendGoalMin: p.data.weekendGoalMin ?? null, vacationGoalMin: p.data.vacationGoalMin ?? null,
     timerType: p.data.timerType ?? 'simple', defaultTimerId: p.data.defaultTimerId ?? null,
     sortOrder: p.data.sortOrder ?? Date.now(), archived: p.data.archived ?? false, createdAt: Date.now(),
   };
@@ -262,6 +266,25 @@ api.post('/rest-days', async (c) => {
 
 api.delete('/rest-days/:date', (c) => {
   db.delete(restDays).where(and(eq(restDays.userId, uid(c)), eq(restDays.date, c.req.param('date')))).run();
+  return c.json({ ok: true });
+});
+
+/* ---------- vacation days (whole-day lighter goal, still streak-keeping) ---------- */
+api.get('/vacation-days', (c) =>
+  c.json(db.select().from(vacationDays).where(eq(vacationDays.userId, uid(c))).orderBy(desc(vacationDays.date)).all()));
+
+api.post('/vacation-days', async (c) => {
+  const p = z.object({ date: z.string().regex(DATE_RE) }).safeParse(await body(c));
+  if (!p.success) return c.json({ error: 'invalid_input' }, 400);
+  const existing = db.select().from(vacationDays).where(and(eq(vacationDays.userId, uid(c)), eq(vacationDays.date, p.data.date))).get();
+  if (existing) return c.json(existing); // idempotent
+  const row = { id: newId(), userId: uid(c), date: p.data.date, createdAt: Date.now() };
+  db.insert(vacationDays).values(row).onConflictDoNothing().run();
+  return c.json(row, 201);
+});
+
+api.delete('/vacation-days/:date', (c) => {
+  db.delete(vacationDays).where(and(eq(vacationDays.userId, uid(c)), eq(vacationDays.date, c.req.param('date')))).run();
   return c.json({ ok: true });
 });
 

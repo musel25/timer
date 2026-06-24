@@ -141,6 +141,14 @@ export function migrate(): void {
       created_at INTEGER NOT NULL
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_rest_days_user_date ON rest_days(user_id, date);
+
+    CREATE TABLE IF NOT EXISTS vacation_days (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_vacation_days_user_date ON vacation_days(user_id, date);
   `);
 
   // Idempotent column additions for databases created before a column existed.
@@ -149,6 +157,8 @@ export function migrate(): void {
   addColumnIfMissing('tasks', 'gcal_event_id', 'TEXT');
   addColumnIfMissing('sessions', 'category', "TEXT NOT NULL DEFAULT 'habit'");
   addColumnIfMissing('sessions', 'parent_session_id', 'TEXT');
+  addColumnIfMissing('habits', 'weekend_goal_min', 'INTEGER');
+  addColumnIfMissing('habits', 'vacation_goal_min', 'INTEGER');
 
   // Pre-existing DBs: add the flag and mark the conventional 'Work' group once.
   if (addColumnIfMissing('habit_groups', 'weekdays_only', 'INTEGER NOT NULL DEFAULT 0')) {
