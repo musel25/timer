@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom';
 import { useHabits, useGroups, useSessions, useSettings, useLogSession, useDeleteSession, useRestDays, useVacationDays } from '../../lib/hooks';
 import type { Habit } from '../../lib/types';
 import { Timer, Plus } from 'lucide-react';
-import { habitStreak, todaySummary, todaysHabitSession } from '../../lib/stats';
+import { habitStreak, todaySummary, todaysHabitSession, effectiveGoal } from '../../lib/stats';
+import { startOfToday } from '../../lib/time';
 import { HabitIcon } from '../../lib/habitIcons';
 import { useRun } from '../run/RunContext';
 import { FocusStarter } from '../run/FocusStarter';
@@ -53,6 +54,7 @@ export function Dashboard() {
       editTo={`/habits/${h.id}`}
       markedToday={today.doneHabitIds.has(h.id)}
       streak={streakFor(h)}
+      goalMin={effectiveGoal(h, startOfToday(), vacationDays)}
       onToggle={toggleAbstain}
     />
   );

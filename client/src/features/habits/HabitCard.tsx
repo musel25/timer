@@ -25,6 +25,7 @@ export function HabitCard({
   editTo,
   markedToday = false,
   streak = 0,
+  goalMin,
   onToggle,
 }: {
   habit: Habit;
@@ -35,10 +36,12 @@ export function HabitCard({
   editTo?: string;
   markedToday?: boolean;
   streak?: number;
+  goalMin?: number | null; // effective goal for today; falls back to habit.dailyGoalMin
   onToggle?: (h: Habit) => void;
 }) {
   const color = categoryColor(habit.id);
-  const goal = habit.dailyGoalMin && habit.dailyGoalMin > 0 ? habit.dailyGoalMin : null;
+  const rawGoal = goalMin !== undefined ? goalMin : habit.dailyGoalMin;
+  const goal = rawGoal && rawGoal > 0 ? rawGoal : null;
   const durations = habit.durations?.length ? habit.durations : [10];
   const defaultMin = habit.defaultDurationMin ?? durations[0];
   const [logging, setLogging] = useState(false);
