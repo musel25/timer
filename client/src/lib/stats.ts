@@ -29,8 +29,8 @@ function activeDays(sessions: Session[], habitId?: string): Set<string> {
 /**
  * Consecutive days with at least one completed session, ending today or
  * yesterday. Dates in `restDays` (local 'YYYY-MM-DD' keys) are transparent:
- * they never break the streak and never add to it — same as a weekend under
- * `weekdaysOnly` in {@link goalStreak}.
+ * they never break the streak and never add to it — the same way rest days
+ * are treated in {@link goalStreak}.
  */
 export function currentStreak(sessions: Session[], habitId?: string, restDays: Set<string> = new Set()): number {
   const days = activeDays(sessions, habitId);
