@@ -48,6 +48,8 @@ export interface Habit {
   durations: number[]; // minutes
   defaultDurationMin: number | null;
   dailyGoalMin: number | null;
+  weekendGoalMin: number | null; // lighter Sat/Sun goal; null = same as dailyGoalMin
+  vacationGoalMin: number | null; // lighter goal on vacation days; null = weekend then daily
   timerType: TimerType;
   defaultTimerId: string | null;
   sortOrder: number;
@@ -159,6 +161,13 @@ export interface CalendarEvent {
 export interface RestDay {
   id: string;
   date: string; // 'YYYY-MM-DD' local date that bridges streaks instead of breaking them
+  createdAt: number;
+}
+
+/** A whole day with a lighter per-habit goal that still must be met to keep a streak. */
+export interface VacationDay {
+  id: string;
+  date: string; // 'YYYY-MM-DD' local date
   createdAt: number;
 }
 

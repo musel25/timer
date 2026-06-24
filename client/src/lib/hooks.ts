@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 import { buildManualSession } from './sessionLog';
-import type { CalendarEvent, Habit, HabitGroup, RestDay, Session, Settings, Task, TaskAttachment, TimerPreset } from './types';
+import type { CalendarEvent, Habit, HabitGroup, RestDay, Session, Settings, Task, TaskAttachment, TimerPreset, VacationDay } from './types';
 
 export interface Me {
   user: { id: string; email: string } | null;
@@ -44,6 +44,19 @@ export function useToggleRestDay() {
     mutationFn: ({ date, on }: { date: string; on: boolean }) =>
       on ? api.post('/rest-days', { date }) : api.del(`/rest-days/${date}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['rest-days'] }),
+  });
+}
+
+/* ---- vacation days (whole-day lighter goal) ---- */
+export const useVacationDays = () => useQuery({ queryKey: ['vacation-days'], queryFn: () => api.get<VacationDay[]>('/vacation-days') });
+
+/** Toggle a date's vacation status: POST to mark it, DELETE to clear it. */
+export function useToggleVacationDay() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ date, on }: { date: string; on: boolean }) =>
+      on ? api.post('/vacation-days', { date }) : api.del(`/vacation-days/${date}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['vacation-days'] }),
   });
 }
 
