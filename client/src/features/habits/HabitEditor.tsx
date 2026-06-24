@@ -24,6 +24,8 @@ export function HabitEditor() {
   const [groupId, setGroupId] = useState<string | null>(null);
   const [kind, setKind] = useState<'time' | 'abstain'>('time');
   const [goal, setGoal] = useState(20); // daily goal in minutes (0 = none)
+  const [weekendGoal, setWeekendGoal] = useState(0); // 0 = same as daily goal
+  const [vacationGoal, setVacationGoal] = useState(0); // 0 = same as weekend/daily
   const [durations, setDurations] = useState<number[]>(DEFAULT_DURATIONS);
   const [defaultMin, setDefaultMin] = useState(10);
 
@@ -35,6 +37,8 @@ export function HabitEditor() {
     setGroupId(existing.groupId);
     setKind(existing.kind ?? 'time');
     setGoal(existing.dailyGoalMin ?? 0);
+    setWeekendGoal(existing.weekendGoalMin ?? 0);
+    setVacationGoal(existing.vacationGoalMin ?? 0);
     const dur = existing.durations?.length ? existing.durations : [10];
     setDurations(dur);
     setDefaultMin(existing.defaultDurationMin && dur.includes(existing.defaultDurationMin) ? existing.defaultDurationMin : dur[0]);
@@ -71,6 +75,8 @@ export function HabitEditor() {
       durations,
       defaultDurationMin: kind === 'abstain' ? null : defaultMin,
       dailyGoalMin: kind === 'time' && goal > 0 ? goal : null,
+      weekendGoalMin: kind === 'time' && weekendGoal > 0 ? weekendGoal : null,
+      vacationGoalMin: kind === 'time' && vacationGoal > 0 ? vacationGoal : null,
       timerType: 'simple',
     });
     navigate('/');
@@ -181,6 +187,16 @@ export function HabitEditor() {
         ) : (
           <p className="mt-2 text-xs text-slate-400">No daily goal</p>
         )}
+        <div className="mt-4 border-t border-ink-600/60 pt-3">
+          <Stepper label="Weekend goal" value={weekendGoal} onChange={setWeekendGoal} min={0} max={120} step={5} suffix="min" />
+          <p className="mt-2 text-xs text-slate-400">{weekendGoal > 0 ? `${weekendGoal} min on Sat/Sun` : 'Weekends use the daily goal'}</p>
+        </div>
+        <div className="mt-4 border-t border-ink-600/60 pt-3">
+          <Stepper label="Vacation goal" value={vacationGoal} onChange={setVacationGoal} min={0} max={120} step={5} suffix="min" />
+          <p className="mt-2 text-xs text-slate-400">
+            {vacationGoal > 0 ? `${vacationGoal} min on vacation days` : weekendGoal > 0 ? 'Vacation days use the weekend goal' : 'Vacation days use the daily goal'}
+          </p>
+        </div>
       </div>
       )}
 
