@@ -119,29 +119,48 @@ const isWeekend = (ts: number) => {
   return day === 0 || day === 6;
 };
 
+/** Minimal habit shape needed to resolve a day's goal. */
+type GoalHabit = { id: string; dailyGoalMin: number | null; weekendGoalMin?: number | null; vacationGoalMin?: number | null };
+
+/**
+ * The configured goal (minutes) a habit must reach on the local day at `ts`,
+ * or null when no goal is configured for that day's tier. Vacation days use the
+ * vacation goal, falling back to the weekend goal then the daily goal; weekends
+ * use the weekend goal, falling back to the daily goal; weekdays use the daily
+ * goal. No 10-minute fallback here — that stays inside goalStreak so it does not
+ * leak into the completion/auto-hide check.
+ */
+export function effectiveGoal(habit: GoalHabit, ts: number, vacationDays: Set<string>): number | null {
+  const daily = habit.dailyGoalMin && habit.dailyGoalMin > 0 ? habit.dailyGoalMin : null;
+  const weekend = habit.weekendGoalMin && habit.weekendGoalMin > 0 ? habit.weekendGoalMin : null;
+  const vacation = habit.vacationGoalMin && habit.vacationGoalMin > 0 ? habit.vacationGoalMin : null;
+  if (vacationDays.has(dayKey(ts))) return vacation ?? weekend ?? daily;
+  if (isWeekend(ts)) return weekend ?? daily;
+  return daily;
+}
+
 /**
  * Consecutive days (ending today, or yesterday when today isn't met yet) on
- * which the habit reached its daily goal in minutes — or at least 10 minutes
- * when it has no goal. With `weekdaysOnly`, Saturdays and Sundays are invisible:
- * they never break the streak and never count toward it. Dates in `restDays`
- * (local 'YYYY-MM-DD' keys) are invisible the same way.
+ * which the habit reached its per-day {@link effectiveGoal} — or at least 10
+ * minutes when that day has no configured goal. Dates in `restDays` are
+ * invisible (never break, never count). Vacation days are NOT skipped: they
+ * simply demand the lighter vacation goal.
  */
 export function goalStreak(
   sessions: Session[],
-  habitId: string,
-  dailyGoalMin: number | null,
-  weekdaysOnly = false,
+  habit: GoalHabit,
   restDays: Set<string> = new Set(),
+  vacationDays: Set<string> = new Set(),
 ): number {
-  const need = dailyGoalMin && dailyGoalMin > 0 ? dailyGoalMin : 10; // no goal → any 10-min day
   const minByDay: Record<string, number> = {};
   for (const s of sessions) {
-    if (!s.completed || s.habitId !== habitId) continue;
+    if (!s.completed || s.habitId !== habit.id) continue;
     const k = dayKey(s.startedAt);
     minByDay[k] = (minByDay[k] ?? 0) + s.actualSeconds / 60;
   }
-  const met = (ts: number) => (minByDay[dayKey(ts)] ?? 0) >= need - 1e-9;
-  const skip = (ts: number) => (weekdaysOnly && isWeekend(ts)) || restDays.has(dayKey(ts));
+  const need = (ts: number) => effectiveGoal(habit, ts, vacationDays) ?? 10; // no goal → any 10-min day
+  const met = (ts: number) => (minByDay[dayKey(ts)] ?? 0) >= need(ts) - 1e-9;
+  const skip = (ts: number) => restDays.has(dayKey(ts));
   const back = (ts: number) => {
     let c = addDays(ts, -1);
     while (skip(c)) c = addDays(c, -1);
@@ -163,13 +182,13 @@ export function goalStreak(
 
 /**
  * The streak to show for a habit: clean-day {@link currentStreak} for abstinence
- * habits, goal-met {@link goalStreak} for time habits. `weekdaysOnly` and
- * `restDays` are forwarded so both kinds bridge the same skipped days.
+ * habits, goal-met {@link goalStreak} for time habits. `restDays` bridge both;
+ * `vacationDays` apply the lighter goal to time habits.
  */
-export function habitStreak(habit: Habit, sessions: Session[], weekdaysOnly = false, restDays: Set<string> = new Set()): number {
+export function habitStreak(habit: Habit, sessions: Session[], restDays: Set<string> = new Set(), vacationDays: Set<string> = new Set()): number {
   return habit.kind === 'abstain'
     ? currentStreak(sessions, habit.id, restDays)
-    : goalStreak(sessions, habit.id, habit.dailyGoalMin, weekdaysOnly, restDays);
+    : goalStreak(sessions, habit, restDays, vacationDays);
 }
 
 /** Minutes of habit-less (focus/timer) sessions since `fromTs`. */

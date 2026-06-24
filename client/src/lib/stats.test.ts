@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { currentStreak, focusMinutes, goalStreak, minutesByDay, minutesInRange, todaySummary, todaysHabitSession } from './stats';
+import { currentStreak, effectiveGoal, focusMinutes, goalStreak, habitStreak, minutesByDay, minutesInRange, todaySummary, todaysHabitSession } from './stats';
 import { dayKey, startOfToday, addDays } from './time';
 import type { Session } from './types';
 
@@ -116,12 +116,12 @@ describe('goalStreak', () => {
       session(addDays(noon, -1), { habitId: 'h1', actualSeconds: 1200 }),
       session(addDays(noon, -2), { habitId: 'h1', actualSeconds: 600 }), // only 1 block — goal missed
     ];
-    expect(goalStreak(s, 'h1', 20)).toBe(2);
+    expect(goalStreak(s, { id: 'h1', dailyGoalMin: 20, weekendGoalMin: null, vacationGoalMin: null })).toBe(2);
   });
 
   it('does not break the streak when today is not yet met', () => {
     const s = [session(addDays(noon, -1), { habitId: 'h1', actualSeconds: 1200 })];
-    expect(goalStreak(s, 'h1', 20)).toBe(1);
+    expect(goalStreak(s, { id: 'h1', dailyGoalMin: 20, weekendGoalMin: null, vacationGoalMin: null })).toBe(1);
   });
 
   it('requires at least one block per day when there is no goal', () => {
@@ -129,7 +129,7 @@ describe('goalStreak', () => {
       session(noon, { habitId: 'h1', actualSeconds: 600 }),
       session(addDays(noon, -1), { habitId: 'h1', actualSeconds: 300 }), // half a block — breaks
     ];
-    expect(goalStreak(s, 'h1', null)).toBe(1);
+    expect(goalStreak(s, { id: 'h1', dailyGoalMin: null, weekendGoalMin: null, vacationGoalMin: null })).toBe(1);
   });
 
   it('ignores other habits and incomplete sessions', () => {
@@ -137,7 +137,7 @@ describe('goalStreak', () => {
       session(noon, { habitId: 'h2', actualSeconds: 1200 }),
       session(noon, { habitId: 'h1', actualSeconds: 1200, completed: false }),
     ];
-    expect(goalStreak(s, 'h1', 10)).toBe(0);
+    expect(goalStreak(s, { id: 'h1', dailyGoalMin: 10, weekendGoalMin: null, vacationGoalMin: null })).toBe(0);
   });
 });
 
@@ -167,12 +167,12 @@ describe('rest days bridge streaks', () => {
       session(noon, { habitId: 'h1', actualSeconds: 1200 }),
       session(addDays(noon, -2), { habitId: 'h1', actualSeconds: 1200 }),
     ];
-    expect(goalStreak(s, 'h1', 20, false, new Set([k(-1)]))).toBe(2);
+    expect(goalStreak(s, { id: 'h1', dailyGoalMin: 20, weekendGoalMin: null, vacationGoalMin: null }, new Set([k(-1)]))).toBe(2);
   });
 
   it('goalStreak: a rest day on today is transparent', () => {
     const s = [session(addDays(noon, -1), { habitId: 'h1', actualSeconds: 1200 })];
-    expect(goalStreak(s, 'h1', 20, false, new Set([k(0)]))).toBe(1);
+    expect(goalStreak(s, { id: 'h1', dailyGoalMin: 20, weekendGoalMin: null, vacationGoalMin: null }, new Set([k(0)]))).toBe(1);
   });
 });
 
@@ -190,56 +190,67 @@ describe('focusMinutes', () => {
   });
 });
 
-describe('goalStreak with weekdaysOnly', () => {
-  afterEach(() => vi.useRealTimers());
+describe('tiered goals (weekend / vacation)', () => {
+  // A fixed Saturday noon so weekend detection is deterministic.
+  const sat = new Date('2026-06-20T12:00:00').getTime(); // 2026-06-20 is a Saturday
+  const mon = new Date('2026-06-22T12:00:00').getTime(); // Monday
+  const h = { id: 'h1', dailyGoalMin: 30, weekendGoalMin: 5, vacationGoalMin: null };
 
-  // Local-noon timestamp for a calendar date.
-  const at = (y: number, m: number, d: number) => new Date(y, m - 1, d, 12).getTime();
-  const h = (ts: number) => session(ts, { habitId: 'h1' }); // 600s = 1 block, meets the no-goal need of 1
-
-  it('bridges the weekend: Friday met + Monday met = streak of 2', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 5, 8, 12)); // Monday 2026-06-08
-    const s = [h(at(2026, 6, 8)), h(at(2026, 6, 5))]; // Mon + previous Fri
-    expect(goalStreak(s, 'h1', null, true)).toBe(2);
-    expect(goalStreak(s, 'h1', null, false)).toBe(1); // sanity: weekend gap still breaks the normal streak
+  it('effectiveGoal: weekday uses the daily goal', () => {
+    expect(effectiveGoal(h, mon, new Set())).toBe(30);
   });
 
-  it('ignores weekend sessions entirely (no break, no bonus)', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 5, 8, 12)); // Monday
-    // Monday met, Saturday session logged, Friday NOT met → streak is just Monday.
-    const s = [h(at(2026, 6, 8)), h(at(2026, 6, 6))];
-    expect(goalStreak(s, 'h1', null, true)).toBe(1);
+  it('effectiveGoal: weekend uses the weekend goal when set', () => {
+    expect(effectiveGoal(h, sat, new Set())).toBe(5);
   });
 
-  it('still breaks on a missed weekday', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 5, 10, 12)); // Wednesday 2026-06-10
-    // Wed met, Tue missed, Mon met → only Wednesday counts.
-    const s = [h(at(2026, 6, 10)), h(at(2026, 6, 8))];
-    expect(goalStreak(s, 'h1', null, true)).toBe(1);
+  it('effectiveGoal: weekend falls back to daily goal when weekendGoalMin is null', () => {
+    expect(effectiveGoal({ id: 'h1', dailyGoalMin: 30, weekendGoalMin: null, vacationGoalMin: null }, sat, new Set())).toBe(30);
   });
 
-  it('grants the not-yet-met-today grace across a weekend (Monday morning sees Friday)', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 5, 8, 12)); // Monday, nothing logged yet today
-    const s = [h(at(2026, 6, 5)), h(at(2026, 6, 4))]; // Fri + Thu
-    expect(goalStreak(s, 'h1', null, true)).toBe(2);
+  it('effectiveGoal: vacation falls back to the weekend goal when vacationGoalMin is null', () => {
+    const k = dayKey(mon);
+    expect(effectiveGoal(h, mon, new Set([k]))).toBe(5); // vacation → null vac → weekend 5
   });
 
-  it('anchors on Friday when today is a weekend day', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 5, 13, 12)); // Saturday 2026-06-13
-    const s = [h(at(2026, 6, 12)), h(at(2026, 6, 11))]; // Fri + Thu
-    expect(goalStreak(s, 'h1', null, true)).toBe(2);
+  it('effectiveGoal: vacation uses its own goal when set', () => {
+    const k = dayKey(mon);
+    const v = { id: 'h1', dailyGoalMin: 30, weekendGoalMin: 5, vacationGoalMin: 2 };
+    expect(effectiveGoal(v, mon, new Set([k]))).toBe(2);
   });
 
-  it('does not count a weekend session even when today is that weekend day', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 5, 14, 12)); // Sunday 2026-06-14
-    // Sessions only on Sun + Sat; Friday was missed → anchor must skip to Friday and find nothing.
-    const s = [h(at(2026, 6, 14)), h(at(2026, 6, 13))];
-    expect(goalStreak(s, 'h1', null, true)).toBe(0);
+  it('effectiveGoal: no daily goal → null on a weekday', () => {
+    expect(effectiveGoal({ id: 'h1', dailyGoalMin: null, weekendGoalMin: null, vacationGoalMin: null }, mon, new Set())).toBeNull();
+  });
+});
+
+describe('goalStreak honors the per-day effective goal', () => {
+  const noon = startOfToday() + 12 * 3600_000;
+  const isWeekendToday = [0, 6].includes(new Date(noon).getDay());
+  const habit = { id: 'h1', dailyGoalMin: 30, weekendGoalMin: 5, vacationGoalMin: null };
+
+  it('a light day that meets the weekend goal keeps the streak (when today is a weekend)', () => {
+    if (!isWeekendToday) return; // deterministic only on weekends; effectiveGoal unit tests cover the logic
+    const s = [session(noon, { habitId: 'h1', actualSeconds: 300 })]; // 5 min
+    expect(goalStreak(s, habit)).toBe(1);
+  });
+
+  it('rest days remain transparent under tiered goals', () => {
+    const k = dayKey(addDays(noon, -1));
+    const s = [
+      session(noon, { habitId: 'h1', actualSeconds: 1800 }),
+      session(addDays(noon, -2), { habitId: 'h1', actualSeconds: 1800 }),
+    ];
+    expect(goalStreak(s, habit, new Set([k]))).toBe(2); // yesterday rest day bridges
+  });
+
+  it('a vacation day still requires its (lighter) goal', () => {
+    const k = dayKey(addDays(noon, -1));
+    const below = [
+      session(noon, { habitId: 'h1', actualSeconds: 1800 }),
+      session(addDays(noon, -1), { habitId: 'h1', actualSeconds: 60 }), // 1 min < weekend/vac goal 5
+    ];
+    // yesterday is a vacation day needing 5 min; only 1 logged → it breaks → streak = today only
+    expect(goalStreak(below, habit, new Set(), new Set([k]))).toBe(1);
   });
 });

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useHabits, useGroups, useSessions, useSettings, useLogSession, useDeleteSession, useRestDays } from '../../lib/hooks';
+import { useHabits, useGroups, useSessions, useSettings, useLogSession, useDeleteSession, useRestDays, useVacationDays } from '../../lib/hooks';
 import type { Habit } from '../../lib/types';
 import { Timer, Plus } from 'lucide-react';
 import { habitStreak, todaySummary, todaysHabitSession } from '../../lib/stats';
@@ -14,6 +14,7 @@ export function Dashboard() {
   const { data: sessions = [] } = useSessions();
   const { data: settings } = useSettings();
   const { data: restDayRows = [] } = useRestDays();
+  const { data: vacationRows = [] } = useVacationDays();
   const { startRun } = useRun();
   const logSession = useLogSession();
   const deleteSession = useDeleteSession();
@@ -21,8 +22,8 @@ export function Dashboard() {
   const today = todaySummary(sessions);
   const active = habits.filter((h) => !h.archived);
   const restDays = new Set(restDayRows.map((r) => r.date));
-  const weekdaysOnly = new Set(groups.filter((g) => g.weekdaysOnly).map((g) => g.id));
-  const streakFor = (h: Habit) => habitStreak(h, sessions, !!h.groupId && weekdaysOnly.has(h.groupId), restDays);
+  const vacationDays = new Set(vacationRows.map((r) => r.date));
+  const streakFor = (h: Habit) => habitStreak(h, sessions, restDays, vacationDays);
 
   function start(habit: Habit, min: number) {
     const prep = settings?.prepSeconds ?? 5;

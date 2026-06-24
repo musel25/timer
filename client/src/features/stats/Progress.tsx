@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Flame, Clock, CalendarRange } from 'lucide-react';
-import { useGroups, useHabits, useRestDays, useSessions, useSettings } from '../../lib/hooks';
+import { useHabits, useRestDays, useSessions, useSettings, useVacationDays } from '../../lib/hooks';
 import { HabitIcon } from '../../lib/habitIcons';
 import { categoryColor, gradient, tint, solid } from '../../lib/palette';
 import { currentStreak, focusMinutes, habitStreak, heatmap, minutesByHabitInRange, minutesInRange, todaySummary } from '../../lib/stats';
@@ -13,10 +13,10 @@ export function Progress() {
   const { data: sessions = [] } = useSessions();
   const { data: habits = [] } = useHabits();
   const { data: settings } = useSettings();
-  const { data: groups = [] } = useGroups();
   const { data: restDayRows = [] } = useRestDays();
-  const weekdaysOnlyGroups = new Set(groups.filter((g) => g.weekdaysOnly).map((g) => g.id));
+  const { data: vacationRows = [] } = useVacationDays();
   const restDays = new Set(restDayRows.map((r) => r.date));
+  const vacationDays = new Set(vacationRows.map((r) => r.date));
   const weekStart = settings?.weekStart ?? 1;
 
   const streak = currentStreak(sessions, undefined, restDays);
@@ -38,7 +38,7 @@ export function Progress() {
       weekMin: Math.round(byHabit[h.id] ?? 0),
       minutes: summary.minutesByHabit[h.id] ?? 0,
       goal: h.dailyGoalMin && h.dailyGoalMin > 0 ? h.dailyGoalMin : null,
-      streak: habitStreak(h, sessions, !!h.groupId && weekdaysOnlyGroups.has(h.groupId), restDays),
+      streak: habitStreak(h, sessions, restDays, vacationDays),
     }))
     .sort((a, b) => Number(b.h.kind !== 'abstain') - Number(a.h.kind !== 'abstain') || b.weekMin - a.weekMin);
 
