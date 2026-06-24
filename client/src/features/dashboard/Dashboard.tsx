@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useHabits, useGroups, useSessions, useSettings, useLogSession, useDeleteSession, useRestDays, useVacationDays } from '../../lib/hooks';
 import type { Habit } from '../../lib/types';
 import { Timer, Plus } from 'lucide-react';
-import { habitStreak, todaySummary, todaysHabitSession, effectiveGoal } from '../../lib/stats';
+import { habitStreak, todaySummary, todaysHabitSession, effectiveGoal, isHabitDoneToday } from '../../lib/stats';
 import { startOfToday } from '../../lib/time';
 import { HabitIcon } from '../../lib/habitIcons';
 import { useRun } from '../run/RunContext';
@@ -25,6 +26,12 @@ export function Dashboard() {
   const restDays = new Set(restDayRows.map((r) => r.date));
   const vacationDays = new Set(vacationRows.map((r) => r.date));
   const streakFor = (h: Habit) => habitStreak(h, sessions, restDays, vacationDays);
+
+  const [showDone, setShowDone] = useState(false);
+  const durOf = (h: Habit) => (h.kind === 'abstain' ? Infinity : h.defaultDurationMin ?? h.durations?.[0] ?? Infinity);
+  const byTime = (a: Habit, b: Habit) => durOf(a) - durOf(b) || a.name.localeCompare(b.name);
+  const doneToday = (h: Habit) => isHabitDoneToday(h, today, effectiveGoal(h, startOfToday(), vacationDays));
+  const doneHabits = active.filter(doneToday).sort(byTime);
 
   function start(habit: Habit, min: number) {
     const prep = settings?.prepSeconds ?? 5;
@@ -60,7 +67,7 @@ export function Dashboard() {
   );
 
   const ordered = [...groups].sort((a, b) => a.sortOrder - b.sortOrder);
-  const ungrouped = active.filter((h) => !h.groupId || !groups.some((g) => g.id === h.groupId));
+  const ungrouped = active.filter((h) => (!h.groupId || !groups.some((g) => g.id === h.groupId)) && !doneToday(h)).sort(byTime);
 
   return (
     <div className="space-y-6">
@@ -78,7 +85,7 @@ export function Dashboard() {
       </header>
 
       {ordered.map((group) => {
-        const list = active.filter((h) => h.groupId === group.id).sort((a, b) => a.sortOrder - b.sortOrder);
+        const list = active.filter((h) => h.groupId === group.id && !doneToday(h)).sort(byTime);
         if (list.length === 0) return null;
         return (
           <section key={group.id}>
@@ -103,6 +110,22 @@ export function Dashboard() {
 
       {active.length === 0 && (
         <p className="py-8 text-center text-slate-500">No habits yet — add your first one below.</p>
+      )}
+
+      {doneHabits.length > 0 && (
+        <section>
+          <button
+            onClick={() => setShowDone((v) => !v)}
+            className="label flex items-center gap-1.5 text-slate-400 transition hover:text-slate-200"
+          >
+            ✓ {doneHabits.length} completed today · {showDone ? 'hide' : 'show'}
+          </button>
+          {showDone && (
+            <div className="mt-2 grid gap-3 opacity-70 sm:grid-cols-2 xl:grid-cols-3">
+              {doneHabits.map(card)}
+            </div>
+          )}
+        </section>
       )}
 
       <div className="grid grid-cols-2 gap-3 pt-2 sm:max-w-md">
