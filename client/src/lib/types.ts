@@ -102,10 +102,9 @@ export interface Session {
   startedAt: number;
   endedAt: number;
   note: string | null;
-  /** 'habit' (default) or 'focus' for a focus-session umbrella. */
+  /** Always 'habit' now. 'focus' is legacy: it tagged the old focus-session
+   *  "umbrella" (removed) and is still excluded from time totals for old rows. */
   category?: 'habit' | 'focus';
-  /** Focus session id this run was logged inside of, when started during one. */
-  parentSessionId?: string | null;
   createdAt: number;
 }
 

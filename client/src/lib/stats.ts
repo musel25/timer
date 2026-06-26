@@ -1,8 +1,9 @@
 import type { Habit, Session } from './types';
 import { dayKey, startOfToday, addDays } from './time';
 
-/** A focus-session umbrella overlaps the habit runs inside it, so it must be
- *  excluded from any "time spent" total to avoid double-counting. */
+/** Legacy guard: the old focus-session "umbrella" (since removed) overlapped the
+ *  habit runs inside it, so any such historical row must stay excluded from
+ *  "time spent" totals to avoid double-counting. New sessions are never 'focus'. */
 const isFocusUmbrella = (s: Session) => s.category === 'focus';
 
 /** Minutes per local day, keyed "YYYY-MM-DD" (uses actual time spent). */

@@ -1,7 +1,9 @@
 # Habit Card → Tracker + Config, with a Timer→Habit Log Bridge — Design
 
 **Date:** 2026-06-26
-**Status:** Draft — pending reconciliation with parallel work (see *Relationship to other specs*)
+**Status:** Superseded — the timer→habit log bridge described here was never shipped.
+Habits are logged entirely by hand with no timer link (see `features/habits/HabitCard.tsx`
+and `features/dashboard/Dashboard.tsx`). Kept for historical context only.
 
 ## Problem
 

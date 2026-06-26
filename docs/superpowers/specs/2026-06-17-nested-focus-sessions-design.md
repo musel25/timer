@@ -1,7 +1,9 @@
 # Nested focus sessions + persistent active runs
 
 **Date:** 2026-06-17
-**Status:** approved
+**Status:** Superseded — nested focus sessions and the focus-session "umbrella"
+were removed. There is now a single timer run with no habit attribution; habits
+are logged by hand. Kept for historical context only.
 
 ## Problem
 

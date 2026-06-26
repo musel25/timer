@@ -82,11 +82,11 @@ export const sessions = sqliteTable('sessions', {
   startedAt: integer('started_at').notNull(),
   endedAt: integer('ended_at').notNull(),
   note: text('note'),
-  // 'habit' (default) or 'focus' — a focus-session umbrella. Focus sessions are
-  // logged separately and excluded from daily minute totals (they overlap the
-  // habit sub-sessions run inside them).
+  // Always 'habit' for new rows. 'focus' is legacy — it tagged the removed
+  // focus-session "umbrella"; such old rows stay excluded from daily totals.
   category: text('category').notNull().default('habit'),
-  // For a habit run started inside a focus session: the focus session's id.
+  // Legacy: unused by the app (nested focus sessions were removed). Column kept
+  // dormant so old rows and export/import dumps stay valid.
   parentSessionId: text('parent_session_id'),
   createdAt: integer('created_at').notNull(),
 });

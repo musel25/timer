@@ -27,8 +27,8 @@ describe('focus-umbrella exclusion from time totals', () => {
   // would inflate "time spent" to 100 min for a 60-min wall-clock block.
   const sessions = [
     session(noon, { category: 'focus', actualSeconds: 3600, habitId: null }),
-    session(noon, { habitId: 'h1', actualSeconds: 1200, parentSessionId: 'focus1' }),
-    session(noon, { habitId: 'h2', actualSeconds: 1200, parentSessionId: 'focus1' }),
+    session(noon, { habitId: 'h1', actualSeconds: 1200 }),
+    session(noon, { habitId: 'h2', actualSeconds: 1200 }),
   ];
 
   it('todaySummary counts habit minutes only, not the umbrella', () => {

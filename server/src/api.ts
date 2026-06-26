@@ -212,8 +212,7 @@ const sessionInput = z.object({
   startedAt: z.number().int(),
   endedAt: z.number().int(),
   note: z.string().nullable().optional(),
-  category: z.enum(['habit', 'focus']).optional(),
-  parentSessionId: z.string().nullable().optional(),
+  category: z.enum(['habit', 'focus']).optional(), // 'focus' accepted only for legacy/import data
 });
 
 api.get('/sessions', (c) => {
@@ -237,7 +236,7 @@ api.post('/sessions', async (c) => {
     id: s.id ?? newId(), userId: uid(c), habitId: s.habitId ?? null, timerId: s.timerId ?? null,
     label: s.label ?? null, type: s.type, plannedSeconds: s.plannedSeconds, actualSeconds: s.actualSeconds,
     completed: s.completed ?? true, startedAt: s.startedAt, endedAt: s.endedAt, note: s.note ?? null,
-    category: s.category ?? 'habit', parentSessionId: s.parentSessionId ?? null, createdAt: now,
+    category: s.category ?? 'habit', createdAt: now,
   }));
   if (rows.length) db.insert(sessions).values(rows).onConflictDoNothing().run();
   return c.json({ inserted: rows.length, ids: rows.map((r) => r.id) }, 201);

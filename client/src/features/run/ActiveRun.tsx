@@ -67,7 +67,6 @@ export function ActiveRun({
       endedAt: Date.now(),
       note: null,
       category: 'habit',
-      parentSessionId: null,
       createdAt: Date.now(),
     });
     saveRun('foreground', null);
