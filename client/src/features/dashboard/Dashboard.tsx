@@ -80,7 +80,7 @@ export function Dashboard() {
         </div>
         <div className="flex items-center gap-2">
           <FocusStarter />
-          <Link to="/timers" className="flex items-center rounded-full border border-ink-600/60 bg-ink-900/30 p-2.5 text-slate-300 backdrop-blur hover:text-slate-100" title="Timer presets"><Timer size={18} /></Link>
+          <Link to="/timer" className="flex items-center rounded-full border border-ink-600/60 bg-ink-900/30 p-2.5 text-slate-300 backdrop-blur hover:text-slate-100" title="Timers"><Timer size={18} /></Link>
         </div>
       </header>
 
