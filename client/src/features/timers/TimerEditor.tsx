@@ -5,10 +5,11 @@ import { Stepper } from '../../components/Stepper';
 import { useDeleteTimer, useSaveTimer, useTimers } from '../../lib/hooks';
 import { PHASE_COLORS } from '../../engine/buildPhases';
 import { timerTypeLabel } from '../../lib/timerMeta';
+import { DEFAULT_POMODORO_PREP } from '../../lib/presets';
 import type { Interval, IntervalConfig, PomodoroConfig, PresetType, SimpleConfig } from '../../lib/types';
 
 const SWATCHES = ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#f43f5e', '#14b8a6'];
-const POMO_DEFAULTS: PomodoroConfig = { work: 25, short: 5, long: 20, longEvery: 4, rounds: 4 };
+const POMO_DEFAULTS: PomodoroConfig = { work: 25, short: 5, long: 20, longEvery: 4, rounds: 4, prepSeconds: DEFAULT_POMODORO_PREP };
 
 export function TimerEditor() {
   const { id } = useParams();
@@ -40,7 +41,9 @@ export function TimerEditor() {
       setMinutes(Math.round(c.totalSeconds / 60));
       setPrep(c.prepSeconds ?? 0);
     } else if (existing.type === 'pomodoro') {
-      setPomo(existing.config as PomodoroConfig);
+      // Merge over defaults so presets saved before prepSeconds existed still
+      // show (and keep) a Get Ready countdown.
+      setPomo({ ...POMO_DEFAULTS, ...(existing.config as PomodoroConfig) });
     } else {
       const c = existing.config as IntervalConfig;
       setPrep(c.prepSeconds ?? 0);
@@ -97,6 +100,7 @@ export function TimerEditor() {
       <div className="card space-y-3 p-4">
         {type === 'pomodoro' ? (
           <>
+            <Stepper label="Prep countdown" value={pomo.prepSeconds ?? DEFAULT_POMODORO_PREP} onChange={(v) => updatePomo({ prepSeconds: v })} min={0} max={60} suffix="s" />
             <Stepper label="Focus block" value={pomo.work} onChange={(v) => updatePomo({ work: v })} min={1} max={120} suffix="min" />
             <Stepper label="Short break" value={pomo.short} onChange={(v) => updatePomo({ short: v })} min={1} max={60} suffix="min" />
             <Stepper label="Long break" value={pomo.long} onChange={(v) => updatePomo({ long: v })} min={1} max={120} suffix="min" />

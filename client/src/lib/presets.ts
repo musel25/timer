@@ -1,8 +1,17 @@
 import type { IntervalConfig, PomodoroConfig, RunSpec, SimpleConfig, TimerPreset } from './types';
 import { buildPomodoroPhases, totalSeconds, workSeconds } from '../engine/buildPhases';
 
+/** Default "Get Ready" countdown for a focus block when the preset predates the
+ *  prepSeconds field — so every focus block starts with a countdown like the
+ *  interval timers do. An explicit 0 in the config disables it. */
+export const DEFAULT_POMODORO_PREP = 10;
+const pomodoroPrep = (cfg: PomodoroConfig): number => cfg.prepSeconds ?? DEFAULT_POMODORO_PREP;
+
 export function presetSeconds(p: TimerPreset): number {
-  if (p.type === 'pomodoro') return totalSeconds(buildPomodoroPhases(p.config as PomodoroConfig, '', 0));
+  if (p.type === 'pomodoro') {
+    const cfg = p.config as PomodoroConfig;
+    return totalSeconds(buildPomodoroPhases(cfg, '', pomodoroPrep(cfg)));
+  }
   if (p.type === 'simple') {
     const c = p.config as SimpleConfig;
     return (c.prepSeconds ?? 0) + c.totalSeconds;
@@ -15,10 +24,11 @@ export function presetSeconds(p: TimerPreset): number {
 export function runSpecFromPreset(p: TimerPreset): RunSpec {
   if (p.type === 'pomodoro') {
     const cfg = p.config as PomodoroConfig;
-    const phases = buildPomodoroPhases(cfg, '', 0);
+    const prep = pomodoroPrep(cfg);
+    const phases = buildPomodoroPhases(cfg, '', prep);
     return {
       type: 'interval',
-      config: { prepSeconds: 0, sets: cfg.rounds, intervals: [], cooldownSeconds: 0 },
+      config: { prepSeconds: prep, sets: cfg.rounds, intervals: [], cooldownSeconds: 0 },
       label: p.name,
       timerId: p.id,
       plannedSeconds: workSeconds(phases),
