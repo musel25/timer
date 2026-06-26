@@ -7,9 +7,7 @@ import { setVolume } from './engine/audio';
 import { Login } from './features/auth/Login';
 import { Layout } from './features/Layout';
 import { Dashboard } from './features/dashboard/Dashboard';
-import { TodayView } from './features/tasks/TodayView';
 import { WeekBoard } from './features/tasks/WeekBoard';
-import { MonthCalendar } from './features/tasks/MonthCalendar';
 import { Timer } from './features/timer/Timer';
 import { TimersLibrary } from './features/timers/TimersLibrary';
 import { TimerEditor } from './features/timers/TimerEditor';
@@ -43,9 +41,8 @@ function AuthedApp() {
   const routes = (
     <Routes>
       <Route element={<Layout />}>
-        <Route path="/" element={<TodayView />} />
+        <Route path="/" element={<Navigate to="/week" replace />} />
         <Route path="/week" element={<WeekBoard />} />
-        <Route path="/month" element={<MonthCalendar />} />
         <Route path="/timer" element={<Timer />} />
         <Route path="/focus" element={<Navigate to="/timer" replace />} />
         <Route path="/quick" element={<Navigate to="/timer" replace />} />

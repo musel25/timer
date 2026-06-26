@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Flame, Timer as TimerIcon, Clock } from 'lucide-react';
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
-import { useTasks, useSaveTask, useToggleTask, useCalendarEvents } from '../../lib/hooks';
+import { useTasks, useSaveTask, useToggleTask, useCalendarEvents, useSessions, useRestDays } from '../../lib/hooks';
 import type { CalendarEvent, Task } from '../../lib/types';
+import { currentStreak, todaySummary } from '../../lib/stats';
 import { eventsByDay } from '../../lib/calendar';
 import { EventChip } from '../../components/EventChip';
 import { weekDays, todayKey, addDaysKey, keyToDate } from '../../lib/date';
@@ -83,8 +84,12 @@ function DayColumn({ dayKey, tasks, events, onEdit, dragHappened }: { dayKey: st
 
 export function WeekBoard() {
   const { data: tasks = [] } = useTasks();
+  const { data: sessions = [] } = useSessions();
+  const { data: restDayRows = [] } = useRestDays();
   const save = useSaveTask();
   const [anchor, setAnchor] = useState(todayKey());
+  const streak = currentStreak(sessions, undefined, new Set(restDayRows.map((r) => r.date)));
+  const summary = todaySummary(sessions);
   const [editing, setEditing] = useState<Task | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   // True while a drag is in flight; cleared a tick after drop so the click
@@ -117,7 +122,20 @@ export function WeekBoard() {
   return (
     <div className="space-y-4">
       <header className="hero flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold md:text-4xl">Week</h1>
+        <div>
+          <h1 className="text-3xl font-bold md:text-4xl">Week</h1>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="stat-pill" style={{ color: 'rgb(217 144 30)' }}>
+              <Flame size={15} /> {streak > 0 ? `${streak}-day streak` : 'No streak yet'}
+            </span>
+            <span className="stat-pill" style={{ color: 'rgb(58 109 240)' }}>
+              <TimerIcon size={15} /> {summary.count} session{summary.count === 1 ? '' : 's'}
+            </span>
+            <span className="stat-pill" style={{ color: 'rgb(124 92 246)' }}>
+              <Clock size={15} /> {summary.minutes} min
+            </span>
+          </div>
+        </div>
         <div className="flex gap-2">
           <button className="btn-ghost px-3 py-1.5" onClick={() => setAnchor(addDaysKey(anchor, -7))}><ChevronLeft size={16} /></button>
           <button className="btn-ghost px-3 py-1.5" onClick={() => setAnchor(todayKey())}>This week</button>
