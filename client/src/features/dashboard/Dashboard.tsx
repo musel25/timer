@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useHabits, useGroups, useSessions, useSettings, useLogSession, useDeleteSession, useRestDays, useVacationDays } from '../../lib/hooks';
-import type { Habit } from '../../lib/types';
-import { Timer, Plus } from 'lucide-react';
+import type { Habit, PomodoroConfig } from '../../lib/types';
+import { Timer, Plus, Hourglass, X } from 'lucide-react';
 import { habitStreak, todaySummary, todaysHabitSession, effectiveGoal, isHabitDoneToday } from '../../lib/stats';
+import { buildPomodoroPhases, workSeconds } from '../../engine/buildPhases';
 import { startOfToday } from '../../lib/time';
 import { HabitIcon } from '../../lib/habitIcons';
 import { useRun } from '../run/RunContext';
-import { FocusStarter } from '../run/FocusStarter';
 import { HabitCard } from '../habits/HabitCard';
+
+const POMODORO_DEFAULT: PomodoroConfig = { work: 25, short: 5, long: 20, longEvery: 4, rounds: 4 };
 
 export function Dashboard() {
   const { data: habits = [] } = useHabits();
@@ -17,9 +19,10 @@ export function Dashboard() {
   const { data: settings } = useSettings();
   const { data: restDayRows = [] } = useRestDays();
   const { data: vacationRows = [] } = useVacationDays();
-  const { startRun } = useRun();
+  const { startRun, setTag, activeRun } = useRun();
   const logSession = useLogSession();
   const deleteSession = useDeleteSession();
+  const taggedHabit = activeRun?.taggedHabitId ? habits.find((h) => h.id === activeRun.taggedHabitId) : undefined;
 
   const today = todaySummary(sessions);
   const active = habits.filter((h) => !h.archived);
@@ -34,6 +37,9 @@ export function Dashboard() {
   const doneHabits = active.filter(doneToday).sort(byTime);
 
   function start(habit: Habit, min: number) {
+    // While a run is active (e.g. a focus block), tapping a habit re-tags that
+    // run to count toward the habit rather than starting a second timer.
+    if (activeRun?.running) { setTag(habit.id); return; }
     const prep = settings?.prepSeconds ?? 5;
     startRun({
       type: 'simple',
@@ -41,6 +47,19 @@ export function Dashboard() {
       habitId: habit.id,
       plannedSeconds: min * 60,
       config: { totalSeconds: min * 60, prepSeconds: prep },
+    });
+  }
+
+  function startFocus() {
+    const prep = settings?.prepSeconds ?? 5;
+    const phases = buildPomodoroPhases(POMODORO_DEFAULT, 'Focus block', prep);
+    startRun({
+      type: 'interval',
+      config: { prepSeconds: prep, sets: POMODORO_DEFAULT.rounds, intervals: [], cooldownSeconds: 0 },
+      label: 'Focus block',
+      plannedSeconds: workSeconds(phases),
+      phases,
+      trackMode: 'focus',
     });
   }
 
@@ -79,10 +98,34 @@ export function Dashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <FocusStarter />
+          {!activeRun?.running && (
+            <button
+              onClick={startFocus}
+              className="flex items-center gap-1.5 rounded-full border border-ink-600/60 bg-ink-900/30 px-3 py-2 text-sm text-slate-300 backdrop-blur hover:text-slate-100"
+              title="Start a focus block"
+            >
+              <Hourglass size={15} /> Focus
+            </button>
+          )}
           <Link to="/timers" className="flex items-center rounded-full border border-ink-600/60 bg-ink-900/30 p-2.5 text-slate-300 backdrop-blur hover:text-slate-100" title="Timer presets"><Timer size={18} /></Link>
         </div>
       </header>
+
+      {activeRun?.running && (
+        <div className="card flex items-center justify-between gap-3 p-3 text-sm">
+          <span className="flex items-center gap-1.5 text-teal-300">
+            <Hourglass size={15} />
+            {taggedHabit
+              ? <>Focus running — counting toward <strong>{taggedHabit.name}</strong>. Tap another habit to switch.</>
+              : <>Focus running — tap a habit to count this block toward it.</>}
+          </span>
+          {taggedHabit && (
+            <button onClick={() => setTag(null)} className="shrink-0 rounded p-1 text-slate-400 hover:text-slate-200" title="Clear tag" aria-label="Clear tag">
+              <X size={15} />
+            </button>
+          )}
+        </div>
+      )}
 
       {ordered.map((group) => {
         const list = active.filter((h) => h.groupId === group.id && !doneToday(h)).sort(byTime);
