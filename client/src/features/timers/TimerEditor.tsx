@@ -4,9 +4,11 @@ import { Plus, X } from 'lucide-react';
 import { Stepper } from '../../components/Stepper';
 import { useDeleteTimer, useSaveTimer, useTimers } from '../../lib/hooks';
 import { PHASE_COLORS } from '../../engine/buildPhases';
-import type { Interval, IntervalConfig, SimpleConfig, TimerType } from '../../lib/types';
+import { timerTypeLabel } from '../../lib/timerMeta';
+import type { Interval, IntervalConfig, PomodoroConfig, PresetType, SimpleConfig } from '../../lib/types';
 
 const SWATCHES = ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#f43f5e', '#14b8a6'];
+const POMO_DEFAULTS: PomodoroConfig = { work: 25, short: 5, long: 20, longEvery: 4, rounds: 4 };
 
 export function TimerEditor() {
   const { id } = useParams();
@@ -16,26 +18,29 @@ export function TimerEditor() {
   const del = useDeleteTimer();
   const existing = id ? timers.find((t) => t.id === id) : undefined;
 
-  const [type, setType] = useState<TimerType>('interval');
+  const [type, setType] = useState<PresetType>('interval');
   const [name, setName] = useState('');
   const [prep, setPrep] = useState(10);
   const [minutes, setMinutes] = useState(10);
   const [sets, setSets] = useState(5);
   const [cooldown, setCooldown] = useState(0);
   const [voice, setVoice] = useState(false);
+  const [pomo, setPomo] = useState<PomodoroConfig>(POMO_DEFAULTS);
   const [intervals, setIntervals] = useState<Interval[]>([
     { label: 'Work', seconds: 40, kind: 'work', color: PHASE_COLORS.work },
     { label: 'Rest', seconds: 20, kind: 'rest', color: PHASE_COLORS.rest },
   ]);
 
   useEffect(() => {
-    if (!existing || existing.type === 'pomodoro') return; // pomodoro presets are edited from the Timer page
+    if (!existing) return;
     setType(existing.type);
     setName(existing.name);
     if (existing.type === 'simple') {
       const c = existing.config as SimpleConfig;
       setMinutes(Math.round(c.totalSeconds / 60));
       setPrep(c.prepSeconds ?? 0);
+    } else if (existing.type === 'pomodoro') {
+      setPomo(existing.config as PomodoroConfig);
     } else {
       const c = existing.config as IntervalConfig;
       setPrep(c.prepSeconds ?? 0);
@@ -56,14 +61,23 @@ export function TimerEditor() {
   function removeInterval(i: number) {
     setIntervals((arr) => arr.filter((_, idx) => idx !== i));
   }
+  function updatePomo(patch: Partial<PomodoroConfig>) {
+    setPomo((p) => ({ ...p, ...patch }));
+  }
 
   async function onSave() {
-    const config =
-      type === 'simple'
-        ? ({ totalSeconds: minutes * 60, prepSeconds: prep } as SimpleConfig)
-        : ({ prepSeconds: prep, sets, cooldownSeconds: cooldown, intervals, sounds: { countdownBeeps: true, voice } } as IntervalConfig);
-    await save.mutateAsync({ id, name: name.trim() || (type === 'simple' ? 'Focus timer' : 'Interval timer'), type, config });
-    navigate('/timers');
+    let config: SimpleConfig | IntervalConfig | PomodoroConfig;
+    if (type === 'simple') {
+      config = { totalSeconds: minutes * 60, prepSeconds: prep };
+    } else if (type === 'pomodoro') {
+      config = pomo;
+    } else {
+      config = { prepSeconds: prep, sets, cooldownSeconds: cooldown, intervals, sounds: { countdownBeeps: true, voice } };
+    }
+    const fallbackName =
+      type === 'simple' ? 'Focus timer' : type === 'pomodoro' ? `${pomo.work}/${pomo.short} × ${pomo.rounds}` : 'Interval timer';
+    await save.mutateAsync({ id, name: name.trim() || fallbackName, type, config });
+    navigate('/timer');
   }
 
   return (
@@ -73,18 +87,33 @@ export function TimerEditor() {
       <input className="input" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
 
       <div className="flex gap-2">
-        <button className={`chip flex-1 ${type === 'simple' ? 'chip-active' : ''}`} onClick={() => setType('simple')}>Focus block</button>
-        <button className={`chip flex-1 ${type === 'interval' ? 'chip-active' : ''}`} onClick={() => setType('interval')}>Interval</button>
+        {(['pomodoro', 'simple', 'interval'] as PresetType[]).map((tt) => (
+          <button key={tt} className={`chip flex-1 ${type === tt ? 'chip-active' : ''}`} onClick={() => setType(tt)}>
+            {timerTypeLabel(tt)}
+          </button>
+        ))}
       </div>
 
       <div className="card space-y-3 p-4">
-        <Stepper label="Prep countdown" value={prep} onChange={setPrep} min={0} max={60} suffix="s" />
-        {type === 'simple' ? (
-          <Stepper label="Duration" value={minutes} onChange={setMinutes} min={1} max={180} suffix="min" />
+        {type === 'pomodoro' ? (
+          <>
+            <Stepper label="Focus block" value={pomo.work} onChange={(v) => updatePomo({ work: v })} min={1} max={120} suffix="min" />
+            <Stepper label="Short break" value={pomo.short} onChange={(v) => updatePomo({ short: v })} min={1} max={60} suffix="min" />
+            <Stepper label="Long break" value={pomo.long} onChange={(v) => updatePomo({ long: v })} min={1} max={120} suffix="min" />
+            <Stepper label="Long break every" value={pomo.longEvery} onChange={(v) => updatePomo({ longEvery: v })} min={1} max={12} suffix="blocks" />
+            <Stepper label="Blocks this session" value={pomo.rounds} onChange={(v) => updatePomo({ rounds: v })} min={1} max={16} />
+          </>
         ) : (
           <>
-            <Stepper label="Sets" value={sets} onChange={setSets} min={1} max={50} />
-            <Stepper label="Cooldown" value={cooldown} onChange={setCooldown} min={0} max={600} step={5} suffix="s" />
+            <Stepper label="Prep countdown" value={prep} onChange={setPrep} min={0} max={60} suffix="s" />
+            {type === 'simple' ? (
+              <Stepper label="Duration" value={minutes} onChange={setMinutes} min={1} max={180} suffix="min" />
+            ) : (
+              <>
+                <Stepper label="Sets" value={sets} onChange={setSets} min={1} max={50} />
+                <Stepper label="Cooldown" value={cooldown} onChange={setCooldown} min={0} max={600} step={5} suffix="s" />
+              </>
+            )}
           </>
         )}
       </div>
@@ -139,7 +168,7 @@ export function TimerEditor() {
       <div className="flex gap-3">
         <button className="btn-accent flex-1" onClick={onSave} disabled={save.isPending}>Save</button>
         {existing && (
-          <button className="btn-outline text-rose-400" onClick={() => { del.mutate(existing.id); navigate('/timers'); }}>Delete</button>
+          <button className="btn-outline text-rose-400" onClick={() => { del.mutate(existing.id); navigate('/timer'); }}>Delete</button>
         )}
       </div>
     </div>
