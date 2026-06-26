@@ -9,6 +9,7 @@ import {
 import { DEFAULT_SETTINGS } from './seed';
 import { calendar } from './calendar';
 import { queueTaskDelete, queueTaskSync } from './gcalSync';
+import { datesInclusive } from './range';
 
 type Env = { Variables: { userId: string } };
 
@@ -250,7 +251,54 @@ api.delete('/sessions/:id', (c) => {
   return c.json({ ok: true });
 });
 
+/* ---------- vacation / rest day ranges (bulk) ---------- */
+// Exported so the insert/delete logic is unit-testable without the HTTP layer.
+export function applyVacationRange(userId: string, start: string, end: string, on: boolean) {
+  const days = datesInclusive(start, end);
+  if (on) {
+    const now = Date.now();
+    for (const date of days)
+      db.insert(vacationDays).values({ id: newId(), userId, date, createdAt: now }).onConflictDoNothing().run();
+  } else {
+    for (const date of days)
+      db.delete(vacationDays).where(and(eq(vacationDays.userId, userId), eq(vacationDays.date, date))).run();
+  }
+  return days;
+}
+export function applyRestRange(userId: string, start: string, end: string, on: boolean) {
+  const days = datesInclusive(start, end);
+  if (on) {
+    const now = Date.now();
+    for (const date of days)
+      db.insert(restDays).values({ id: newId(), userId, date, createdAt: now }).onConflictDoNothing().run();
+  } else {
+    for (const date of days)
+      db.delete(restDays).where(and(eq(restDays.userId, userId), eq(restDays.date, date))).run();
+  }
+  return days;
+}
+
+const rangeBody = z.object({ start: z.string().regex(DATE_RE), end: z.string().regex(DATE_RE) });
+function rangeRoute(apply: (userId: string, s: string, e: string, on: boolean) => string[], on: boolean) {
+  return async (c: any) => {
+    const p = rangeBody.safeParse(await body(c));
+    if (!p.success) return c.json({ error: 'invalid_input' }, 400);
+    try {
+      const days = apply(uid(c), p.data.start, p.data.end, on);
+      return c.json({ ok: true, count: days.length });
+    } catch {
+      return c.json({ error: 'invalid_range' }, 400);
+    }
+  };
+}
+
 /* ---------- rest days (whole-day streak skips) ---------- */
+// `/range` routes are registered before `/:date` so 'range' is not captured as a date param.
+api.post('/rest-days/range', rangeRoute(applyRestRange, true));
+api.delete('/rest-days/range', rangeRoute(applyRestRange, false));
+api.post('/vacation-days/range', rangeRoute(applyVacationRange, true));
+api.delete('/vacation-days/range', rangeRoute(applyVacationRange, false));
+
 api.get('/rest-days', (c) =>
   c.json(db.select().from(restDays).where(eq(restDays.userId, uid(c))).orderBy(desc(restDays.date)).all()));
 
