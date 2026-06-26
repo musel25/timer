@@ -9,7 +9,6 @@ import { Layout } from './features/Layout';
 import { Dashboard } from './features/dashboard/Dashboard';
 import { WeekBoard } from './features/tasks/WeekBoard';
 import { Timer } from './features/timer/Timer';
-import { TimersLibrary } from './features/timers/TimersLibrary';
 import { TimerEditor } from './features/timers/TimerEditor';
 import { HabitEditor } from './features/habits/HabitEditor';
 import { HabitDetail } from './features/habits/HabitDetail';
@@ -48,7 +47,7 @@ function AuthedApp() {
         <Route path="/focus" element={<Navigate to="/timer" replace />} />
         <Route path="/quick" element={<Navigate to="/timer" replace />} />
         <Route path="/habits" element={<Dashboard />} />
-        <Route path="/timers" element={<TimersLibrary />} />
+        <Route path="/timers" element={<Navigate to="/timer" replace />} />
         <Route path="/timers/new" element={<TimerEditor />} />
         <Route path="/timers/:id" element={<TimerEditor />} />
         <Route path="/habits/new" element={<HabitEditor />} />
