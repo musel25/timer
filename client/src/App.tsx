@@ -11,7 +11,6 @@ import { TodayView } from './features/tasks/TodayView';
 import { WeekBoard } from './features/tasks/WeekBoard';
 import { MonthCalendar } from './features/tasks/MonthCalendar';
 import { Timer } from './features/timer/Timer';
-import { TimersLibrary } from './features/timers/TimersLibrary';
 import { TimerEditor } from './features/timers/TimerEditor';
 import { HabitEditor } from './features/habits/HabitEditor';
 import { Progress } from './features/stats/Progress';
@@ -50,7 +49,7 @@ function AuthedApp() {
         <Route path="/focus" element={<Navigate to="/timer" replace />} />
         <Route path="/quick" element={<Navigate to="/timer" replace />} />
         <Route path="/habits" element={<Dashboard />} />
-        <Route path="/timers" element={<TimersLibrary />} />
+        <Route path="/timers" element={<Navigate to="/timer" replace />} />
         <Route path="/timers/new" element={<TimerEditor />} />
         <Route path="/timers/:id" element={<TimerEditor />} />
         <Route path="/habits/new" element={<HabitEditor />} />
