@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useHabits, useGroups, useSessions, useSettings, useLogSession, useDeleteSession, useRestDays, useVacationDays } from '../../lib/hooks';
+import { useHabits, useGroups, useSessions, useLogSession, useDeleteSession, useRestDays, useVacationDays } from '../../lib/hooks';
 import type { Habit } from '../../lib/types';
 import { Timer, Plus } from 'lucide-react';
 import { habitStreak, todaySummary, todaysHabitSession, effectiveGoal, isHabitDoneToday } from '../../lib/stats';
@@ -14,10 +14,9 @@ export function Dashboard() {
   const { data: habits = [] } = useHabits();
   const { data: groups = [] } = useGroups();
   const { data: sessions = [] } = useSessions();
-  const { data: settings } = useSettings();
   const { data: restDayRows = [] } = useRestDays();
   const { data: vacationRows = [] } = useVacationDays();
-  const { startRun } = useRun();
+  const { activeElapsedSec, checkpointActive } = useRun();
   const logSession = useLogSession();
   const deleteSession = useDeleteSession();
 
@@ -33,17 +32,6 @@ export function Dashboard() {
   const doneToday = (h: Habit) => isHabitDoneToday(h, today, effectiveGoal(h, startOfToday(), vacationDays));
   const doneHabits = active.filter(doneToday).sort(byTime);
 
-  function start(habit: Habit, min: number) {
-    const prep = settings?.prepSeconds ?? 5;
-    startRun({
-      type: 'simple',
-      label: habit.name,
-      habitId: habit.id,
-      plannedSeconds: min * 60,
-      config: { totalSeconds: min * 60, prepSeconds: prep },
-    });
-  }
-
   const log = (habit: Habit, min: number) => logSession.mutate({ habitId: habit.id, minutes: min });
   const toggleAbstain = (habit: Habit) => {
     const existing = todaysHabitSession(sessions, habit.id);
@@ -56,8 +44,9 @@ export function Dashboard() {
       key={h.id}
       habit={h}
       minutesToday={today.minutesByHabit[h.id] ?? 0}
-      onStart={start}
       onLog={log}
+      suggestedMin={() => Math.round(activeElapsedSec() / 60)}
+      onCheckpoint={checkpointActive}
       editTo={`/habits/${h.id}`}
       markedToday={today.doneHabitIds.has(h.id)}
       streak={streakFor(h)}
@@ -75,7 +64,7 @@ export function Dashboard() {
         <div>
           <h1 className="text-3xl font-bold md:text-4xl">Habits</h1>
           <div className="mt-1 text-sm text-slate-300">
-            {today.count > 0 ? `Today · ${today.count} done · ${today.minutes} min` : 'Tap a duration to start a focus block'}
+            {today.count > 0 ? `Today · ${today.count} done · ${today.minutes} min` : 'Nothing logged yet today'}
           </div>
         </div>
         <div className="flex items-center gap-2">
