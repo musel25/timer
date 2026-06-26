@@ -6,22 +6,26 @@ offline, syncs across devices behind a private login.
 
 ## Features
 
-- **Two kinds of timers**
-  - *Simple focus block* — one stretch of N minutes (with prep countdown + finish chime).
-  - *Interval* — prep → sets × (work / rest), with per-interval labels, colors and sounds.
-- **Quick Timer** — fire a one-off countdown or interval in seconds; optionally save it.
-- **Saved timers** — a library of reusable presets, keyed by *duration / structure* (not by habit).
-- **Habit dashboard** — your daily habits grouped by time of day (Morning / Work / Night), each with
-  a row of duration presets. Tap a duration to start. Mirrors the layout you sketched.
-- **Progress tracking** — every run logs a session (duration snapshotted), powering streaks, a
-  GitHub-style minutes heatmap, weekly/monthly totals, and per-habit goals.
+- **Timers** — build and run a *Focus block* (multi-round work/break Pomodoro) or a plain
+  countdown *Timer*, with prep countdown, chimes, and reusable saved presets.
+- **One shared timer with habit tagging** — there's always at most one running timer. It keeps
+  going as you navigate between pages. Start a Focus block, then on the **Habits** page tap a
+  habit to count that block toward it (tap another to switch the tag). No nested second timer.
+- **Navigation** — a slim left bar: **Week · Habits · Timer · Progress · Settings**. The Week
+  planner is the home view (per-day tasks + Google Calendar events, today highlighted).
+- **Habit dashboard** — your daily habits grouped by time of day, each with duration presets.
+  Tap a duration to start; click a habit to open its **drill-down** (Overview + Month).
+- **Per-habit drill-down** — an Overview (streak, activity grid, recent days vs. goal) and a
+  **Month** calendar where you paint **vacation** (lighter goal) and **rest** (streak-skip) days
+  as ranges — tap a start day then an end day. (Vacation/rest dates are global across habits.)
+- **Progress tracking** — every run logs a session, powering streaks, a GitHub-style minutes
+  heatmap, weekly/monthly totals, and per-habit goals (lighter on weekends/vacation).
 - **Audio & voice** — countdown beeps, distinct work/rest/finish tones (Web Audio, no asset files),
   optional spoken cues.
 - **PWA** — installable, offline-capable, **Wake Lock** keeps the screen on during a workout.
 - **Accounts** — single private account (closed signup), cross-device cloud sync, JSON export/import.
-- **Google Calendar** — events show up in the Week planner and Today view; dated
-  tasks mirror to a dedicated Planner calendar (service-account setup: see
-  [docs/gcal-setup.md](docs/gcal-setup.md)).
+- **Google Calendar** — events show up in the Week planner; dated tasks mirror to a dedicated
+  Planner calendar (service-account setup: see [docs/gcal-setup.md](docs/gcal-setup.md)).
 
 ## Stack
 
