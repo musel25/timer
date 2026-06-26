@@ -77,7 +77,8 @@ export function Dashboard() {
       minutesToday={today.minutesByHabit[h.id] ?? 0}
       onStart={start}
       onLog={log}
-      editTo={`/habits/${h.id}`}
+      editTo={`/habits/${h.id}/edit`}
+      detailTo={`/habits/${h.id}`}
       markedToday={today.doneHabitIds.has(h.id)}
       streak={streakFor(h)}
       goalMin={effectiveGoal(h, startOfToday(), vacationDays)}
