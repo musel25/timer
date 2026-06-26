@@ -7,13 +7,12 @@ import { setVolume } from './engine/audio';
 import { Login } from './features/auth/Login';
 import { Layout } from './features/Layout';
 import { Dashboard } from './features/dashboard/Dashboard';
-import { TodayView } from './features/tasks/TodayView';
 import { WeekBoard } from './features/tasks/WeekBoard';
-import { MonthCalendar } from './features/tasks/MonthCalendar';
 import { Timer } from './features/timer/Timer';
 import { TimersLibrary } from './features/timers/TimersLibrary';
 import { TimerEditor } from './features/timers/TimerEditor';
 import { HabitEditor } from './features/habits/HabitEditor';
+import { HabitDetail } from './features/habits/HabitDetail';
 import { Progress } from './features/stats/Progress';
 import { SettingsPage } from './features/settings/Settings';
 import { AgentsProvider } from './features/agents/AgentsContext';
@@ -43,9 +42,8 @@ function AuthedApp() {
   const routes = (
     <Routes>
       <Route element={<Layout />}>
-        <Route path="/" element={<TodayView />} />
+        <Route path="/" element={<Navigate to="/week" replace />} />
         <Route path="/week" element={<WeekBoard />} />
-        <Route path="/month" element={<MonthCalendar />} />
         <Route path="/timer" element={<Timer />} />
         <Route path="/focus" element={<Navigate to="/timer" replace />} />
         <Route path="/quick" element={<Navigate to="/timer" replace />} />
@@ -54,7 +52,8 @@ function AuthedApp() {
         <Route path="/timers/new" element={<TimerEditor />} />
         <Route path="/timers/:id" element={<TimerEditor />} />
         <Route path="/habits/new" element={<HabitEditor />} />
-        <Route path="/habits/:id" element={<HabitEditor />} />
+        <Route path="/habits/:id" element={<HabitDetail />} />
+        <Route path="/habits/:id/edit" element={<HabitEditor />} />
         <Route path="/stats" element={<Progress />} />
         <Route path="/settings" element={<SettingsPage />} />
         {CC_DASH_ENABLED && <Route path="/agents" element={<AgentsDashboard />} />}

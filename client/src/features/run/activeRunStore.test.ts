@@ -38,23 +38,23 @@ describe('isStale', () => {
 describe('save/load round trip', () => {
   beforeEach(() => localStorage.clear());
 
-  it('persists and reads back a slot independently', () => {
-    saveRun('focus', run({ focusId: 'f1' }));
-    saveRun('foreground', run({ parentFocusId: 'f1', elapsedMs: 5000 }));
-    expect(loadRun('focus')?.focusId).toBe('f1');
-    expect(loadRun('foreground')?.parentFocusId).toBe('f1');
+  it('persists and reads back the run slot', () => {
+    saveRun('foreground', run({ elapsedMs: 5000 }));
     expect(loadRun('foreground')?.elapsedMs).toBe(5000);
   });
 
-  it('clears a slot when saved null without touching the other', () => {
-    saveRun('focus', run({ focusId: 'f1' }));
+  it('round-trips taggedHabitId through save/load', () => {
+    saveRun('foreground', run({ taggedHabitId: 'habit-9' }));
+    expect(loadRun('foreground')?.taggedHabitId).toBe('habit-9');
+  });
+
+  it('clears the slot when saved null', () => {
     saveRun('foreground', run());
     saveRun('foreground', null);
     expect(loadRun('foreground')).toBeNull();
-    expect(loadRun('focus')?.focusId).toBe('f1');
   });
 
   it('returns null for an empty store', () => {
-    expect(loadRun('focus')).toBeNull();
+    expect(loadRun('foreground')).toBeNull();
   });
 });

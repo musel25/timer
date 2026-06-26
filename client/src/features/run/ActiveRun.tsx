@@ -9,6 +9,7 @@ import { useTimerEngine } from '../../engine/useTimerEngine';
 import { unlockAudio } from '../../engine/audio';
 import { releaseWakeLock, reacquireWakeLock, requestWakeLock } from '../../engine/wakeLock';
 import { saveRun } from './activeRunStore';
+import { attributedHabitId } from './attribution';
 import { RunScreen } from './RunScreen';
 import { MiniPlayer } from './MiniPlayer';
 
@@ -24,7 +25,7 @@ export function ActiveRun({
   onAgain,
   startedAtEpoch,
   resumeElapsed = 0,
-  parentFocusId = null,
+  taggedHabitId = null,
 }: {
   spec: RunSpec;
   onClose: () => void;
@@ -33,10 +34,14 @@ export function ActiveRun({
   startedAtEpoch?: number;
   /** Seconds already elapsed when resuming a persisted run. */
   resumeElapsed?: number;
-  /** Focus session this run was launched inside of, if any. */
-  parentFocusId?: string | null;
+  /** Habit this run is currently attributed to, if any (live re-taggable from the dashboard). */
+  taggedHabitId?: string | null;
 }) {
   const { data: settings } = useSettings();
+  // Keep the latest tag in a ref so the finish-time log reads the current value,
+  // not the one captured when the engine's onFinish closure was created.
+  const tagRef = useRef(taggedHabitId);
+  tagRef.current = taggedHabitId;
   const phases = useMemo(() => spec.phases ?? buildPhases(spec), [spec]);
   const focusMode = spec.trackMode === 'focus';
   const planned = useMemo(() => spec.plannedSeconds || totalSeconds(phases), [phases, spec]);
@@ -57,7 +62,7 @@ export function ActiveRun({
     logged.current = true;
     void logSession({
       id: crypto.randomUUID(),
-      habitId: focusMode ? null : (spec.habitId ?? null),
+      habitId: attributedHabitId(tagRef.current, spec.habitId),
       timerId: spec.timerId ?? null,
       label: spec.label,
       type: spec.type,
@@ -68,7 +73,7 @@ export function ActiveRun({
       endedAt: Date.now(),
       note: null,
       category: 'habit',
-      parentSessionId: parentFocusId,
+      parentSessionId: null,
       createdAt: Date.now(),
     });
     saveRun('foreground', null);
@@ -93,10 +98,10 @@ export function ActiveRun({
         status: engine.status,
         elapsedMs: engine.elapsed * 1000,
         snapshotEpoch: Date.now(),
-        parentFocusId,
+        taggedHabitId,
       });
     }
-  }, [engine.status, engine.elapsed, spec, parentFocusId]);
+  }, [engine.status, engine.elapsed, spec, taggedHabitId]);
 
   // Auto-start + keep the screen awake for the life of the run.
   useEffect(() => {

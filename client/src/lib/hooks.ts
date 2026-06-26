@@ -47,6 +47,16 @@ export function useToggleRestDay() {
   });
 }
 
+/** Mark or clear an inclusive date range as rest days (bulk). */
+export function useSetRestRange() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ start, end, on }: { start: string; end: string; on: boolean }) =>
+      on ? api.post('/rest-days/range', { start, end }) : api.del('/rest-days/range', { start, end }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['rest-days'] }),
+  });
+}
+
 /* ---- vacation days (whole-day lighter goal) ---- */
 export const useVacationDays = () => useQuery({ queryKey: ['vacation-days'], queryFn: () => api.get<VacationDay[]>('/vacation-days') });
 
@@ -56,6 +66,16 @@ export function useToggleVacationDay() {
   return useMutation({
     mutationFn: ({ date, on }: { date: string; on: boolean }) =>
       on ? api.post('/vacation-days', { date }) : api.del(`/vacation-days/${date}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['vacation-days'] }),
+  });
+}
+
+/** Mark or clear an inclusive date range as vacation (bulk). */
+export function useSetVacationRange() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ start, end, on }: { start: string; end: string; on: boolean }) =>
+      on ? api.post('/vacation-days/range', { start, end }) : api.del('/vacation-days/range', { start, end }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['vacation-days'] }),
   });
 }

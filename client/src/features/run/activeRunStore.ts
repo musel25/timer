@@ -1,7 +1,7 @@
 import type { RunSpec } from '../../lib/types';
 
-/** The two concurrent run slots: one background focus umbrella + one foreground timer. */
-export type RunSlot = 'focus' | 'foreground';
+/** A single shared run slot. (Was two slots; the focus "umbrella" has been removed.) */
+export type RunSlot = 'foreground';
 
 /**
  * A live run snapshot persisted to localStorage so it survives a reload. We store
@@ -16,10 +16,8 @@ export interface PersistedRun {
   /** Active elapsed ms captured at `snapshotEpoch`. */
   elapsedMs: number;
   snapshotEpoch: number;
-  /** focus slot: stable id used for the logged focus session and as children's parentSessionId. */
-  focusId?: string;
-  /** foreground slot: the focus session id this run belongs to, if any. */
-  parentFocusId?: string | null;
+  /** The habit this run is currently attributed to, if any (live re-taggable). */
+  taggedHabitId?: string | null;
 }
 
 const KEY = 'timer_active_runs';

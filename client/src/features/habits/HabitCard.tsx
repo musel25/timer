@@ -23,6 +23,7 @@ export function HabitCard({
   onLog,
   onHide,
   editTo,
+  detailTo,
   markedToday = false,
   streak = 0,
   goalMin,
@@ -34,6 +35,7 @@ export function HabitCard({
   onLog?: (h: Habit, min: number) => void;
   onHide?: (h: Habit) => void;
   editTo?: string;
+  detailTo?: string;
   markedToday?: boolean;
   streak?: number;
   goalMin?: number | null; // effective goal for today; falls back to habit.dailyGoalMin
@@ -64,7 +66,11 @@ export function HabitCard({
         <HabitIcon name={habit.emoji} size={20} />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="truncate font-semibold">{habit.name}</div>
+        {detailTo ? (
+          <Link to={detailTo} className="block truncate font-semibold transition hover:text-accent" title="Open habit details">{habit.name}</Link>
+        ) : (
+          <div className="truncate font-semibold">{habit.name}</div>
+        )}
         {habit.note && <div className="truncate text-xs text-slate-400">{habit.note}</div>}
       </div>
       {onLog && habit.kind !== 'abstain' && (
