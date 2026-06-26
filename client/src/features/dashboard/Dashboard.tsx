@@ -1,28 +1,26 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useHabits, useGroups, useSessions, useSettings, useLogSession, useDeleteSession, useRestDays, useVacationDays } from '../../lib/hooks';
-import type { Habit, PomodoroConfig } from '../../lib/types';
-import { Timer, Plus, Hourglass, X } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { useHabits, useGroups, useSessions, useLogSession, useDeleteSession, useRestDays, useVacationDays } from '../../lib/hooks';
+import type { Habit } from '../../lib/types';
 import { habitStreak, todaySummary, todaysHabitSession, effectiveGoal, isHabitDoneToday } from '../../lib/stats';
-import { buildPomodoroPhases, workSeconds } from '../../engine/buildPhases';
 import { startOfToday } from '../../lib/time';
 import { HabitIcon } from '../../lib/habitIcons';
-import { useRun } from '../run/RunContext';
-import { HabitCard } from '../habits/HabitCard';
+import { HabitCard, type LogEntry } from '../habits/HabitCard';
 
-const POMODORO_DEFAULT: PomodoroConfig = { work: 25, short: 5, long: 20, longEvery: 4, rounds: 4 };
-
+/**
+ * The Habits dashboard: every habit as a card you log by hand. Habits are never
+ * timed — timing is its own tool under /timer. Time habits open a minutes/note
+ * composer; abstinence habits toggle a daily "stayed off it" check.
+ */
 export function Dashboard() {
   const { data: habits = [] } = useHabits();
   const { data: groups = [] } = useGroups();
   const { data: sessions = [] } = useSessions();
-  const { data: settings } = useSettings();
   const { data: restDayRows = [] } = useRestDays();
   const { data: vacationRows = [] } = useVacationDays();
-  const { startRun, setTag, activeRun } = useRun();
   const logSession = useLogSession();
   const deleteSession = useDeleteSession();
-  const taggedHabit = activeRun?.taggedHabitId ? habits.find((h) => h.id === activeRun.taggedHabitId) : undefined;
 
   const today = todaySummary(sessions);
   const active = habits.filter((h) => !h.archived);
@@ -36,34 +34,8 @@ export function Dashboard() {
   const doneToday = (h: Habit) => isHabitDoneToday(h, today, effectiveGoal(h, startOfToday(), vacationDays));
   const doneHabits = active.filter(doneToday).sort(byTime);
 
-  function start(habit: Habit, min: number) {
-    // While a run is active (e.g. a focus block), tapping a habit re-tags that
-    // run to count toward the habit rather than starting a second timer.
-    if (activeRun?.running) { setTag(habit.id); return; }
-    const prep = settings?.prepSeconds ?? 5;
-    startRun({
-      type: 'simple',
-      label: habit.name,
-      habitId: habit.id,
-      plannedSeconds: min * 60,
-      config: { totalSeconds: min * 60, prepSeconds: prep },
-    });
-  }
-
-  function startFocus() {
-    const prep = settings?.prepSeconds ?? 5;
-    const phases = buildPomodoroPhases(POMODORO_DEFAULT, 'Focus block', prep);
-    startRun({
-      type: 'interval',
-      config: { prepSeconds: prep, sets: POMODORO_DEFAULT.rounds, intervals: [], cooldownSeconds: 0 },
-      label: 'Focus block',
-      plannedSeconds: workSeconds(phases),
-      phases,
-      trackMode: 'focus',
-    });
-  }
-
-  const log = (habit: Habit, min: number) => logSession.mutate({ habitId: habit.id, minutes: min });
+  const log = (habit: Habit, entry: LogEntry) =>
+    logSession.mutate({ habitId: habit.id, minutes: entry.minutes, note: entry.note, endedAt: entry.endedAt });
   const toggleAbstain = (habit: Habit) => {
     const existing = todaysHabitSession(sessions, habit.id);
     if (existing) deleteSession.mutate(existing.id);
@@ -75,7 +47,6 @@ export function Dashboard() {
       key={h.id}
       habit={h}
       minutesToday={today.minutesByHabit[h.id] ?? 0}
-      onStart={start}
       onLog={log}
       editTo={`/habits/${h.id}/edit`}
       detailTo={`/habits/${h.id}`}
@@ -95,38 +66,11 @@ export function Dashboard() {
         <div>
           <h1 className="text-3xl font-bold md:text-4xl">Habits</h1>
           <div className="mt-1 text-sm text-slate-300">
-            {today.count > 0 ? `Today · ${today.count} done · ${today.minutes} min` : 'Tap a duration to start a focus block'}
+            {today.count > 0 ? `Today · ${today.count} done · ${today.minutes} min` : 'Nothing logged yet today'}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {!activeRun?.running && (
-            <button
-              onClick={startFocus}
-              className="flex items-center gap-1.5 rounded-full border border-ink-600/60 bg-ink-900/30 px-3 py-2 text-sm text-slate-300 backdrop-blur hover:text-slate-100"
-              title="Start a focus block"
-            >
-              <Hourglass size={15} /> Focus
-            </button>
-          )}
-          <Link to="/timer" className="flex items-center rounded-full border border-ink-600/60 bg-ink-900/30 p-2.5 text-slate-300 backdrop-blur hover:text-slate-100" title="Timers"><Timer size={18} /></Link>
-        </div>
+        <Link to="/habits/new" className="btn-accent shrink-0"><Plus size={16} /> New habit</Link>
       </header>
-
-      {activeRun?.running && (
-        <div className="card flex items-center justify-between gap-3 p-3 text-sm">
-          <span className="flex items-center gap-1.5 text-teal-300">
-            <Hourglass size={15} />
-            {taggedHabit
-              ? <>Focus running — counting toward <strong>{taggedHabit.name}</strong>. Tap another habit to switch.</>
-              : <>Focus running — tap a habit to count this block toward it.</>}
-          </span>
-          {taggedHabit && (
-            <button onClick={() => setTag(null)} className="shrink-0 rounded p-1 text-slate-400 hover:text-slate-200" title="Clear tag" aria-label="Clear tag">
-              <X size={15} />
-            </button>
-          )}
-        </div>
-      )}
 
       {ordered.map((group) => {
         const list = active.filter((h) => h.groupId === group.id && !doneToday(h)).sort(byTime);
@@ -153,7 +97,7 @@ export function Dashboard() {
       )}
 
       {active.length === 0 && (
-        <p className="py-8 text-center text-slate-500">No habits yet — add your first one below.</p>
+        <p className="py-8 text-center text-slate-500">No habits yet — add your first one above.</p>
       )}
 
       {doneHabits.length > 0 && (
@@ -171,11 +115,6 @@ export function Dashboard() {
           )}
         </section>
       )}
-
-      <div className="grid grid-cols-2 gap-3 pt-2 sm:max-w-md">
-        <Link to="/timer" className="btn-accent"><Timer size={16} /> Timer</Link>
-        <Link to="/habits/new" className="btn-ghost"><Plus size={16} /> Habit</Link>
-      </div>
     </div>
   );
 }

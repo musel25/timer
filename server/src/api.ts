@@ -163,8 +163,6 @@ const habitInput = z.object({
   dailyGoalMin: z.number().int().positive().nullable().optional(),
   weekendGoalMin: z.number().int().positive().nullable().optional(),
   vacationGoalMin: z.number().int().positive().nullable().optional(),
-  timerType: z.enum(['simple', 'interval']).optional(),
-  defaultTimerId: z.string().nullable().optional(),
   sortOrder: z.number().int().optional(),
   archived: z.boolean().optional(),
   hiddenOn: z.string().regex(DATE_RE).nullable().optional(),
@@ -181,7 +179,6 @@ api.post('/habits', async (c) => {
     emoji: p.data.emoji ?? null, note: p.data.note ?? null, kind: p.data.kind ?? 'time', durations: p.data.durations,
     defaultDurationMin: p.data.defaultDurationMin ?? null, dailyGoalMin: p.data.dailyGoalMin ?? null,
     weekendGoalMin: p.data.weekendGoalMin ?? null, vacationGoalMin: p.data.vacationGoalMin ?? null,
-    timerType: p.data.timerType ?? 'simple', defaultTimerId: p.data.defaultTimerId ?? null,
     sortOrder: p.data.sortOrder ?? Date.now(), archived: p.data.archived ?? false, createdAt: Date.now(),
   };
   db.insert(habits).values(row).run();

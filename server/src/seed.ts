@@ -70,8 +70,6 @@ export function bootstrap(): void {
         durations: h.durations,
         defaultDurationMin: h.def,
         dailyGoalMin: h.goal,
-        timerType: 'simple',
-        defaultTimerId: null,
         sortOrder: i,
         archived: false,
         createdAt: now,

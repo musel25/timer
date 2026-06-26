@@ -9,15 +9,15 @@ import { useTimerEngine } from '../../engine/useTimerEngine';
 import { unlockAudio } from '../../engine/audio';
 import { releaseWakeLock, reacquireWakeLock, requestWakeLock } from '../../engine/wakeLock';
 import { saveRun } from './activeRunStore';
-import { attributedHabitId } from './attribution';
 import { RunScreen } from './RunScreen';
 import { MiniPlayer } from './MiniPlayer';
 
 /**
  * Owns the timer engine and session logging for a single run. Mounted by
  * RunProvider *above* the router, so the engine keeps ticking while the user
- * navigates. Renders the full-screen RunScreen when expanded, or the persistent
- * MiniPlayer when minimized — both are presentational views of this engine.
+ * navigates. Starts minimized as the persistent MiniPlayer — so the rest of the
+ * app stays interactive while a timer runs — and expands to the full-screen
+ * RunScreen on demand; both are presentational views of this one engine.
  */
 export function ActiveRun({
   spec,
@@ -25,7 +25,6 @@ export function ActiveRun({
   onAgain,
   startedAtEpoch,
   resumeElapsed = 0,
-  taggedHabitId = null,
 }: {
   spec: RunSpec;
   onClose: () => void;
@@ -34,14 +33,8 @@ export function ActiveRun({
   startedAtEpoch?: number;
   /** Seconds already elapsed when resuming a persisted run. */
   resumeElapsed?: number;
-  /** Habit this run is currently attributed to, if any (live re-taggable from the dashboard). */
-  taggedHabitId?: string | null;
 }) {
   const { data: settings } = useSettings();
-  // Keep the latest tag in a ref so the finish-time log reads the current value,
-  // not the one captured when the engine's onFinish closure was created.
-  const tagRef = useRef(taggedHabitId);
-  tagRef.current = taggedHabitId;
   const phases = useMemo(() => spec.phases ?? buildPhases(spec), [spec]);
   const focusMode = spec.trackMode === 'focus';
   const planned = useMemo(() => spec.plannedSeconds || totalSeconds(phases), [phases, spec]);
@@ -54,7 +47,8 @@ export function ActiveRun({
   );
   const logged = useRef(false);
   const [muted, setMuted] = useState(false);
-  const [minimized, setMinimized] = useState(false);
+  // Start minimized so the rest of the app stays usable while a timer runs.
+  const [minimized, setMinimized] = useState(true);
 
   // In focus (Pomodoro) mode we log only completed work time, not breaks.
   function logRun(completed: boolean, totalElapsed: number) {
@@ -62,7 +56,7 @@ export function ActiveRun({
     logged.current = true;
     void logSession({
       id: crypto.randomUUID(),
-      habitId: attributedHabitId(tagRef.current, spec.habitId),
+      habitId: spec.habitId ?? null,
       timerId: spec.timerId ?? null,
       label: spec.label,
       type: spec.type,
@@ -98,10 +92,9 @@ export function ActiveRun({
         status: engine.status,
         elapsedMs: engine.elapsed * 1000,
         snapshotEpoch: Date.now(),
-        taggedHabitId,
       });
     }
-  }, [engine.status, engine.elapsed, spec, taggedHabitId]);
+  }, [engine.status, engine.elapsed, spec]);
 
   // Auto-start + keep the screen awake for the life of the run.
   useEffect(() => {

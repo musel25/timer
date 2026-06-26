@@ -16,8 +16,6 @@ export interface PersistedRun {
   /** Active elapsed ms captured at `snapshotEpoch`. */
   elapsedMs: number;
   snapshotEpoch: number;
-  /** The habit this run is currently attributed to, if any (live re-taggable). */
-  taggedHabitId?: string | null;
 }
 
 const KEY = 'timer_active_runs';

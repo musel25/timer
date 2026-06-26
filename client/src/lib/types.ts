@@ -20,6 +20,7 @@ export interface PomodoroConfig {
   long: number; // minutes
   longEvery: number; // long break after this many pomodoros
   rounds: number; // pomodoros per session
+  prepSeconds?: number; // "Get Ready" countdown before the first focus block; 0/undefined = none
 }
 
 export interface HabitGroup {
@@ -50,8 +51,6 @@ export interface Habit {
   dailyGoalMin: number | null;
   weekendGoalMin: number | null; // lighter Sat/Sun goal; null = same as dailyGoalMin
   vacationGoalMin: number | null; // lighter goal on vacation days; null = weekend then daily
-  timerType: TimerType;
-  defaultTimerId: string | null;
   sortOrder: number;
   archived: boolean;
   hiddenOn: string | null; // 'YYYY-MM-DD' the habit was hidden from Today, or null

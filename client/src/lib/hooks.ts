@@ -15,12 +15,16 @@ export const useSettings = () => useQuery({ queryKey: ['settings'], queryFn: () 
 export const useSessions = () =>
   useQuery({ queryKey: ['sessions'], queryFn: () => api.get<Session[]>('/sessions') });
 
-/** Log a habit by hand (no timer): POST a completed session, refresh today's stats. */
+/**
+ * Log a habit by hand (no timer): POST a completed session, refresh today's
+ * stats. `note` records what was done; `endedAt` back-dates the log (defaults to
+ * now) so a forgotten day can be filled in.
+ */
 export function useLogSession() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ habitId, minutes }: { habitId: string; minutes: number }) =>
-      api.post('/sessions', buildManualSession(habitId, minutes, Date.now())),
+    mutationFn: ({ habitId, minutes, note, endedAt }: { habitId: string; minutes: number; note?: string | null; endedAt?: number }) =>
+      api.post('/sessions', buildManualSession(habitId, minutes, endedAt ?? Date.now(), note ?? null)),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['sessions'] }),
   });
 }

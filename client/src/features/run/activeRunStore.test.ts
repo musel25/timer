@@ -43,11 +43,6 @@ describe('save/load round trip', () => {
     expect(loadRun('foreground')?.elapsedMs).toBe(5000);
   });
 
-  it('round-trips taggedHabitId through save/load', () => {
-    saveRun('foreground', run({ taggedHabitId: 'habit-9' }));
-    expect(loadRun('foreground')?.taggedHabitId).toBe('habit-9');
-  });
-
   it('clears the slot when saved null', () => {
     saveRun('foreground', run());
     saveRun('foreground', null);
