@@ -4,19 +4,30 @@ import { unlockAudio, requestNotificationPermission } from '../../engine/audio';
 import { ActiveRun } from './ActiveRun';
 import { FocusRun } from './FocusRun';
 import { loadRun, saveRun, liveElapsedMs, isStale } from './activeRunStore';
+import { uncommittedElapsedSec, checkpointActive as checkpointActiveRun } from './activeElapsed';
 
 interface FocusSlot { spec: RunSpec; focusId: string; startedAtEpoch: number; resumeElapsed: number }
 interface ForegroundSlot { spec: RunSpec; key: number; startedAtEpoch: number; resumeElapsed: number; parentFocusId: string | null }
 
 interface RunCtx {
-  /** Start a foreground timer (habit or ad-hoc). Tagged to the active focus session, if any. */
+  /** Start a foreground timer (ad-hoc). Tagged to the active focus session, if any. */
   startRun: (spec: RunSpec) => void;
   /** Start the background focus "umbrella" countdown. */
   startFocus: (minutes: number, label?: string) => void;
   focusActive: boolean;
+  /** Uncommitted elapsed seconds of the active run (foreground > focus > 0). */
+  activeElapsedSec: () => number;
+  /** Mark the active run's elapsed as logged to a habit (lap reset). */
+  checkpointActive: () => void;
 }
 
-const Ctx = createContext<RunCtx>({ startRun: () => {}, startFocus: () => {}, focusActive: false });
+const Ctx = createContext<RunCtx>({
+  startRun: () => {},
+  startFocus: () => {},
+  focusActive: false,
+  activeElapsedSec: () => 0,
+  checkpointActive: () => {},
+});
 export const useRun = () => useContext(Ctx);
 
 /**
@@ -66,11 +77,14 @@ export function RunProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const activeElapsedSec = useCallback(() => uncommittedElapsedSec(Date.now()), []);
+  const checkpointActive = useCallback(() => checkpointActiveRun(Date.now()), []);
+
   const closeFg = useCallback(() => { saveRun('foreground', null); setFg(null); }, []);
   const closeFocus = useCallback(() => { saveRun('focus', null); setFocus(null); }, []);
 
   return (
-    <Ctx.Provider value={{ startRun, startFocus, focusActive: !!focus }}>
+    <Ctx.Provider value={{ startRun, startFocus, focusActive: !!focus, activeElapsedSec, checkpointActive }}>
       {children}
       {focus && (
         <FocusRun
