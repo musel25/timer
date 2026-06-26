@@ -112,7 +112,7 @@ function TimerCard({
         </div>
         <span className="btn-accent shrink-0 px-3 py-2 text-sm"><Play size={15} fill="currentColor" /></span>
       </div>
-      <div className="mt-3 flex gap-3 text-xs text-slate-500" onClick={(e) => e.stopPropagation()}>
+      <div className="mt-3 flex gap-3 text-xs text-slate-500" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
         <Link to={`/timers/${preset.id}`} className="hover:text-slate-300">Edit</Link>
         <button className="hover:text-slate-300" onClick={onDuplicate}>Duplicate</button>
         <button className="hover:text-rose-400" onClick={onDelete}>Delete</button>
