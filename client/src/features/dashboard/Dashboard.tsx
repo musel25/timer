@@ -1,22 +1,24 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 import { useHabits, useGroups, useSessions, useLogSession, useDeleteSession, useRestDays, useVacationDays } from '../../lib/hooks';
 import type { Habit } from '../../lib/types';
-import { Timer, Plus } from 'lucide-react';
 import { habitStreak, todaySummary, todaysHabitSession, effectiveGoal, isHabitDoneToday } from '../../lib/stats';
 import { startOfToday } from '../../lib/time';
 import { HabitIcon } from '../../lib/habitIcons';
-import { useRun } from '../run/RunContext';
-import { FocusStarter } from '../run/FocusStarter';
-import { HabitCard } from '../habits/HabitCard';
+import { HabitCard, type LogEntry } from '../habits/HabitCard';
 
+/**
+ * The Habits dashboard: every habit as a card you log by hand (no timers live
+ * here — timing is its own tool under /timer). Time habits open a minutes/note
+ * composer; abstinence habits toggle a daily "stayed off it" check.
+ */
 export function Dashboard() {
   const { data: habits = [] } = useHabits();
   const { data: groups = [] } = useGroups();
   const { data: sessions = [] } = useSessions();
   const { data: restDayRows = [] } = useRestDays();
   const { data: vacationRows = [] } = useVacationDays();
-  const { activeElapsedSec, checkpointActive } = useRun();
   const logSession = useLogSession();
   const deleteSession = useDeleteSession();
 
@@ -32,7 +34,8 @@ export function Dashboard() {
   const doneToday = (h: Habit) => isHabitDoneToday(h, today, effectiveGoal(h, startOfToday(), vacationDays));
   const doneHabits = active.filter(doneToday).sort(byTime);
 
-  const log = (habit: Habit, min: number) => logSession.mutate({ habitId: habit.id, minutes: min });
+  const log = (habit: Habit, entry: LogEntry) =>
+    logSession.mutate({ habitId: habit.id, minutes: entry.minutes, note: entry.note, endedAt: entry.endedAt });
   const toggleAbstain = (habit: Habit) => {
     const existing = todaysHabitSession(sessions, habit.id);
     if (existing) deleteSession.mutate(existing.id);
@@ -45,8 +48,6 @@ export function Dashboard() {
       habit={h}
       minutesToday={today.minutesByHabit[h.id] ?? 0}
       onLog={log}
-      suggestedMin={() => Math.round(activeElapsedSec() / 60)}
-      onCheckpoint={checkpointActive}
       editTo={`/habits/${h.id}`}
       markedToday={today.doneHabitIds.has(h.id)}
       streak={streakFor(h)}
@@ -67,10 +68,7 @@ export function Dashboard() {
             {today.count > 0 ? `Today · ${today.count} done · ${today.minutes} min` : 'Nothing logged yet today'}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <FocusStarter />
-          <Link to="/timers" className="flex items-center rounded-full border border-ink-600/60 bg-ink-900/30 p-2.5 text-slate-300 backdrop-blur hover:text-slate-100" title="Timer presets"><Timer size={18} /></Link>
-        </div>
+        <Link to="/habits/new" className="btn-accent shrink-0"><Plus size={16} /> New habit</Link>
       </header>
 
       {ordered.map((group) => {
@@ -98,7 +96,7 @@ export function Dashboard() {
       )}
 
       {active.length === 0 && (
-        <p className="py-8 text-center text-slate-500">No habits yet — add your first one below.</p>
+        <p className="py-8 text-center text-slate-500">No habits yet — add your first one above.</p>
       )}
 
       {doneHabits.length > 0 && (
@@ -116,11 +114,6 @@ export function Dashboard() {
           )}
         </section>
       )}
-
-      <div className="grid grid-cols-2 gap-3 pt-2 sm:max-w-md">
-        <Link to="/timer" className="btn-accent"><Timer size={16} /> Timer</Link>
-        <Link to="/habits/new" className="btn-ghost"><Plus size={16} /> Habit</Link>
-      </div>
     </div>
   );
 }

@@ -6,23 +6,33 @@ import { HabitIcon } from '../../lib/habitIcons';
 import { categoryColor, gradient, tint, solid } from '../../lib/palette';
 import { GoalBar } from '../../components/GoalBar';
 
+/** What a successful manual log carries: the minutes plus an optional note and
+ *  the day it counts toward (today, or back-dated to yesterday). */
+export interface LogEntry {
+  minutes: number;
+  note: string | null;
+  /** End-of-window timestamp; the day this `endedAt` falls in receives the time. */
+  endedAt: number;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /**
- * A habit as a colorful card — a tracker + config + log surface (it no longer
- * starts timers; timing lives on the Timer page). Time habits show a primary
- * "Log time" action plus today's progress toward the daily goal (minutes).
- * When a timer/focus block is running, opening the log pre-fills with its
- * uncommitted minutes (`suggestedMin`) and a successful log checkpoints it
- * (`onCheckpoint`, the lap reset). Abstinence habits ('abstain' kind) instead
- * show an end-of-day "stayed off today" toggle and a clean-day streak. Pass
- * `onHide` for the Today hide control, `editTo` for an edit link, `onLog` for
- * logging, and the abstain trio (`markedToday`, `streak`, `onToggle`).
+ * A habit as a colorful card. Habits are never timed — they are *logged by hand*.
+ * A time habit ('time' kind) opens a small composer (minutes + optional note +
+ * today/yesterday) and shows today's progress toward the daily goal. An
+ * abstinence habit ('abstain' kind) instead shows an end-of-day "stayed off
+ * today" toggle and a clean-day streak.
+ *
+ * Props: `onLog` commits a {@link LogEntry} for a time habit; the abstain trio
+ * (`markedToday`, `streak`, `onToggle`) drives the avoid-habit check; `onHide`
+ * is the Today hide control; `editTo` links to the editor; `goalMin` is the
+ * effective goal for today (falls back to `habit.dailyGoalMin`).
  */
 export function HabitCard({
   habit,
   minutesToday,
   onLog,
-  suggestedMin,
-  onCheckpoint,
   onHide,
   editTo,
   markedToday = false,
@@ -32,9 +42,7 @@ export function HabitCard({
 }: {
   habit: Habit;
   minutesToday: number;
-  onLog?: (h: Habit, min: number) => void;
-  suggestedMin?: () => number;
-  onCheckpoint?: () => void;
+  onLog?: (h: Habit, entry: LogEntry) => void;
   onHide?: (h: Habit) => void;
   editTo?: string;
   markedToday?: boolean;
@@ -47,26 +55,28 @@ export function HabitCard({
   const goal = rawGoal && rawGoal > 0 ? rawGoal : null;
   const durations = habit.durations?.length ? habit.durations : [10];
   const defaultMin = habit.defaultDurationMin ?? durations[0];
+
   const [logging, setLogging] = useState(false);
-  const [customMin, setCustomMin] = useState(String(defaultMin));
+  const [minutes, setMinutes] = useState(defaultMin);
+  const [note, setNote] = useState('');
+  const [yesterday, setYesterday] = useState(false);
 
   function openLog() {
     setLogging((v) => {
       const next = !v;
-      if (next && suggestedMin) {
-        const s = Math.round(suggestedMin());
-        if (s > 0) setCustomMin(String(s));
-      }
+      if (next) { setMinutes(defaultMin); setNote(''); setYesterday(false); } // fresh composer each open
       return next;
     });
   }
 
-  function log(min: number) {
-    if (!onLog || !Number.isFinite(min) || min <= 0) return;
-    onLog(habit, min);
-    onCheckpoint?.();
+  function commit() {
+    if (!onLog || !Number.isFinite(minutes) || minutes <= 0) return;
+    onLog(habit, {
+      minutes,
+      note: note.trim() || null,
+      endedAt: yesterday ? Date.now() - DAY_MS : Date.now(),
+    });
     setLogging(false);
-    setCustomMin(String(defaultMin));
   }
 
   const header = (
@@ -99,7 +109,7 @@ export function HabitCard({
     </div>
   );
 
-  // Abstinence habit: one end-of-day toggle + clean-day streak, no timer.
+  // Abstinence habit: one end-of-day toggle + clean-day streak, nothing to log.
   if (habit.kind === 'abstain') {
     return (
       <div className="card group relative overflow-hidden p-4">
@@ -129,6 +139,7 @@ export function HabitCard({
     <div className="card group relative overflow-hidden p-4">
       <div className="absolute inset-x-0 top-0 h-1" style={{ backgroundImage: gradient(color.rgb) }} />
       {header}
+
       {onLog && (
         <button
           onClick={openLog}
@@ -140,42 +151,75 @@ export function HabitCard({
           <Plus size={14} /> Log time
         </button>
       )}
+
       {onLog && logging && (
-        <div className="mt-2 rounded-xl border border-ink-600/60 bg-ink-900/40 p-2">
-          <div className="mb-1.5 text-xs text-slate-400">Log time</div>
-          <div className="mb-2 flex flex-wrap gap-1.5">
-            {durations.map((min) => (
+        <div className="mt-2 space-y-2 rounded-xl border border-ink-600/60 bg-ink-900/40 p-2.5">
+          {/* minutes — quick chips set the amount, or type a custom value */}
+          <div>
+            <div className="mb-1.5 text-xs text-slate-400">Minutes</div>
+            <div className="flex flex-wrap gap-1.5">
+              {durations.map((min) => (
+                <button
+                  key={min}
+                  onClick={() => setMinutes(min)}
+                  className="chip flex-1 justify-center py-1.5 text-sm font-medium"
+                  style={
+                    minutes === min
+                      ? { borderColor: solid(color.rgb), backgroundColor: tint(color.rgb, 0.18), color: solid(color.rgb) }
+                      : { borderColor: tint(color.rgb, 0.25) }
+                  }
+                >
+                  {min}m
+                </button>
+              ))}
+              <input
+                type="number"
+                min={1}
+                inputMode="numeric"
+                value={minutes}
+                onChange={(e) => setMinutes(Number(e.target.value))}
+                onKeyDown={(e) => e.key === 'Enter' && commit()}
+                aria-label="Custom minutes"
+                className="input w-16 py-1.5 text-center text-sm"
+              />
+            </div>
+          </div>
+
+          {/* what did you do? — optional */}
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && commit()}
+            placeholder="What did you do? (optional)"
+            aria-label="Note"
+            className="input w-full py-1.5 text-sm"
+          />
+
+          {/* which day — default today, or back-date to yesterday */}
+          <div className="flex gap-1.5">
+            {([['Today', false], ['Yesterday', true]] as const).map(([label, isYesterday]) => (
               <button
-                key={min}
-                onClick={() => log(min)}
-                className="chip flex-1 justify-center py-1.5 text-sm font-medium"
-                style={{ borderColor: tint(color.rgb, 0.3), backgroundColor: tint(color.rgb, 0.06), color: solid(color.rgb) }}
+                key={label}
+                onClick={() => setYesterday(isYesterday)}
+                className={`chip flex-1 justify-center py-1.5 text-sm ${yesterday === isYesterday ? 'chip-active' : ''}`}
               >
-                {min}m
+                {label}
               </button>
             ))}
           </div>
-          <div className="flex gap-1.5">
-            <input
-              type="number"
-              min={1}
-              inputMode="numeric"
-              value={customMin}
-              onChange={(e) => setCustomMin(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && log(Number(customMin))}
-              aria-label="Minutes"
-              className="input w-20 py-1.5 text-sm"
-            />
-            <button
-              onClick={() => log(Number(customMin))}
-              className="chip flex-1 justify-center gap-1 py-1.5 text-sm font-medium"
-              style={{ borderColor: tint(color.rgb, 0.6), backgroundColor: tint(color.rgb, 0.18), color: solid(color.rgb) }}
-            >
-              <Check size={13} /> Log {customMin || '0'} min
-            </button>
-          </div>
+
+          <button
+            onClick={commit}
+            disabled={!(minutes > 0)}
+            className="chip w-full justify-center gap-1 py-2 text-sm font-medium disabled:opacity-40"
+            style={{ borderColor: tint(color.rgb, 0.6), backgroundColor: tint(color.rgb, 0.18), color: solid(color.rgb) }}
+          >
+            <Check size={13} /> Log {minutes > 0 ? `${minutes} min` : ''}{yesterday ? ' yesterday' : ''}
+          </button>
         </div>
       )}
+
       {goal ? (
         <div className="mt-3">
           <GoalBar done={minutesToday} goal={goal} rgb={color.rgb} />

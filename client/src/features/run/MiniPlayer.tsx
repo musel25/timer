@@ -11,9 +11,10 @@ interface MiniPlayerProps {
 }
 
 /**
- * Persistent, Spotify-style bar shown while a run is minimized. The engine keeps
- * running in ActiveRun; this is just a compact view + controls. Clicking the body
- * re-expands to the full RunScreen.
+ * Persistent, Spotify-style bar shown while a run is minimized (the default
+ * surface for a running timer). The engine keeps running in ActiveRun; this is
+ * just a compact view + controls. Clicking the body re-expands to the full
+ * RunScreen. On mobile it floats just above the bottom nav so both stay tappable.
  */
 export function MiniPlayer({ spec, engine, onExpand, onStop }: MiniPlayerProps) {
   const phase = engine.phase;
@@ -21,7 +22,7 @@ export function MiniPlayer({ spec, engine, onExpand, onStop }: MiniPlayerProps) 
   const pct = Math.round((engine.fraction || 0) * 100);
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:bottom-4 sm:justify-end sm:px-4">
+    <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-40 flex justify-center px-3 md:bottom-4 md:justify-end md:px-4">
       <div className="card pointer-events-auto relative flex w-full max-w-sm items-center gap-3 overflow-hidden p-2 pr-3 shadow-lg">
         {/* progress sliver along the top */}
         <div className="absolute inset-x-0 top-0 h-0.5 bg-ink-600">

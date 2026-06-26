@@ -8,10 +8,17 @@ export type ManualSessionInput = Pick<
 
 /**
  * Build a completed session logged by hand for a habit — no timer involved.
- * The window ends `now` and runs back `minutes`, so it counts toward today's
- * blocks/streaks exactly like a finished timer run. See the manual-logging spec.
+ * The window ends at `endedAt` (default now) and runs back `minutes`, so it
+ * counts toward that day's minutes/streaks exactly like a finished run would.
+ * Pass an `endedAt` inside an earlier day to back-date the log (e.g. yesterday);
+ * `note` records what was done. See the manual-logging spec.
  */
-export function buildManualSession(habitId: string, minutes: number, now: number): ManualSessionInput {
+export function buildManualSession(
+  habitId: string,
+  minutes: number,
+  endedAt: number,
+  note: string | null = null,
+): ManualSessionInput {
   const seconds = Math.round(minutes * 60);
   return {
     habitId,
@@ -21,8 +28,8 @@ export function buildManualSession(habitId: string, minutes: number, now: number
     plannedSeconds: seconds,
     actualSeconds: seconds,
     completed: true,
-    startedAt: now - seconds * 1000,
-    endedAt: now,
-    note: null,
+    startedAt: endedAt - seconds * 1000,
+    endedAt,
+    note: note?.trim() ? note.trim() : null,
   };
 }

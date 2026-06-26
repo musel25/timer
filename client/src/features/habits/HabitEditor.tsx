@@ -77,7 +77,6 @@ export function HabitEditor() {
       dailyGoalMin: kind === 'time' && goal > 0 ? goal : null,
       weekendGoalMin: kind === 'time' && weekendGoal > 0 ? weekendGoal : null,
       vacationGoalMin: kind === 'time' && vacationGoal > 0 ? vacationGoal : null,
-      timerType: 'simple',
     });
     navigate('/');
   }
@@ -117,7 +116,7 @@ export function HabitEditor() {
             onClick={() => setKind('time')}
             className={`chip flex-1 justify-center px-3 py-1.5 ${kind === 'time' ? 'chip-active' : ''}`}
           >
-            Focus time
+            Log time
           </button>
           <button
             onClick={() => setKind('abstain')}
@@ -126,9 +125,11 @@ export function HabitEditor() {
             Avoid (daily check)
           </button>
         </div>
-        {kind === 'abstain' && (
-          <p className="mt-1.5 text-xs text-slate-400">No timer — mark "stayed off it" at the end of each day to build a clean streak.</p>
-        )}
+        <p className="mt-1.5 text-xs text-slate-400">
+          {kind === 'time'
+            ? 'Log the minutes you spent by hand — habits never run a timer.'
+            : 'Mark "stayed off it" at the end of each day to build a clean streak.'}
+        </p>
       </div>
 
       <div>
@@ -147,8 +148,9 @@ export function HabitEditor() {
       {kind === 'time' && (
       <div className="card space-y-3 p-4">
         <div>
-          <label className="label">Timer lengths</label>
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <label className="label">Quick-log amounts</label>
+          <p className="mb-2 mt-1 text-xs text-slate-400">One-tap minute buttons shown on the habit card.</p>
+          <div className="flex flex-wrap gap-1.5">
             {DURATION_CHOICES.map((min) => (
               <button
                 key={min}

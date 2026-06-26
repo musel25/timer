@@ -2,59 +2,37 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import type { RunSpec } from '../../lib/types';
 import { unlockAudio, requestNotificationPermission } from '../../engine/audio';
 import { ActiveRun } from './ActiveRun';
-import { FocusRun } from './FocusRun';
 import { loadRun, saveRun, liveElapsedMs, isStale } from './activeRunStore';
-import { uncommittedElapsedSec, checkpointActive as checkpointActiveRun } from './activeElapsed';
 
-interface FocusSlot { spec: RunSpec; focusId: string; startedAtEpoch: number; resumeElapsed: number }
-interface ForegroundSlot { spec: RunSpec; key: number; startedAtEpoch: number; resumeElapsed: number; parentFocusId: string | null }
+interface RunSlot { spec: RunSpec; key: number; startedAtEpoch: number; resumeElapsed: number }
 
 interface RunCtx {
-  /** Start a foreground timer (ad-hoc). Tagged to the active focus session, if any. */
+  /** Start a timer/focus-block run from the Timer page. */
   startRun: (spec: RunSpec) => void;
-  /** Start the background focus "umbrella" countdown. */
-  startFocus: (minutes: number, label?: string) => void;
-  focusActive: boolean;
-  /** Uncommitted elapsed seconds of the active run (foreground > focus > 0). */
-  activeElapsedSec: () => number;
-  /** Mark the active run's elapsed as logged to a habit (lap reset). */
-  checkpointActive: () => void;
 }
 
-const Ctx = createContext<RunCtx>({
-  startRun: () => {},
-  startFocus: () => {},
-  focusActive: false,
-  activeElapsedSec: () => 0,
-  checkpointActive: () => {},
-});
+const Ctx = createContext<RunCtx>({ startRun: () => {} });
 export const useRun = () => useContext(Ctx);
 
 /**
- * Holds up to two concurrent runs above the router: one background `focus`
- * umbrella + one `foreground` timer. Both survive navigation (engines live in
- * the child components) and reload (snapshots in activeRunStore, resumed live).
+ * Holds the single active timer run above the router so it keeps ticking while
+ * the user navigates (the engine lives in {@link ActiveRun}) and survives reload
+ * (a snapshot in activeRunStore, resumed live). The run shows as a minimized
+ * mini-player by default, so the rest of the app stays fully interactive while a
+ * timer is going; tap it to expand the full-screen view.
  */
 export function RunProvider({ children }: { children: ReactNode }) {
-  const [focus, setFocus] = useState<FocusSlot | null>(null);
-  const [fg, setFg] = useState<ForegroundSlot | null>(null);
+  const [run, setRun] = useState<RunSlot | null>(null);
   const keyRef = useRef(0);
-  const focusRef = useRef<FocusSlot | null>(null);
-  focusRef.current = focus;
 
-  // Rehydrate persisted runs once on mount — resume exactly where wall-clock says.
+  // Rehydrate a persisted run once on mount — resume exactly where wall-clock says.
   useEffect(() => {
     const now = Date.now();
-    const f = loadRun('focus');
-    if (f?.focusId && f.status !== 'done' && !isStale(f, now)) {
-      setFocus({ spec: f.spec, focusId: f.focusId, startedAtEpoch: f.startedAtEpoch, resumeElapsed: liveElapsedMs(f, now) / 1000 });
-    } else if (f) saveRun('focus', null);
-
-    const g = loadRun('foreground');
+    const g = loadRun();
     if (g && g.status !== 'done' && !isStale(g, now)) {
       keyRef.current += 1;
-      setFg({ spec: g.spec, key: keyRef.current, startedAtEpoch: g.startedAtEpoch, resumeElapsed: liveElapsedMs(g, now) / 1000, parentFocusId: g.parentFocusId ?? null });
-    } else if (g) saveRun('foreground', null);
+      setRun({ spec: g.spec, key: keyRef.current, startedAtEpoch: g.startedAtEpoch, resumeElapsed: liveElapsedMs(g, now) / 1000 });
+    } else if (g) saveRun(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -62,48 +40,21 @@ export function RunProvider({ children }: { children: ReactNode }) {
     unlockAudio(); // inside the click gesture — unlock audio for mobile
     requestNotificationPermission();
     keyRef.current += 1;
-    setFg({ spec: s, key: keyRef.current, startedAtEpoch: Date.now(), resumeElapsed: 0, parentFocusId: focusRef.current?.focusId ?? null });
+    setRun({ spec: s, key: keyRef.current, startedAtEpoch: Date.now(), resumeElapsed: 0 });
   }, []);
 
-  const startFocus = useCallback((minutes: number, label = 'Focus session') => {
-    unlockAudio();
-    requestNotificationPermission();
-    const secs = Math.max(1, Math.round(minutes)) * 60;
-    setFocus({
-      spec: { type: 'simple', label, plannedSeconds: secs, config: { totalSeconds: secs, prepSeconds: 0 } },
-      focusId: crypto.randomUUID(),
-      startedAtEpoch: Date.now(),
-      resumeElapsed: 0,
-    });
-  }, []);
-
-  const activeElapsedSec = useCallback(() => uncommittedElapsedSec(Date.now()), []);
-  const checkpointActive = useCallback(() => checkpointActiveRun(Date.now()), []);
-
-  const closeFg = useCallback(() => { saveRun('foreground', null); setFg(null); }, []);
-  const closeFocus = useCallback(() => { saveRun('focus', null); setFocus(null); }, []);
+  const close = useCallback(() => { saveRun(null); setRun(null); }, []);
 
   return (
-    <Ctx.Provider value={{ startRun, startFocus, focusActive: !!focus, activeElapsedSec, checkpointActive }}>
+    <Ctx.Provider value={{ startRun }}>
       {children}
-      {focus && (
-        <FocusRun
-          key={focus.focusId}
-          spec={focus.spec}
-          focusId={focus.focusId}
-          startedAtEpoch={focus.startedAtEpoch}
-          resumeElapsed={focus.resumeElapsed}
-          onClose={closeFocus}
-        />
-      )}
-      {fg && (
+      {run && (
         <ActiveRun
-          key={fg.key}
-          spec={fg.spec}
-          startedAtEpoch={fg.startedAtEpoch}
-          resumeElapsed={fg.resumeElapsed}
-          parentFocusId={fg.parentFocusId}
-          onClose={closeFg}
+          key={run.key}
+          spec={run.spec}
+          startedAtEpoch={run.startedAtEpoch}
+          resumeElapsed={run.resumeElapsed}
+          onClose={close}
           onAgain={startRun}
         />
       )}

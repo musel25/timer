@@ -45,6 +45,9 @@ export const habits = sqliteTable('habits', {
   // Optional lighter goals; NULL = no reduction (use dailyGoalMin that day).
   weekendGoalMin: integer('weekend_goal_min'),
   vacationGoalMin: integer('vacation_goal_min'),
+  // Legacy: habits no longer start timers (they are logged manually), so these
+  // two columns are unused by the app. Kept (with their DB defaults) only so old
+  // rows and export/import dumps stay valid — do not reference them in new code.
   timerType: text('timer_type').notNull().default('simple'),
   defaultTimerId: text('default_timer_id'),
   sortOrder: integer('sort_order').notNull().default(0),

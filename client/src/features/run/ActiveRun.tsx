@@ -15,8 +15,9 @@ import { MiniPlayer } from './MiniPlayer';
 /**
  * Owns the timer engine and session logging for a single run. Mounted by
  * RunProvider *above* the router, so the engine keeps ticking while the user
- * navigates. Renders the full-screen RunScreen when expanded, or the persistent
- * MiniPlayer when minimized — both are presentational views of this engine.
+ * navigates. Starts minimized as the persistent MiniPlayer — so the dashboard
+ * stays interactive while a timer runs — and expands to the full-screen
+ * RunScreen on demand; both are presentational views of this one engine.
  */
 export function ActiveRun({
   spec,
@@ -24,7 +25,6 @@ export function ActiveRun({
   onAgain,
   startedAtEpoch,
   resumeElapsed = 0,
-  parentFocusId = null,
 }: {
   spec: RunSpec;
   onClose: () => void;
@@ -33,8 +33,6 @@ export function ActiveRun({
   startedAtEpoch?: number;
   /** Seconds already elapsed when resuming a persisted run. */
   resumeElapsed?: number;
-  /** Focus session this run was launched inside of, if any. */
-  parentFocusId?: string | null;
 }) {
   const { data: settings } = useSettings();
   const phases = useMemo(() => spec.phases ?? buildPhases(spec), [spec]);
@@ -49,7 +47,8 @@ export function ActiveRun({
   );
   const logged = useRef(false);
   const [muted, setMuted] = useState(false);
-  const [minimized, setMinimized] = useState(false);
+  // Start minimized so the rest of the app stays usable while a timer runs.
+  const [minimized, setMinimized] = useState(true);
 
   // In focus (Pomodoro) mode we log only completed work time, not breaks.
   function logRun(completed: boolean, totalElapsed: number) {
@@ -68,10 +67,10 @@ export function ActiveRun({
       endedAt: Date.now(),
       note: null,
       category: 'habit',
-      parentSessionId: parentFocusId,
+      parentSessionId: null,
       createdAt: Date.now(),
     });
-    saveRun('foreground', null);
+    saveRun(null);
   }
 
   const engine = useTimerEngine(phases, {
@@ -87,16 +86,15 @@ export function ActiveRun({
   // Persist a snapshot each displayed second so a foreground run resumes after reload.
   useEffect(() => {
     if (engine.status === 'running' || engine.status === 'paused') {
-      saveRun('foreground', {
+      saveRun({
         spec,
         startedAtEpoch: startedAt.current,
         status: engine.status,
         elapsedMs: engine.elapsed * 1000,
         snapshotEpoch: Date.now(),
-        parentFocusId,
       });
     }
-  }, [engine.status, engine.elapsed, spec, parentFocusId]);
+  }, [engine.status, engine.elapsed, spec]);
 
   // Auto-start + keep the screen awake for the life of the run.
   useEffect(() => {
