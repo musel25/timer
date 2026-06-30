@@ -183,18 +183,18 @@ export function HabitEditor() {
 
       {kind === 'time' && (
       <div className="card p-4">
-        <Stepper label="Daily goal" value={goal} onChange={setGoal} min={0} max={120} step={5} suffix="min" />
+        <Stepper label="Daily goal" value={goal} onChange={setGoal} min={0} max={120} step={1} suffix="min" editable />
         {goal > 0 ? (
           <p className="mt-2 text-xs text-slate-400">{goal} min/day</p>
         ) : (
           <p className="mt-2 text-xs text-slate-400">No daily goal</p>
         )}
         <div className="mt-4 border-t border-ink-600/60 pt-3">
-          <Stepper label="Weekend goal" value={weekendGoal} onChange={setWeekendGoal} min={0} max={120} step={5} suffix="min" />
+          <Stepper label="Weekend goal" value={weekendGoal} onChange={setWeekendGoal} min={0} max={120} step={1} suffix="min" editable />
           <p className="mt-2 text-xs text-slate-400">{weekendGoal > 0 ? `${weekendGoal} min on Sat/Sun` : 'Weekends use the daily goal'}</p>
         </div>
         <div className="mt-4 border-t border-ink-600/60 pt-3">
-          <Stepper label="Vacation goal" value={vacationGoal} onChange={setVacationGoal} min={0} max={120} step={5} suffix="min" />
+          <Stepper label="Vacation goal" value={vacationGoal} onChange={setVacationGoal} min={0} max={120} step={1} suffix="min" editable />
           <p className="mt-2 text-xs text-slate-400">
             {vacationGoal > 0 ? `${vacationGoal} min on vacation days` : weekendGoal > 0 ? 'Vacation days use the weekend goal' : 'Vacation days use the daily goal'}
           </p>
