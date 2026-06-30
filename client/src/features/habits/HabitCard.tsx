@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, EyeOff, Flame, Pencil, Plus, ShieldCheck } from 'lucide-react';
+import { Check, EyeOff, Flame, MoreHorizontal, Pencil, Plus, ShieldCheck } from 'lucide-react';
 import type { Habit } from '../../lib/types';
 import { HabitIcon } from '../../lib/habitIcons';
 import { categoryColor, gradient, tint, solid } from '../../lib/palette';
@@ -81,6 +81,13 @@ export function HabitCard({
     setLogging(false);
   }
 
+  // One-tap: log the default amount for today, no composer, no note.
+  function logDefault() {
+    if (!onLog || !(defaultMin > 0)) return;
+    onLog(habit, { minutes: defaultMin, note: null, endedAt: Date.now() });
+    setLogging(false);
+  }
+
   const title = detailTo ? (
     <Link to={detailTo} className="block truncate font-semibold transition hover:text-accent" title="Open habit details">{habit.name}</Link>
   ) : (
@@ -149,15 +156,26 @@ export function HabitCard({
       {header}
 
       {onLog && (
-        <button
-          onClick={openLog}
-          aria-label="Log time"
-          aria-expanded={logging}
-          className="chip w-full justify-center gap-1.5 py-2 font-medium"
-          style={{ borderColor: tint(color.rgb, 0.5), backgroundColor: tint(color.rgb, 0.1), color: solid(color.rgb) }}
-        >
-          <Plus size={14} /> Log time
-        </button>
+        <div className="flex gap-1.5">
+          <button
+            onClick={logDefault}
+            aria-label={`Log ${defaultMin} minutes`}
+            className="chip flex-1 justify-center gap-1.5 py-2 font-medium"
+            style={{ borderColor: tint(color.rgb, 0.5), backgroundColor: tint(color.rgb, 0.1), color: solid(color.rgb) }}
+          >
+            <Plus size={14} /> Log {defaultMin} min
+          </button>
+          <button
+            onClick={openLog}
+            aria-label="Custom log"
+            aria-expanded={logging}
+            title="Custom amount, note, or back-date"
+            className="chip shrink-0 justify-center px-3 py-2"
+            style={{ borderColor: tint(color.rgb, 0.5), backgroundColor: tint(color.rgb, 0.1), color: solid(color.rgb) }}
+          >
+            <MoreHorizontal size={16} />
+          </button>
+        </div>
       )}
 
       {onLog && logging && (

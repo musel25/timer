@@ -5,7 +5,7 @@ import { Stepper } from '../../components/Stepper';
 import { useDeleteHabit, useGroups, useHabits, useSaveGroup, useSaveHabit } from '../../lib/hooks';
 import { HabitIcon, HABIT_ICONS, HABIT_ICON_NAMES, DEFAULT_HABIT_ICON } from '../../lib/habitIcons';
 
-const DURATION_CHOICES = [5, 10, 15, 20, 25, 30, 45, 60]; // minutes
+const DURATION_CHOICES = [3, 5, 10, 15, 20, 25, 30, 45, 60]; // minutes
 const DEFAULT_DURATIONS = [5, 10, 20];
 
 export function HabitEditor() {
