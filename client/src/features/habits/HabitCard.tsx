@@ -15,8 +15,6 @@ export interface LogEntry {
   endedAt: number;
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 /**
  * A habit as a colorful card. Habits are never timed — they are *logged by hand*.
  * A time habit ('time' kind) opens a small composer (minutes + optional note +
@@ -55,29 +53,23 @@ export function HabitCard({
   const color = categoryColor(habit.id);
   const rawGoal = goalMin !== undefined ? goalMin : habit.dailyGoalMin;
   const goal = rawGoal && rawGoal > 0 ? rawGoal : null;
-  const durations = habit.durations?.length ? habit.durations : [10];
-  const defaultMin = habit.defaultDurationMin ?? durations[0];
+  const fallbackMin = habit.durations?.length ? habit.durations[0] : 10;
+  const defaultMin = habit.defaultDurationMin ?? fallbackMin;
 
   const [logging, setLogging] = useState(false);
   const [minutes, setMinutes] = useState(defaultMin);
-  const [note, setNote] = useState('');
-  const [yesterday, setYesterday] = useState(false);
 
   function openLog() {
     setLogging((v) => {
       const next = !v;
-      if (next) { setMinutes(defaultMin); setNote(''); setYesterday(false); } // fresh composer each open
+      if (next) setMinutes(defaultMin); // fresh number box each open
       return next;
     });
   }
 
   function commit() {
     if (!onLog || !Number.isFinite(minutes) || minutes <= 0) return;
-    onLog(habit, {
-      minutes,
-      note: note.trim() || null,
-      endedAt: yesterday ? Date.now() - DAY_MS : Date.now(),
-    });
+    onLog(habit, { minutes, note: null, endedAt: Date.now() });
     setLogging(false);
   }
 
@@ -169,7 +161,7 @@ export function HabitCard({
             onClick={openLog}
             aria-label="Custom log"
             aria-expanded={logging}
-            title="Custom amount, note, or back-date"
+            title="Log a specific amount"
             className="chip shrink-0 justify-center px-3 py-2"
             style={{ borderColor: tint(color.rgb, 0.5), backgroundColor: tint(color.rgb, 0.1), color: solid(color.rgb) }}
           >
@@ -179,69 +171,27 @@ export function HabitCard({
       )}
 
       {onLog && logging && (
-        <div className="mt-2 space-y-2 rounded-xl border border-ink-600/60 bg-ink-900/40 p-2.5">
-          {/* minutes — quick chips set the amount, or type a custom value */}
-          <div>
-            <div className="mb-1.5 text-xs text-slate-400">Minutes</div>
-            <div className="flex flex-wrap gap-1.5">
-              {durations.map((min) => (
-                <button
-                  key={min}
-                  onClick={() => setMinutes(min)}
-                  className="chip flex-1 justify-center py-1.5 text-sm font-medium"
-                  style={
-                    minutes === min
-                      ? { borderColor: solid(color.rgb), backgroundColor: tint(color.rgb, 0.18), color: solid(color.rgb) }
-                      : { borderColor: tint(color.rgb, 0.25) }
-                  }
-                >
-                  {min}m
-                </button>
-              ))}
-              <input
-                type="number"
-                min={1}
-                inputMode="numeric"
-                value={minutes}
-                onChange={(e) => setMinutes(Number(e.target.value))}
-                onKeyDown={(e) => e.key === 'Enter' && commit()}
-                aria-label="Custom minutes"
-                className="input w-16 py-1.5 text-center text-sm"
-              />
-            </div>
-          </div>
-
-          {/* what did you do? — optional */}
+        <div className="mt-2 flex items-center gap-1.5 rounded-xl border border-ink-600/60 bg-ink-900/40 p-2.5">
+          {/* just a number box for a specific amount */}
           <input
-            type="text"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
+            type="number"
+            min={1}
+            inputMode="numeric"
+            autoFocus
+            value={minutes}
+            onChange={(e) => setMinutes(Number(e.target.value))}
             onKeyDown={(e) => e.key === 'Enter' && commit()}
-            placeholder="What did you do? (optional)"
-            aria-label="Note"
-            className="input w-full py-1.5 text-sm"
+            aria-label="Minutes"
+            className="input w-20 py-1.5 text-center text-sm"
           />
-
-          {/* which day — default today, or back-date to yesterday */}
-          <div className="flex gap-1.5">
-            {([['Today', false], ['Yesterday', true]] as const).map(([label, isYesterday]) => (
-              <button
-                key={label}
-                onClick={() => setYesterday(isYesterday)}
-                className={`chip flex-1 justify-center py-1.5 text-sm ${yesterday === isYesterday ? 'chip-active' : ''}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
+          <span className="text-xs text-slate-400">min</span>
           <button
             onClick={commit}
             disabled={!(minutes > 0)}
-            className="chip w-full justify-center gap-1 py-2 text-sm font-medium disabled:opacity-40"
+            className="chip ml-auto justify-center gap-1 px-4 py-2 text-sm font-medium disabled:opacity-40"
             style={{ borderColor: tint(color.rgb, 0.6), backgroundColor: tint(color.rgb, 0.18), color: solid(color.rgb) }}
           >
-            <Check size={13} /> Log {minutes > 0 ? `${minutes} min` : ''}{yesterday ? ' yesterday' : ''}
+            <Check size={13} /> Log
           </button>
         </div>
       )}
