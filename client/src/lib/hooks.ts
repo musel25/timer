@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 import { buildManualSession } from './sessionLog';
-import type { CalendarEvent, Habit, HabitGroup, RestDay, Session, Settings, Task, TaskAttachment, TimerPreset, VacationDay } from './types';
+import type { CalendarEvent, Habit, HabitGroup, Note, RestDay, Session, Settings, Task, TaskAttachment, TimerPreset, VacationDay } from './types';
 
 export interface Me {
   user: { id: string; email: string } | null;
@@ -169,6 +169,26 @@ export function useDeleteTask() {
   return useMutation({
     mutationFn: (id: string) => api.del(`/tasks/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+  });
+}
+
+/* ---- notes (quick capture) ---- */
+export const useNotes = () => useQuery({ queryKey: ['notes'], queryFn: () => api.get<Note[]>('/notes') });
+
+export function useSaveNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (n: Partial<Note> & { id?: string }) =>
+      n.id ? api.patch<Note>(`/notes/${n.id}`, n) : api.post<Note>('/notes', n),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notes'] }),
+  });
+}
+
+export function useDeleteNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.del(`/notes/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notes'] }),
   });
 }
 

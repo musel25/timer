@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, asc, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { db } from './db';
-import { habitGroups, habits, restDays, sessions, taskAttachments, tasks, timers, userSettings, users, vacationDays } from './schema';
+import { habitGroups, habits, notes, restDays, sessions, taskAttachments, tasks, timers, userSettings, users, vacationDays } from './schema';
 import {
   createSession, currentUserId, destroySession, hashPassword, newId, requireAuth, verifyPassword,
 } from './auth';
@@ -71,6 +71,7 @@ api.use('/vacation-days', requireAuth); api.use('/vacation-days/*', requireAuth)
 api.use('/settings', requireAuth);
 api.use('/export', requireAuth); api.use('/import', requireAuth);
 api.use('/tasks', requireAuth); api.use('/tasks/*', requireAuth);
+api.use('/notes', requireAuth); api.use('/notes/*', requireAuth);
 api.use('/attachments', requireAuth); api.use('/attachments/*', requireAuth);
 api.use('/calendar', requireAuth); api.use('/calendar/*', requireAuth);
 
@@ -393,6 +394,49 @@ api.delete('/tasks/:id', (c) => {
   return c.json({ ok: true });
 });
 
+/* ---------- notes (quick capture) ---------- */
+const noteInput = z.object({
+  text: z.string().min(1),
+  tags: z.array(z.string()).optional(),
+  pinned: z.boolean().optional(),
+});
+
+api.get('/notes', (c) => {
+  const rows = db.select().from(notes).where(eq(notes.userId, uid(c)))
+    .orderBy(desc(notes.pinned), desc(notes.createdAt)).all();
+  return c.json(rows);
+});
+
+api.post('/notes', async (c) => {
+  const p = noteInput.safeParse(await body(c));
+  if (!p.success) return c.json({ error: 'invalid_input' }, 400);
+  const now = Date.now();
+  const row = {
+    id: newId(), userId: uid(c), text: p.data.text,
+    tags: p.data.tags ?? [], pinned: p.data.pinned ?? false,
+    createdAt: now, updatedAt: now,
+  };
+  db.insert(notes).values(row).run();
+  return c.json(row, 201);
+});
+
+api.patch('/notes/:id', async (c) => {
+  const id = c.req.param('id');
+  const p = noteInput.partial().safeParse(await body(c));
+  if (!p.success) return c.json({ error: 'invalid_input' }, 400);
+  const res = db.update(notes).set({ ...p.data, updatedAt: Date.now() })
+    .where(and(eq(notes.id, id), eq(notes.userId, uid(c)))).run();
+  if (res.changes === 0) return c.json({ error: 'not_found' }, 404);
+  return c.json(db.select().from(notes).where(and(eq(notes.id, id), eq(notes.userId, uid(c)))).get());
+});
+
+api.delete('/notes/:id', (c) => {
+  const res = db.delete(notes)
+    .where(and(eq(notes.id, c.req.param('id')), eq(notes.userId, uid(c)))).run();
+  if (res.changes === 0) return c.json({ error: 'not_found' }, 404);
+  return c.json({ ok: true });
+});
+
 /* ---------- task attachments (pasted images) ---------- */
 const ATTACH_DATA_URL_RE = /^data:(image\/(?:png|jpeg|webp|gif));base64,(.+)$/;
 const MAX_ATTACH_BYTES = 3 * 1024 * 1024;
@@ -489,6 +533,7 @@ api.get('/export', (c) => {
     timers: db.select().from(timers).where(eq(timers.userId, u)).all(),
     sessions: db.select().from(sessions).where(eq(sessions.userId, u)).all(),
     tasks: db.select().from(tasks).where(eq(tasks.userId, u)).all(),
+    notes: db.select().from(notes).where(eq(notes.userId, u)).all(),
     attachments: db.select().from(taskAttachments).where(eq(taskAttachments.userId, u)).all()
       .map((a) => ({
         id: a.id, taskId: a.taskId, mime: a.mime, width: a.width, height: a.height,
@@ -507,6 +552,7 @@ api.post('/import', async (c) => {
     if (Array.isArray(data.habits)) for (const h of reassign(data.habits)) tx.insert(habits).values(h).onConflictDoNothing().run();
     if (Array.isArray(data.sessions)) for (const s of reassign(data.sessions)) tx.insert(sessions).values(s).onConflictDoNothing().run();
     if (Array.isArray(data.tasks)) for (const t of reassign(data.tasks)) tx.insert(tasks).values(t).onConflictDoNothing().run();
+    if (Array.isArray(data.notes)) for (const n of reassign(data.notes)) tx.insert(notes).values(n).onConflictDoNothing().run();
     if (Array.isArray(data.attachments)) for (const a of data.attachments) {
       tx.insert(taskAttachments).values({
         id: a.id, userId: u, taskId: a.taskId, mime: a.mime,

@@ -146,6 +146,17 @@ export interface Task {
   createdAt: number;
 }
 
+/** A quick free-form capture (idea, thought, habit tweak). Tags come from
+ *  #hashtags typed in the text, lowercased. */
+export interface Note {
+  id: string;
+  text: string;
+  tags: string[];
+  pinned: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface CalendarEvent {
   id: string;
   calendarId: string;

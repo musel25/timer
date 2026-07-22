@@ -13,6 +13,7 @@ import { TimerEditor } from './features/timers/TimerEditor';
 import { HabitEditor } from './features/habits/HabitEditor';
 import { HabitDetail } from './features/habits/HabitDetail';
 import { Progress } from './features/stats/Progress';
+import { Notes } from './features/notes/Notes';
 import { SettingsPage } from './features/settings/Settings';
 import { AgentsProvider } from './features/agents/AgentsContext';
 import { AgentsDashboard } from './features/agents/AgentsDashboard';
@@ -54,6 +55,7 @@ function AuthedApp() {
         <Route path="/habits/:id" element={<HabitDetail />} />
         <Route path="/habits/:id/edit" element={<HabitEditor />} />
         <Route path="/stats" element={<Progress />} />
+        <Route path="/notes" element={<Notes />} />
         <Route path="/settings" element={<SettingsPage />} />
         {CC_DASH_ENABLED && <Route path="/agents" element={<AgentsDashboard />} />}
         <Route path="*" element={<Navigate to="/" replace />} />

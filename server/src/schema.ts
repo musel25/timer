@@ -136,6 +136,18 @@ export const vacationDays = sqliteTable('vacation_days', {
   createdAt: integer('created_at').notNull(),
 });
 
+/** A quick free-form capture (idea, thought, habit tweak). Tags are parsed from
+ *  #hashtags in the text on the client and stored lowercased for filtering. */
+export const notes = sqliteTable('notes', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  text: text('text').notNull(),
+  tags: text('tags', { mode: 'json' }).notNull().$type<string[]>(),
+  pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
 export const taskAttachments = sqliteTable('task_attachments', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),

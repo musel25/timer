@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import {
-  CalendarDays, Timer, Repeat, BarChart3, Settings, Bot, type LucideIcon,
+  CalendarDays, Timer, Repeat, BarChart3, StickyNote, Settings, Bot, type LucideIcon,
 } from 'lucide-react';
 import { useAgentsOptional } from './agents/AgentsContext';
 import { askingCount } from './agents/sessionView';
@@ -19,6 +19,7 @@ const groups: { title: string; tabs: { to: string; label: string; icon: LucideIc
       { to: '/timer', label: 'Timer', icon: Timer },
       { to: '/habits', label: 'Habits', icon: Repeat },
       { to: '/stats', label: 'Progress', icon: BarChart3 },
+      { to: '/notes', label: 'Notes', icon: StickyNote },
       { to: '/settings', label: 'Settings', icon: Settings },
     ],
   },
@@ -30,6 +31,7 @@ const mobileTabs: { to: string; label: string; icon: LucideIcon; end?: boolean }
   { to: '/timer', label: 'Timer', icon: Timer },
   { to: '/habits', label: 'Habits', icon: Repeat },
   { to: '/stats', label: 'Progress', icon: BarChart3 },
+  { to: '/notes', label: 'Notes', icon: StickyNote },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -83,7 +85,7 @@ export function Layout() {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md border-t border-ink-600 bg-ink-800/95 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-6">
           {mobileTabs.map((t) => (
             <NavLink
               key={t.to}
