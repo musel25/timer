@@ -44,7 +44,7 @@ export function TaskEditor({ task, onClose }: { task: Task; onClose: () => void 
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/30 p-0 sm:items-center sm:p-4" onClick={onClose}>
+    <div data-modal className="fixed inset-0 z-40 flex items-end justify-center bg-black/30 p-0 sm:items-center sm:p-4" onClick={onClose}>
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}

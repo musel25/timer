@@ -1,7 +1,9 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   CalendarDays, Timer, Repeat, BarChart3, StickyNote, Settings, Bot, type LucideIcon,
 } from 'lucide-react';
+import { isTypingTarget } from '../lib/dom';
 import { useAgentsOptional } from './agents/AgentsContext';
 import { askingCount } from './agents/sessionView';
 import { CC_DASH_ENABLED } from './agents/enabled';
@@ -25,6 +27,21 @@ const groups: { title: string; tabs: { to: string; label: string; icon: LucideIc
   },
 ];
 
+// The Claude Code dashboard tab exists only in dev (it's mounted under AgentsProvider).
+const navGroups = groups.map((g) =>
+  g.title === 'Tools' && CC_DASH_ENABLED
+    ? { ...g, tabs: [...g.tabs, { to: '/agents', label: 'Agents', icon: Bot }] }
+    : g,
+);
+
+// Sidebar order, flattened: this is what the 1-9 shortcuts and the hint numbers
+// shown next to each tab both index into, so they can never drift apart.
+const shortcutTabs = navGroups.flatMap((g) => g.tabs);
+const shortcutKeyOf = (to: string) => {
+  const i = shortcutTabs.findIndex((t) => t.to === to);
+  return i >= 0 && i < 9 ? String(i + 1) : null;
+};
+
 // Most-used items for the mobile bottom bar.
 const mobileTabs: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
   { to: '/week', label: 'Week', icon: CalendarDays },
@@ -37,13 +54,25 @@ const mobileTabs: { to: string; label: string; icon: LucideIcon; end?: boolean }
 
 export function Layout() {
   const agents = useAgentsOptional();
+  const navigate = useNavigate();
   const waiting = agents ? askingCount(agents.cards) : 0;
-  // Add the Claude Code dashboard tab only in dev (it's mounted under AgentsProvider).
-  const navGroups = groups.map((g) =>
-    g.title === 'Tools' && CC_DASH_ENABLED
-      ? { ...g, tabs: [...g.tabs, { to: '/agents', label: 'Agents', icon: Bot }] }
-      : g,
-  );
+
+  // 1-9 jump straight to a tab (1 Week, 2 Timer, 3 Habits, ...).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      // Never steal a key from a text field, a browser/OS chord (Cmd-1 switches
+      // browser tabs), or a full-screen overlay whose content is what you see.
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      if (!/^[1-9]$/.test(e.key)) return;
+      if (isTypingTarget(e.target) || document.querySelector('[data-modal]')) return;
+      const tab = shortcutTabs[Number(e.key) - 1];
+      if (!tab) return;
+      e.preventDefault();
+      navigate(tab.to);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [navigate]);
 
   return (
     <div className="flex h-full w-full">
@@ -69,8 +98,10 @@ export function Layout() {
               >
                 <t.icon size={18} className="shrink-0" />
                 {t.label}
-                {t.to === '/agents' && waiting > 0 && (
+                {t.to === '/agents' && waiting > 0 ? (
                   <span className="ml-auto rounded-full px-1.5 text-[11px] font-bold text-white" style={{ backgroundColor: 'rgb(217 144 30)' }}>{waiting}</span>
+                ) : shortcutKeyOf(t.to) && (
+                  <span className="ml-auto text-[11px] font-semibold text-slate-500 opacity-0 transition-opacity group-hover:opacity-100">{shortcutKeyOf(t.to)}</span>
                 )}
               </NavLink>
             ))}

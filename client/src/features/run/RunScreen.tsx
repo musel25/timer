@@ -27,6 +27,7 @@ export function RunScreen({ spec, engine, muted, onToggleMute, focusMode, workDo
 
   return (
     <div
+      data-modal
       className="fixed inset-0 z-50 flex flex-col text-white"
       style={{ background: `radial-gradient(120% 90% at 50% 25%, ${bg}33, #0b0f14 72%)` }}
     >
