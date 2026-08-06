@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Pencil, Pin, Trash2, X } from 'lucide-react';
+import { Archive, ArchiveRestore, Check, Pencil, Pin, Trash2, X } from 'lucide-react';
 import type { Note } from '../../lib/types';
 import { useDeleteNote, useSaveNote } from '../../lib/hooks';
 import { extractTags, splitByTags } from './noteTags';
@@ -13,6 +13,7 @@ export function NoteCard({ note, onTagClick }: { note: Note; onTagClick: (tag: s
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.text);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const archived = note.archivedAt !== null;
 
   function saveEdit() {
     const t = draft.trim();
@@ -48,7 +49,7 @@ export function NoteCard({ note, onTagClick }: { note: Note; onTagClick: (tag: s
   }
 
   return (
-    <article className="card px-4 py-3">
+    <article className={`card px-4 py-3 ${archived ? 'opacity-70' : ''}`}>
       <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-100">
         {splitByTags(note.text).map((p, i) =>
           p.isTag ? (
@@ -68,19 +69,35 @@ export function NoteCard({ note, onTagClick }: { note: Note; onTagClick: (tag: s
         <span className="text-[11px]">{timeLabel(note.createdAt)}</span>
         {note.pinned && <Pin size={11} className="text-accent" />}
         <span className="ml-auto flex items-center gap-1">
-          <button
-            className={`rounded-lg p-1.5 transition hover:bg-ink-700 ${note.pinned ? 'text-accent' : 'hover:text-slate-200'}`}
-            title={note.pinned ? 'Unpin' : 'Pin to top'}
-            onClick={() => save.mutate({ id: note.id, pinned: !note.pinned })}
-          >
-            <Pin size={14} />
-          </button>
+          {!archived && (
+            <button
+              className={`rounded-lg p-1.5 transition hover:bg-ink-700 ${note.pinned ? 'text-accent' : 'hover:text-slate-200'}`}
+              title={note.pinned ? 'Unpin' : 'Pin to top'}
+              onClick={() => save.mutate({ id: note.id, pinned: !note.pinned })}
+            >
+              <Pin size={14} />
+            </button>
+          )}
           <button
             className="rounded-lg p-1.5 transition hover:bg-ink-700 hover:text-slate-200"
             title="Edit"
             onClick={() => { setDraft(note.text); setEditing(true); }}
           >
             <Pencil size={14} />
+          </button>
+          {/* Reversible, so no confirm — archiving also drops the pin. */}
+          <button
+            className="rounded-lg p-1.5 transition hover:bg-ink-700 hover:text-slate-200"
+            title={archived ? 'Move back to inbox' : 'Archive (hide, keep)'}
+            onClick={() =>
+              save.mutate(
+                archived
+                  ? { id: note.id, archivedAt: null }
+                  : { id: note.id, archivedAt: Date.now(), pinned: false },
+              )
+            }
+          >
+            {archived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
           </button>
           {confirmDelete ? (
             <button

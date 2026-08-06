@@ -399,6 +399,7 @@ const noteInput = z.object({
   text: z.string().min(1),
   tags: z.array(z.string()).optional(),
   pinned: z.boolean().optional(),
+  archivedAt: z.number().nullable().optional(),
 });
 
 api.get('/notes', (c) => {
@@ -414,6 +415,7 @@ api.post('/notes', async (c) => {
   const row = {
     id: newId(), userId: uid(c), text: p.data.text,
     tags: p.data.tags ?? [], pinned: p.data.pinned ?? false,
+    archivedAt: p.data.archivedAt ?? null,
     createdAt: now, updatedAt: now,
   };
   db.insert(notes).values(row).run();

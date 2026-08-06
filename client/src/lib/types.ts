@@ -153,6 +153,8 @@ export interface Note {
   text: string;
   tags: string[];
   pinned: boolean;
+  /** When the note left the inbox; null while it's still there. */
+  archivedAt: number | null;
   createdAt: number;
   updatedAt: number;
 }

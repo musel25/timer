@@ -144,6 +144,8 @@ export const notes = sqliteTable('notes', {
   text: text('text').notNull(),
   tags: text('tags', { mode: 'json' }).notNull().$type<string[]>(),
   pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
+  /** When the note was moved out of the inbox; null while it's still in it. */
+  archivedAt: integer('archived_at'),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });

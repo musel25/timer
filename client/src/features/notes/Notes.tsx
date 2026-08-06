@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pin, Search, Send } from 'lucide-react';
+import { Archive, Pin, Search, Send } from 'lucide-react';
 import { useNotes, useSaveNote } from '../../lib/hooks';
 import { addDaysKey, dateToKey, todayKey } from '../../lib/date';
 import type { Note } from '../../lib/types';
@@ -24,6 +24,12 @@ export function Notes() {
   const [draft, setDraft] = useState('');
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [view, setView] = useState<'inbox' | 'archive'>('inbox');
+
+  const archivedCount = notes.filter((n) => n.archivedAt !== null).length;
+  // Falls back to the inbox on its own once the archive empties out.
+  const inArchive = view === 'archive' && archivedCount > 0;
+  const scoped = notes.filter((n) => (n.archivedAt !== null) === inArchive);
 
   function submit() {
     const t = draft.trim();
@@ -32,14 +38,19 @@ export function Notes() {
     setDraft('');
   }
 
+  // Tags, counts and search all scope to the view you're in — an archived note
+  // contributes nothing to the inbox, which is the point of archiving it.
   const tagCounts = useMemo(() => {
     const m = new Map<string, number>();
-    for (const n of notes) for (const t of n.tags) m.set(t, (m.get(t) ?? 0) + 1);
+    for (const n of notes) {
+      if ((n.archivedAt !== null) !== inArchive) continue;
+      for (const t of n.tags) m.set(t, (m.get(t) ?? 0) + 1);
+    }
     return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-  }, [notes]);
+  }, [notes, inArchive]);
 
   const q = query.trim().toLowerCase();
-  const filtered = notes.filter(
+  const filtered = scoped.filter(
     (n) => (!tagFilter || n.tags.includes(tagFilter)) && (!q || n.text.toLowerCase().includes(q)),
   );
   const pinned = filtered.filter((n) => n.pinned);
@@ -58,39 +69,44 @@ export function Notes() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <header className="hero">
-        <h1 className="text-3xl font-bold md:text-4xl">Notes</h1>
+        <h1 className="text-3xl font-bold md:text-4xl">{inArchive ? 'Archive' : 'Notes'}</h1>
         <div className="mt-1 text-sm text-slate-300">
-          {notes.length > 0
-            ? `${notes.length} note${notes.length === 1 ? '' : 's'}${tagCounts.length > 0 ? ` · ${tagCounts.length} tag${tagCounts.length === 1 ? '' : 's'}` : ''}`
-            : 'Capture ideas before they slip away'}
+          {inArchive
+            ? `${scoped.length} note${scoped.length === 1 ? '' : 's'} kept out of the way`
+            : scoped.length > 0
+              ? `${scoped.length} note${scoped.length === 1 ? '' : 's'}${tagCounts.length > 0 ? ` · ${tagCounts.length} tag${tagCounts.length === 1 ? '' : 's'}` : ''}`
+              : 'Capture ideas before they slip away'}
         </div>
       </header>
 
-      <form
-        onSubmit={(e) => { e.preventDefault(); submit(); }}
-        className="flex items-end gap-2 rounded-[20px] border border-dashed border-ink-600 px-4 py-3 transition focus-within:border-accent/70"
-      >
-        <textarea
-          className="max-h-48 w-full resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-slate-500"
-          placeholder="What's on your mind? Use #tags to organize — e.g. drink water after coffee #habits"
-          rows={draft.includes('\n') ? 3 : 1}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
-          }}
-        />
-        <button
-          type="submit"
-          className="btn-accent shrink-0 px-3 py-2"
-          disabled={!draft.trim() || save.isPending}
-          title="Save note (Enter)"
+      {/* The archive is read-and-restore only — a new note always lands in the inbox. */}
+      {!inArchive && (
+        <form
+          onSubmit={(e) => { e.preventDefault(); submit(); }}
+          className="flex items-end gap-2 rounded-[20px] border border-dashed border-ink-600 px-4 py-3 transition focus-within:border-accent/70"
         >
-          <Send size={15} />
-        </button>
-      </form>
+          <textarea
+            className="max-h-48 w-full resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-slate-500"
+            placeholder="What's on your mind? Use #tags to organize — e.g. drink water after coffee #habits"
+            rows={draft.includes('\n') ? 3 : 1}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
+            }}
+          />
+          <button
+            type="submit"
+            className="btn-accent shrink-0 px-3 py-2"
+            disabled={!draft.trim() || save.isPending}
+            title="Save note (Enter)"
+          >
+            <Send size={15} />
+          </button>
+        </form>
+      )}
 
-      {(tagCounts.length > 0 || notes.length > 3) && (
+      {(tagCounts.length > 0 || archivedCount > 0 || notes.length > 3) && (
         <div className="flex flex-wrap items-center gap-1.5">
           {tagCounts.length > 0 && (
             <>
@@ -111,15 +127,29 @@ export function Notes() {
               ))}
             </>
           )}
-          <label className="ml-auto flex min-w-[8rem] items-center gap-1.5 rounded-lg border border-ink-600 px-2.5 py-1.5 transition focus-within:border-accent/70">
-            <Search size={13} className="shrink-0 text-slate-500" />
-            <input
-              className="w-full min-w-0 bg-transparent text-xs outline-none placeholder:text-slate-500"
-              placeholder="Search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </label>
+          {/* Archive toggle + search travel together on the right edge. */}
+          <div className="ml-auto flex items-center gap-1.5">
+            {archivedCount > 0 && (
+              <button
+                className={`chip min-w-0 gap-1 px-2.5 py-1 text-xs ${inArchive ? 'chip-active' : ''}`}
+                title={inArchive ? 'Back to the inbox' : 'Show archived notes'}
+                // Tags differ between the two lists, so a carried-over filter would
+                // match nothing; the search term is worth keeping.
+                onClick={() => { setView(inArchive ? 'inbox' : 'archive'); setTagFilter(null); }}
+              >
+                <Archive size={12} /> Archived <span className="opacity-60">{archivedCount}</span>
+              </button>
+            )}
+            <label className="flex min-w-[8rem] items-center gap-1.5 rounded-lg border border-ink-600 px-2.5 py-1.5 transition focus-within:border-accent/70">
+              <Search size={13} className="shrink-0 text-slate-500" />
+              <input
+                className="w-full min-w-0 bg-transparent text-xs outline-none placeholder:text-slate-500"
+                placeholder="Search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </label>
+          </div>
         </div>
       )}
 
@@ -143,7 +173,11 @@ export function Notes() {
 
       {!isLoading && filtered.length === 0 && (
         <p className="py-8 text-center text-slate-500">
-          {filtering ? 'No notes match this filter.' : 'No notes yet — jot down your first thought above.'}
+          {filtering
+            ? 'No notes match this filter.'
+            : inArchive
+              ? 'Nothing archived.'
+              : 'No notes yet — jot down your first thought above.'}
         </p>
       )}
     </div>

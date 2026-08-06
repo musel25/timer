@@ -12,10 +12,25 @@ describe('notes table + CRUD scoping', () => {
   let db: typeof import('./db').db;
   let migrate: typeof import('./db').migrate;
   let notes: typeof import('./schema').notes;
+  let api: typeof import('./api').api;
+
+  // Insert a user + a live auth session; return a Cookie header for it.
+  async function makeUser(id: string): Promise<string> {
+    const { users, authSessions } = await import('./schema');
+    const now = Date.now();
+    db.insert(users).values({ id, email: `${id}@t.test`, passwordHash: 'x', createdAt: now }).run();
+    db.insert(authSessions).values({
+      id: `sid_${id}`, userId: id, createdAt: now, expiresAt: now + 1e9, userAgent: null,
+    }).run();
+    return `sid=sid_${id}`;
+  }
+  const send = (method: string, cookie: string, body: unknown) =>
+    ({ method, headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify(body) });
 
   beforeAll(async () => {
     ({ sqlite, db, migrate } = await import('./db'));
     ({ notes } = await import('./schema'));
+    ({ api } = await import('./api'));
     migrate();
   });
 
@@ -27,7 +42,9 @@ describe('notes table + CRUD scoping', () => {
   it('creates the notes table', () => {
     const cols = sqlite.prepare('PRAGMA table_info(notes)').all() as { name: string }[];
     expect(cols.map((c) => c.name)).toEqual(
-      expect.arrayContaining(['id', 'user_id', 'text', 'tags', 'pinned', 'created_at', 'updated_at']),
+      expect.arrayContaining([
+        'id', 'user_id', 'text', 'tags', 'pinned', 'created_at', 'updated_at', 'archived_at',
+      ]),
     );
   });
 
@@ -53,6 +70,36 @@ describe('notes table + CRUD scoping', () => {
     }).run();
     expect(db.select().from(notes).where(eq(notes.userId, 'u1')).all()).toHaveLength(1);
     expect(db.select().from(notes).where(eq(notes.userId, 'u2')).all()).toHaveLength(1);
+  });
+
+  it('archives a note: stamps archivedAt, drops the pin, keeps it in GET /notes', async () => {
+    const cookie = await makeUser('dana');
+    const created = await (await api.request('/notes', send('POST', cookie, {
+      text: 'maybe drop this #someday', tags: ['someday'], pinned: true,
+    }))).json();
+    expect(created.archivedAt).toBeNull();
+
+    const at = Date.now();
+    const archived = await (await api.request(
+      `/notes/${created.id}`, send('PATCH', cookie, { archivedAt: at, pinned: false }),
+    )).json();
+    expect(archived.archivedAt).toBe(at);
+    expect(archived.pinned).toBe(false);
+
+    // Archived notes still come back — the client decides what to show.
+    const all = await (await api.request('/notes', { headers: { cookie } })).json();
+    expect(all.map((n: { id: string }) => n.id)).toContain(created.id);
+  });
+
+  it('unarchives a note by nulling archivedAt', async () => {
+    const cookie = await makeUser('erin');
+    const created = await (await api.request('/notes', send('POST', cookie, { text: 'back to inbox' }))).json();
+    await api.request(`/notes/${created.id}`, send('PATCH', cookie, { archivedAt: Date.now() }));
+
+    const restored = await (await api.request(
+      `/notes/${created.id}`, send('PATCH', cookie, { archivedAt: null }),
+    )).json();
+    expect(restored.archivedAt).toBeNull();
   });
 
   it('requires auth on every /notes verb (no cookie → 401)', async () => {

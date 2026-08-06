@@ -148,6 +148,7 @@ export function migrate(): void {
       text TEXT NOT NULL,
       tags TEXT NOT NULL DEFAULT '[]',
       pinned INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
@@ -170,6 +171,7 @@ export function migrate(): void {
   addColumnIfMissing('sessions', 'parent_session_id', 'TEXT');
   addColumnIfMissing('habits', 'weekend_goal_min', 'INTEGER');
   addColumnIfMissing('habits', 'vacation_goal_min', 'INTEGER');
+  addColumnIfMissing('notes', 'archived_at', 'INTEGER');
 
   // Pre-existing DBs: add the flag and mark the conventional 'Work' group once.
   if (addColumnIfMissing('habit_groups', 'weekdays_only', 'INTEGER NOT NULL DEFAULT 0')) {
