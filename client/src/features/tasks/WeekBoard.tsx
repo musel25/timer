@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Flame, Timer as TimerIcon, Clock } from 'lucide-react';
+import { Archive, ArchiveRestore, Check, ChevronLeft, ChevronRight, Flame, Timer as TimerIcon, Clock } from 'lucide-react';
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { useTasks, useSaveTask, useToggleTask, useCalendarEvents, useSessions, useRestDays } from '../../lib/hooks';
+import { isArchived } from '../../lib/archive';
 import type { CalendarEvent, Task } from '../../lib/types';
 import { currentStreak, todaySummary } from '../../lib/stats';
 import { eventsByDay } from '../../lib/calendar';
@@ -13,7 +14,7 @@ import { TaskEditor } from './TaskEditor';
 
 const INBOX = 'inbox';
 
-function DraggableTask({ task, onEdit, dragHappened }: { task: Task; onEdit: (t: Task) => void; dragHappened: React.MutableRefObject<boolean> }) {
+function DraggableTask({ task, onEdit, dragHappened, onArchive }: { task: Task; onEdit: (t: Task) => void; dragHappened: React.MutableRefObject<boolean>; onArchive?: (t: Task) => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
   const toggle = useToggleTask();
   // The whole card is the drag source, checkbox and title included — the
@@ -40,6 +41,39 @@ function DraggableTask({ task, onEdit, dragHappened }: { task: Task; onEdit: (t:
         className={`min-w-0 flex-1 break-words text-left leading-snug ${task.done ? 'text-slate-500 line-through' : 'text-slate-100'}`}
       >
         {task.title}
+      </button>
+      {/* Same dragHappened guard as the checkbox — a drag must not archive. */}
+      {onArchive && (
+        <button
+          onClick={() => { if (!dragHappened.current) onArchive(task); }}
+          aria-label="Archive task"
+          title="Archive (hide, keep)"
+          className="-mr-1 mt-0.5 shrink-0 rounded p-0.5 text-slate-500 transition hover:bg-ink-700 hover:text-slate-200"
+        >
+          <Archive size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Archived tasks are read-only: no drag, no checkbox, just restore or open. */
+function ArchivedTask({ task, onEdit, onRestore }: { task: Task; onEdit: (t: Task) => void; onRestore: (t: Task) => void }) {
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-ink-600 bg-ink-800/60 px-2.5 py-2 text-sm opacity-70">
+      <button
+        onClick={() => onEdit(task)}
+        className="min-w-0 flex-1 break-words text-left leading-snug text-slate-300"
+      >
+        {task.title}
+      </button>
+      <button
+        onClick={() => onRestore(task)}
+        aria-label="Move back to Inbox"
+        title="Move back to Inbox"
+        className="-mr-1 mt-0.5 shrink-0 rounded p-0.5 text-slate-500 transition hover:bg-ink-700 hover:text-slate-200"
+      >
+        <ArchiveRestore size={14} />
       </button>
     </div>
   );
@@ -91,6 +125,7 @@ export function WeekBoard() {
   const streak = currentStreak(sessions, undefined, new Set(restDayRows.map((r) => r.date)));
   const summary = todaySummary(sessions);
   const [editing, setEditing] = useState<Task | null>(null);
+  const [showArchive, setShowArchive] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   // True while a drag is in flight; cleared a tick after drop so the click
   // that follows pointer-up doesn't toggle/edit the dragged task.
@@ -100,9 +135,17 @@ export function WeekBoard() {
   const days = weekDays(anchor, 1);
   const { data: events = [] } = useCalendarEvents(days[0], days[6]);
   const evByDay = eventsByDay(events);
-  const inbox = tasks.filter((t) => t.date === null && !t.done);
+  // Archived tasks leave the board entirely — Inbox and day columns alike —
+  // until you open the archive. Newest-archived first once you do.
+  const inbox = tasks.filter((t) => t.date === null && !t.done && !isArchived(t));
+  const archived = tasks
+    .filter((t) => isArchived(t))
+    .sort((a, b) => (b.archivedAt ?? 0) - (a.archivedAt ?? 0));
+  // Falls back to the Inbox on its own once the archive empties out, so
+  // restoring the last task can't strand you on a blank column.
+  const inArchive = showArchive && archived.length > 0;
   const byDateMap = new Map<string, Task[]>();
-  for (const t of tasks) if (t.date) { const arr = byDateMap.get(t.date) ?? []; arr.push(t); byDateMap.set(t.date, arr); }
+  for (const t of tasks) if (t.date && !isArchived(t)) { const arr = byDateMap.get(t.date) ?? []; arr.push(t); byDateMap.set(t.date, arr); }
   const byDate = (key: string) => (byDateMap.get(key) ?? []).slice().sort((a, b) => Number(a.done) - Number(b.done) || a.sortOrder - b.sortOrder);
 
   function clearDragSoon() {
@@ -154,15 +197,54 @@ export function WeekBoard() {
           {days.map((key) => <DayColumn key={key} dayKey={key} tasks={byDate(key)} events={evByDay.get(key) ?? []} onEdit={setEditing} dragHappened={dragHappened} />)}
 
           <div className="card flex flex-col p-3">
-            <div className="mb-2 flex items-baseline justify-between px-1 text-slate-400">
-              <span className="text-xs font-bold uppercase tracking-wide">Inbox</span>
-              {inbox.length > 0 && <span className="text-lg font-bold">{inbox.length}</span>}
+            <div className="mb-2 flex items-baseline justify-between gap-2 px-1 text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wide">
+                {inArchive ? 'Archived' : 'Inbox'}
+              </span>
+              <span className="flex items-baseline gap-2">
+                {/* Only appears once something is archived, so it stays invisible
+                    until it's earned. */}
+                {archived.length > 0 && (
+                  <button
+                    onClick={() => setShowArchive(!inArchive)}
+                    title={inArchive ? 'Back to the Inbox' : 'Show archived tasks'}
+                    className={`flex items-center gap-1 self-center rounded px-1.5 py-0.5 text-xs font-semibold transition hover:bg-ink-700 ${inArchive ? 'text-accent' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                    <Archive size={12} /> {archived.length}
+                  </button>
+                )}
+                {!inArchive && inbox.length > 0 && <span className="text-lg font-bold">{inbox.length}</span>}
+              </span>
             </div>
-            <DropColumn id={INBOX}>
-              {inbox.map((t) => <DraggableTask key={t.id} task={t} onEdit={setEditing} dragHappened={dragHappened} />)}
-              {inbox.length === 0 && <p className="px-1 py-2 text-sm text-slate-500">Drop undated tasks here.</p>}
-            </DropColumn>
-            <div className="mt-2"><QuickAdd date={null} placeholder="Capture a task…" compact /></div>
+            {inArchive ? (
+              // Not a drop target: you restore an archived task, you don't drag onto it.
+              <div className="min-h-[40px] flex-1 space-y-1.5 p-1">
+                {archived.map((t) => (
+                  <ArchivedTask
+                    key={t.id}
+                    task={t}
+                    onEdit={setEditing}
+                    onRestore={(task) => save.mutate({ id: task.id, archivedAt: null })}
+                  />
+                ))}
+              </div>
+            ) : (
+              <>
+                <DropColumn id={INBOX}>
+                  {inbox.map((t) => (
+                    <DraggableTask
+                      key={t.id}
+                      task={t}
+                      onEdit={setEditing}
+                      dragHappened={dragHappened}
+                      onArchive={(task) => save.mutate({ id: task.id, archivedAt: Date.now() })}
+                    />
+                  ))}
+                  {inbox.length === 0 && <p className="px-1 py-2 text-sm text-slate-500">Drop undated tasks here.</p>}
+                </DropColumn>
+                <div className="mt-2"><QuickAdd date={null} placeholder="Capture a task…" compact /></div>
+              </>
+            )}
           </div>
         </div>
       </DndContext>

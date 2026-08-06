@@ -2,13 +2,6 @@
 const TAG_RE = /#([\p{L}\p{N}_-]+)/gu;
 
 /** Unique lowercased tags found in the text, in order of first appearance. */
-/** Loose null check on purpose: a response predating the archive column (a stale
- *  server, or the service worker replaying a cached /api/notes) has no
- *  `archivedAt` at all, and `undefined` must read as "in the inbox" — otherwise
- *  every note hides itself and the inbox looks empty. */
-export const isArchived = (note: { archivedAt?: number | null }): boolean =>
-  note.archivedAt != null;
-
 export function extractTags(text: string): string[] {
   return [...new Set([...text.matchAll(TAG_RE)].map((m) => m[1].toLowerCase()))];
 }

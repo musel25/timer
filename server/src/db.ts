@@ -108,6 +108,7 @@ export function migrate(): void {
       done INTEGER NOT NULL DEFAULT 0,
       completed_at INTEGER,
       hidden_on TEXT,
+      archived_at INTEGER,
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL
     );
@@ -172,6 +173,7 @@ export function migrate(): void {
   addColumnIfMissing('habits', 'weekend_goal_min', 'INTEGER');
   addColumnIfMissing('habits', 'vacation_goal_min', 'INTEGER');
   addColumnIfMissing('notes', 'archived_at', 'INTEGER');
+  addColumnIfMissing('tasks', 'archived_at', 'INTEGER');
 
   // Pre-existing DBs: add the flag and mark the conventional 'Work' group once.
   if (addColumnIfMissing('habit_groups', 'weekdays_only', 'INTEGER NOT NULL DEFAULT 0')) {

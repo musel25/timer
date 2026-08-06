@@ -141,6 +141,8 @@ export interface Task {
   done: boolean;
   completedAt: number | null;
   hiddenOn: string | null; // 'YYYY-MM-DD' the task was hidden from Today, or null
+  /** When the task was archived out of the Inbox; null while it's still there. */
+  archivedAt: number | null;
   sortOrder: number;
   attachmentCount?: number;
   createdAt: number;

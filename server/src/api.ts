@@ -341,6 +341,7 @@ const taskInput = z.object({
   done: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
   hiddenOn: z.string().regex(DATE_RE).nullable().optional(),
+  archivedAt: z.number().nullable().optional(),
 });
 
 api.get('/tasks', (c) => {
@@ -362,7 +363,7 @@ api.post('/tasks', async (c) => {
   const row = {
     id: newId(), userId: uid(c), title: p.data.title, notes: p.data.notes ?? null,
     date: p.data.date ?? null, done: p.data.done ?? false,
-    completedAt: p.data.done ? now : null,
+    completedAt: p.data.done ? now : null, archivedAt: p.data.archivedAt ?? null,
     sortOrder: p.data.sortOrder ?? now, createdAt: now,
   };
   db.insert(tasks).values(row).run();

@@ -102,6 +102,8 @@ export const tasks = sqliteTable('tasks', {
   completedAt: integer('completed_at'),
   // local calendar date 'YYYY-MM-DD' on which this task was hidden from Today; NULL = not hidden
   hiddenOn: text('hidden_on'),
+  /** When the task was archived out of the Inbox; NULL while it's still there. */
+  archivedAt: integer('archived_at'),
   sortOrder: integer('sort_order').notNull().default(0),
   // Google Calendar event mirroring this task on the Planner calendar, or NULL
   gcalEventId: text('gcal_event_id'),

@@ -4,7 +4,8 @@ import { useNotes, useSaveNote } from '../../lib/hooks';
 import { addDaysKey, dateToKey, todayKey } from '../../lib/date';
 import type { Note } from '../../lib/types';
 import { NoteCard } from './NoteCard';
-import { extractTags, isArchived } from './noteTags';
+import { extractTags } from './noteTags';
+import { isArchived } from '../../lib/archive';
 
 function dayLabel(ts: number): string {
   const key = dateToKey(new Date(ts));

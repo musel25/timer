@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Archive, ArchiveRestore, Check, Pencil, Pin, Trash2, X } from 'lucide-react';
 import type { Note } from '../../lib/types';
 import { useDeleteNote, useSaveNote } from '../../lib/hooks';
-import { extractTags, isArchived, splitByTags } from './noteTags';
+import { extractTags, splitByTags } from './noteTags';
+import { isArchived } from '../../lib/archive';
 
 const timeLabel = (ts: number) =>
   new Date(ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
