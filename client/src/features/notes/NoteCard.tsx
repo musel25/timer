@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Archive, ArchiveRestore, Check, Pencil, Pin, Trash2, X } from 'lucide-react';
 import type { Note } from '../../lib/types';
 import { useDeleteNote, useSaveNote } from '../../lib/hooks';
-import { extractTags, splitByTags } from './noteTags';
+import { extractTags, isArchived, splitByTags } from './noteTags';
 
 const timeLabel = (ts: number) =>
   new Date(ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -13,7 +13,7 @@ export function NoteCard({ note, onTagClick }: { note: Note; onTagClick: (tag: s
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.text);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const archived = note.archivedAt !== null;
+  const archived = isArchived(note);
 
   function saveEdit() {
     const t = draft.trim();

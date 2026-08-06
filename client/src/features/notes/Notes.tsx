@@ -4,7 +4,7 @@ import { useNotes, useSaveNote } from '../../lib/hooks';
 import { addDaysKey, dateToKey, todayKey } from '../../lib/date';
 import type { Note } from '../../lib/types';
 import { NoteCard } from './NoteCard';
-import { extractTags } from './noteTags';
+import { extractTags, isArchived } from './noteTags';
 
 function dayLabel(ts: number): string {
   const key = dateToKey(new Date(ts));
@@ -26,10 +26,10 @@ export function Notes() {
   const [query, setQuery] = useState('');
   const [view, setView] = useState<'inbox' | 'archive'>('inbox');
 
-  const archivedCount = notes.filter((n) => n.archivedAt !== null).length;
+  const archivedCount = notes.filter(isArchived).length;
   // Falls back to the inbox on its own once the archive empties out.
   const inArchive = view === 'archive' && archivedCount > 0;
-  const scoped = notes.filter((n) => (n.archivedAt !== null) === inArchive);
+  const scoped = notes.filter((n) => isArchived(n) === inArchive);
 
   function submit() {
     const t = draft.trim();
@@ -43,7 +43,7 @@ export function Notes() {
   const tagCounts = useMemo(() => {
     const m = new Map<string, number>();
     for (const n of notes) {
-      if ((n.archivedAt !== null) !== inArchive) continue;
+      if (isArchived(n) !== inArchive) continue;
       for (const t of n.tags) m.set(t, (m.get(t) ?? 0) + 1);
     }
     return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
