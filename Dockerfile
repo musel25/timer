@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 make g+
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY server/package*.json ./
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
 
 # ── build: compile the server bundle and the React SPA ───────────────────────
 FROM node:22-bookworm-slim AS build
@@ -23,12 +23,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 make g+
 WORKDIR /app
 # server
 COPY server/package*.json server/
-RUN cd server && npm install
+RUN cd server && npm ci
 COPY server/ server/
 RUN cd server && npm run build
 # client
 COPY client/package*.json client/
-RUN cd client && npm install
+RUN cd client && npm ci
 COPY client/ client/
 RUN cd client && npm run build
 
