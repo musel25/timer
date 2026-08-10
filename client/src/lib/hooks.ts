@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 import { buildManualSession } from './sessionLog';
+import { applyReorder } from './order';
 import type { CalendarEvent, Habit, HabitGroup, Note, RestDay, Session, Settings, Task, TaskAttachment, TimerPreset, VacationDay } from './types';
 
 export interface Me {
@@ -161,6 +162,26 @@ export function useSaveTask() {
     mutationFn: (t: Partial<Task> & { id?: string }) =>
       t.id ? api.patch<Task>(`/tasks/${t.id}`, t) : api.post<Task>('/tasks', t),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+  });
+}
+
+/** Whole-column reorder. Optimistic: the board must not flicker back to the
+ *  old order while the request is in flight. */
+export function useReorderTasks() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ date, ids }: { date: string | null; ids: string[] }) =>
+      api.post<{ ok: true }>('/tasks/reorder', { date, ids }),
+    onMutate: async ({ date, ids }) => {
+      await qc.cancelQueries({ queryKey: ['tasks'] });
+      const prev = qc.getQueryData<Task[]>(['tasks']);
+      qc.setQueryData<Task[]>(['tasks'], (old) => applyReorder(old ?? [], date, ids));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['tasks'], ctx.prev);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
   });
 }
 

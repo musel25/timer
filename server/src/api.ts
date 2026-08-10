@@ -371,6 +371,40 @@ api.post('/tasks', async (c) => {
   return c.json(row, 201);
 });
 
+/** Whole-column reorder: `ids` is the column's full order, top to bottom.
+ *  One call rather than N task PATCHes because every PATCH fires a gcal sync,
+ *  and Calendar cannot see sortOrder — only a real date change is worth a push. */
+const reorderInput = z.object({
+  date: z.string().regex(DATE_RE).nullable(),
+  ids: z.array(z.string()),
+});
+
+api.post('/tasks/reorder', async (c) => {
+  const p = reorderInput.safeParse(await body(c));
+  if (!p.success) return c.json({ error: 'invalid_input' }, 400);
+  const u = uid(c);
+  const { date, ids } = p.data;
+
+  // Ids the client no longer owns (deleted elsewhere, or another user's) are
+  // skipped, not rejected: a stale board must not 500, and must not reach
+  // across users. They still consume their index, so the rest keep their gaps.
+  const owned = new Map(
+    db.select().from(tasks).where(eq(tasks.userId, u)).all().map((t) => [t.id, t]),
+  );
+  const moved: string[] = [];
+  db.transaction((tx) => {
+    ids.forEach((id, i) => {
+      const row = owned.get(id);
+      if (!row) return;
+      tx.update(tasks).set({ date, sortOrder: i })
+        .where(and(eq(tasks.id, id), eq(tasks.userId, u))).run();
+      if (row.date !== date) moved.push(id);
+    });
+  });
+  for (const id of moved) queueTaskSync(u, id);
+  return c.json({ ok: true });
+});
+
 api.patch('/tasks/:id', async (c) => {
   const id = c.req.param('id');
   const p = taskInput.partial().safeParse(await body(c));

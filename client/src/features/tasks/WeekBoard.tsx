@@ -1,9 +1,12 @@
 import { useRef, useState } from 'react';
 import { Archive, ArchiveRestore, Check, ChevronLeft, ChevronRight, Flame, Timer as TimerIcon, Clock } from 'lucide-react';
-import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, closestCorners, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
-import { useTasks, useSaveTask, useToggleTask, useCalendarEvents, useSessions, useRestDays } from '../../lib/hooks';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { useTasks, useSaveTask, useToggleTask, useReorderTasks, useCalendarEvents, useSessions, useRestDays } from '../../lib/hooks';
 import { isArchived } from '../../lib/archive';
+import { columnOrder, moveWithin, numberOf } from '../../lib/order';
 import type { CalendarEvent, Task } from '../../lib/types';
 import { currentStreak, todaySummary } from '../../lib/stats';
 import { eventsByDay } from '../../lib/calendar';
@@ -14,8 +17,8 @@ import { TaskEditor } from './TaskEditor';
 
 const INBOX = 'inbox';
 
-function DraggableTask({ task, onEdit, dragHappened, onArchive }: { task: Task; onEdit: (t: Task) => void; dragHappened: React.MutableRefObject<boolean>; onArchive?: (t: Task) => void }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
+function DraggableTask({ task, index, onEdit, dragHappened, onArchive }: { task: Task; index: number | null; onEdit: (t: Task) => void; dragHappened: React.MutableRefObject<boolean>; onArchive?: (t: Task) => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
   const toggle = useToggleTask();
   // The whole card is the drag source, checkbox and title included — the
   // sensor's activation distance means a plain tap still clicks. After a real
@@ -23,12 +26,18 @@ function DraggableTask({ task, onEdit, dragHappened, onArchive }: { task: Task; 
   return (
     <div
       ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
       {...listeners}
-      className={`flex cursor-grab items-start gap-2 rounded-lg border border-ink-600 bg-ink-800 px-2.5 py-2 text-sm shadow-sm transition active:cursor-grabbing ${
+      className={`flex cursor-grab items-start gap-1.5 rounded-lg border border-ink-600 bg-ink-800 px-2.5 py-2 text-sm shadow-sm transition active:cursor-grabbing ${
         isDragging ? 'opacity-50' : ''
       }`}
     >
+      {/* Position in the column. Done tasks leave the gutter empty — the
+          checkbox already says it, and blanking it keeps 1..n gapless. */}
+      <span className="mt-px w-3 shrink-0 text-right text-[11px] font-semibold leading-[19px] tabular-nums text-slate-500">
+        {index ?? ''}
+      </span>
       <button
         onClick={() => { if (!dragHappened.current) toggle.mutate({ id: task.id, done: !task.done }); }}
         aria-label={task.done ? 'Mark not done' : 'Mark done'}
@@ -109,7 +118,11 @@ function DayColumn({ dayKey, tasks, events, onEdit, dragHappened }: { dayKey: st
         </div>
       )}
       <DropColumn id={dayKey}>
-        {tasks.map((t) => <DraggableTask key={t.id} task={t} onEdit={onEdit} dragHappened={dragHappened} />)}
+        <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+          {tasks.map((t) => (
+            <DraggableTask key={t.id} task={t} index={numberOf(tasks, t)} onEdit={onEdit} dragHappened={dragHappened} />
+          ))}
+        </SortableContext>
       </DropColumn>
       <div className="mt-2"><QuickAdd date={dayKey} placeholder="Add task" compact /></div>
     </div>
@@ -121,6 +134,7 @@ export function WeekBoard() {
   const { data: sessions = [] } = useSessions();
   const { data: restDayRows = [] } = useRestDays();
   const save = useSaveTask();
+  const reorder = useReorderTasks();
   const [anchor, setAnchor] = useState(todayKey());
   const streak = currentStreak(sessions, undefined, new Set(restDayRows.map((r) => r.date)));
   const summary = todaySummary(sessions);
@@ -137,7 +151,7 @@ export function WeekBoard() {
   const evByDay = eventsByDay(events);
   // Archived tasks leave the board entirely — Inbox and day columns alike —
   // until you open the archive. Newest-archived first once you do.
-  const inbox = tasks.filter((t) => t.date === null && !t.done && !isArchived(t));
+  const inbox = columnOrder(tasks.filter((t) => t.date === null && !t.done && !isArchived(t)));
   const archived = tasks
     .filter((t) => isArchived(t))
     .sort((a, b) => (b.archivedAt ?? 0) - (a.archivedAt ?? 0));
@@ -146,7 +160,12 @@ export function WeekBoard() {
   const inArchive = showArchive && archived.length > 0;
   const byDateMap = new Map<string, Task[]>();
   for (const t of tasks) if (t.date && !isArchived(t)) { const arr = byDateMap.get(t.date) ?? []; arr.push(t); byDateMap.set(t.date, arr); }
-  const byDate = (key: string) => (byDateMap.get(key) ?? []).slice().sort((a, b) => Number(a.done) - Number(b.done) || a.sortOrder - b.sortOrder);
+  const byDate = (key: string) => columnOrder(byDateMap.get(key) ?? []);
+
+  // Every column the board can drop onto, keyed the same way the droppables are.
+  const columns = new Map<string, Task[]>([[INBOX, inbox], ...days.map((k) => [k, byDate(k)] as const)]);
+  const columnOfTask = new Map<string, string>();
+  for (const [col, list] of columns) for (const t of list) columnOfTask.set(t.id, col);
 
   function clearDragSoon() {
     setTimeout(() => { dragHappened.current = false; }, 0);
@@ -155,11 +174,25 @@ export function WeekBoard() {
   function onDragEnd(e: DragEndEvent) {
     clearDragSoon();
     const taskId = String(e.active.id);
-    const over = e.over?.id ? String(e.over.id) : null;
-    if (!over) return;
-    const date = over === INBOX ? null : over;
-    const task = tasks.find((t) => t.id === taskId);
-    if (task && task.date !== date) save.mutate({ id: taskId, date });
+    const overId = e.over?.id ? String(e.over.id) : null;
+    if (!overId) return;
+    // `over` is either another card or the column itself (empty column, or the
+    // padding below the last card) — the latter means "put it at the end".
+    const toCol = columns.has(overId) ? overId : columnOfTask.get(overId);
+    if (!toCol) return;
+    const date = toCol === INBOX ? null : toCol;
+
+    const ids = (columns.get(toCol) ?? []).map((t) => t.id);
+    if (columnOfTask.get(taskId) === toCol) {
+      const from = ids.indexOf(taskId);
+      const to = columns.has(overId) ? ids.length - 1 : ids.indexOf(overId);
+      if (from < 0 || to < 0 || from === to) return;
+      reorder.mutate({ date, ids: moveWithin(ids, from, to) });
+    } else {
+      const at = columns.has(overId) ? ids.length : ids.indexOf(overId);
+      ids.splice(at < 0 ? ids.length : at, 0, taskId);
+      reorder.mutate({ date, ids });
+    }
   }
 
   return (
@@ -188,6 +221,7 @@ export function WeekBoard() {
 
       <DndContext
         sensors={sensors}
+        collisionDetection={closestCorners}
         onDragStart={() => { dragHappened.current = true; }}
         onDragCancel={clearDragSoon}
         onDragEnd={onDragEnd}
@@ -231,15 +265,18 @@ export function WeekBoard() {
             ) : (
               <>
                 <DropColumn id={INBOX}>
-                  {inbox.map((t) => (
-                    <DraggableTask
-                      key={t.id}
-                      task={t}
-                      onEdit={setEditing}
-                      dragHappened={dragHappened}
-                      onArchive={(task) => save.mutate({ id: task.id, archivedAt: Date.now() })}
-                    />
-                  ))}
+                  <SortableContext items={inbox.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                    {inbox.map((t) => (
+                      <DraggableTask
+                        key={t.id}
+                        task={t}
+                        index={numberOf(inbox, t)}
+                        onEdit={setEditing}
+                        dragHappened={dragHappened}
+                        onArchive={(task) => save.mutate({ id: task.id, archivedAt: Date.now() })}
+                      />
+                    ))}
+                  </SortableContext>
                   {inbox.length === 0 && <p className="px-1 py-2 text-sm text-slate-500">Drop undated tasks here.</p>}
                 </DropColumn>
                 <div className="mt-2"><QuickAdd date={null} placeholder="Capture a task…" compact /></div>
