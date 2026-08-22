@@ -5,9 +5,10 @@ import { Layout } from './Layout';
 
 function renderApp() {
   return render(
-    <MemoryRouter initialEntries={['/week']}>
+    <MemoryRouter initialEntries={['/now']}>
       <Routes>
         <Route element={<Layout />}>
+          <Route path="/now" element={<div>now page</div>} />
           <Route path="/week" element={<div>week page</div>} />
           <Route path="/timer" element={<div>timer page</div>} />
           <Route path="/habits" element={<div>habits page</div>} />
@@ -22,25 +23,27 @@ function renderApp() {
 describe('Layout number shortcuts', () => {
   it('jumps to the tab at that position in the sidebar', () => {
     renderApp();
-    fireEvent.keyDown(window, { key: '3' });
+    fireEvent.keyDown(window, { key: '4' });
     expect(screen.getByText('habits page')).toBeDefined();
-    fireEvent.keyDown(window, { key: '2' });
+    fireEvent.keyDown(window, { key: '3' });
     expect(screen.getByText('timer page')).toBeDefined();
-    fireEvent.keyDown(window, { key: '1' });
+    fireEvent.keyDown(window, { key: '2' });
     expect(screen.getByText('week page')).toBeDefined();
+    fireEvent.keyDown(window, { key: '1' });
+    expect(screen.getByText('now page')).toBeDefined();
   });
 
   it('ignores digits with no tab, modifier chords, and typing in a field', () => {
     renderApp();
     fireEvent.keyDown(window, { key: '9' });
-    expect(screen.getByText('week page')).toBeDefined();
+    expect(screen.getByText('now page')).toBeDefined();
     fireEvent.keyDown(window, { key: '3', metaKey: true });
-    expect(screen.getByText('week page')).toBeDefined();
+    expect(screen.getByText('now page')).toBeDefined();
 
     const input = document.createElement('input');
     document.body.appendChild(input);
     fireEvent.keyDown(input, { key: '3' });
-    expect(screen.getByText('week page')).toBeDefined();
+    expect(screen.getByText('now page')).toBeDefined();
     input.remove();
   });
 
@@ -50,7 +53,7 @@ describe('Layout number shortcuts', () => {
     overlay.setAttribute('data-modal', '');
     document.body.appendChild(overlay);
     fireEvent.keyDown(window, { key: '3' });
-    expect(screen.getByText('week page')).toBeDefined();
+    expect(screen.getByText('now page')).toBeDefined();
     overlay.remove();
   });
 });
