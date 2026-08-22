@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { and, asc, desc, eq, gt, gte, isNull, lte, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNull, lte, ne, sql } from 'drizzle-orm';
 import { db } from './db';
-import { habitGroups, habits, notes, restDays, sessions, taskAttachments, tasks, threads, timers, userSettings, users, vacationDays } from './schema';
+import { desktops, habitGroups, habits, notes, restDays, sessions, taskAttachments, tasks, timers, userSettings, users, vacationDays } from './schema';
 import {
   createSession, currentUserId, destroySession, hashPassword, newId, requireAuth, verifyPassword,
 } from './auth';
@@ -72,7 +72,7 @@ api.use('/settings', requireAuth);
 api.use('/export', requireAuth); api.use('/import', requireAuth);
 api.use('/tasks', requireAuth); api.use('/tasks/*', requireAuth);
 api.use('/notes', requireAuth); api.use('/notes/*', requireAuth);
-api.use('/threads', requireAuth); api.use('/threads/*', requireAuth);
+api.use('/desktops', requireAuth); api.use('/desktops/*', requireAuth);
 api.use('/attachments', requireAuth); api.use('/attachments/*', requireAuth);
 api.use('/calendar', requireAuth); api.use('/calendar/*', requireAuth);
 
@@ -475,69 +475,63 @@ api.delete('/notes/:id', (c) => {
   return c.json({ ok: true });
 });
 
-/* ---------- threads (the Now board) ---------- */
-const threadInput = z.object({
+/* ---------- desktops (one card per Ubuntu workspace) ---------- */
+const desktopTask = z.object({ id: z.string(), text: z.string().min(1), done: z.boolean() });
+const desktopComment = z.object({ id: z.string(), text: z.string().min(1), at: z.number() });
+const desktopInput = z.object({
   title: z.string().min(1),
   lane: z.string().nullable().optional(),
-  state: z.enum(['active', 'waiting', 'parked']).optional(),
-  nextStep: z.string().nullable().optional(),
-  wakeAt: z.number().nullable().optional(),
-  waitingOn: z.string().nullable().optional(),
-  taskId: z.string().nullable().optional(),
-  doneAt: z.number().nullable().optional(),
+  description: z.string().nullable().optional(),
+  tasks: z.array(desktopTask).optional(),
+  comments: z.array(desktopComment).optional(),
+  focused: z.boolean().optional(),
+  sortOrder: z.number().optional(),
+  archivedAt: z.number().nullable().optional(),
 });
 
-const THREAD_DONE_WINDOW_MS = 24 * 60 * 60 * 1000;
-
-/** Demote whatever else was active, so 'at most one active' holds even when two
- *  tabs race. Called in the same request as the promotion. */
-function demoteOtherActive(userId: string, keepId: string, now: number): void {
-  db.update(threads).set({ state: 'parked', touchedAt: now })
-    .where(and(eq(threads.userId, userId), ne(threads.id, keepId), eq(threads.state, 'active')))
+/** Keep 'at most one focused per user' true even when two tabs race. */
+function demoteOtherFocused(userId: string, keepId: string, now: number): void {
+  db.update(desktops).set({ focused: false, updatedAt: now })
+    .where(and(eq(desktops.userId, userId), ne(desktops.id, keepId), eq(desktops.focused, true)))
     .run();
 }
 
-api.get('/threads', (c) => {
-  const cutoff = Date.now() - THREAD_DONE_WINDOW_MS;
-  const rows = db.select().from(threads)
-    .where(and(eq(threads.userId, uid(c)), or(isNull(threads.doneAt), gt(threads.doneAt, cutoff))))
-    // In-flight first (done_at IS NOT NULL sorts 0 before 1), then most recent.
-    .orderBy(sql`done_at IS NOT NULL`, desc(threads.touchedAt))
-    .all();
-  return c.json(rows);
-});
+api.get('/desktops', (c) =>
+  c.json(db.select().from(desktops)
+    .where(and(eq(desktops.userId, uid(c)), isNull(desktops.archivedAt)))
+    .orderBy(asc(desktops.sortOrder), asc(desktops.createdAt)).all()));
 
-api.post('/threads', async (c) => {
-  const p = threadInput.safeParse(await body(c));
+api.post('/desktops', async (c) => {
+  const p = desktopInput.safeParse(await body(c));
   if (!p.success) return c.json({ error: 'invalid_input' }, 400);
   const now = Date.now();
   const row = {
     id: newId(), userId: uid(c), title: p.data.title,
-    lane: p.data.lane ?? null, state: p.data.state ?? 'parked',
-    nextStep: p.data.nextStep ?? null, wakeAt: p.data.wakeAt ?? null,
-    waitingOn: p.data.waitingOn ?? null, taskId: p.data.taskId ?? null,
-    doneAt: p.data.doneAt ?? null, touchedAt: now, createdAt: now,
+    lane: p.data.lane ?? null, description: p.data.description ?? null,
+    tasks: p.data.tasks ?? [], comments: p.data.comments ?? [],
+    focused: p.data.focused ?? false, sortOrder: p.data.sortOrder ?? now,
+    archivedAt: p.data.archivedAt ?? null, createdAt: now, updatedAt: now,
   };
-  db.insert(threads).values(row).run();
-  if (row.state === 'active') demoteOtherActive(row.userId, row.id, now);
+  db.insert(desktops).values(row).run();
+  if (row.focused) demoteOtherFocused(row.userId, row.id, now);
   return c.json(row, 201);
 });
 
-api.patch('/threads/:id', async (c) => {
+api.patch('/desktops/:id', async (c) => {
   const id = c.req.param('id');
-  const p = threadInput.partial().safeParse(await body(c));
+  const p = desktopInput.partial().safeParse(await body(c));
   if (!p.success) return c.json({ error: 'invalid_input' }, 400);
   const now = Date.now();
-  const res = db.update(threads).set({ ...p.data, touchedAt: now })
-    .where(and(eq(threads.id, id), eq(threads.userId, uid(c)))).run();
+  const res = db.update(desktops).set({ ...p.data, updatedAt: now })
+    .where(and(eq(desktops.id, id), eq(desktops.userId, uid(c)))).run();
   if (res.changes === 0) return c.json({ error: 'not_found' }, 404);
-  if (p.data.state === 'active') demoteOtherActive(uid(c), id, now);
-  return c.json(db.select().from(threads).where(and(eq(threads.id, id), eq(threads.userId, uid(c)))).get());
+  if (p.data.focused === true) demoteOtherFocused(uid(c), id, now);
+  return c.json(db.select().from(desktops).where(and(eq(desktops.id, id), eq(desktops.userId, uid(c)))).get());
 });
 
-api.delete('/threads/:id', (c) => {
-  const res = db.delete(threads)
-    .where(and(eq(threads.id, c.req.param('id')), eq(threads.userId, uid(c)))).run();
+api.delete('/desktops/:id', (c) => {
+  const res = db.delete(desktops)
+    .where(and(eq(desktops.id, c.req.param('id')), eq(desktops.userId, uid(c)))).run();
   if (res.changes === 0) return c.json({ error: 'not_found' }, 404);
   return c.json({ ok: true });
 });
@@ -639,7 +633,7 @@ api.get('/export', (c) => {
     sessions: db.select().from(sessions).where(eq(sessions.userId, u)).all(),
     tasks: db.select().from(tasks).where(eq(tasks.userId, u)).all(),
     notes: db.select().from(notes).where(eq(notes.userId, u)).all(),
-    threads: db.select().from(threads).where(eq(threads.userId, u)).all(),
+    desktops: db.select().from(desktops).where(eq(desktops.userId, u)).all(),
     attachments: db.select().from(taskAttachments).where(eq(taskAttachments.userId, u)).all()
       .map((a) => ({
         id: a.id, taskId: a.taskId, mime: a.mime, width: a.width, height: a.height,
@@ -659,7 +653,7 @@ api.post('/import', async (c) => {
     if (Array.isArray(data.sessions)) for (const s of reassign(data.sessions)) tx.insert(sessions).values(s).onConflictDoNothing().run();
     if (Array.isArray(data.tasks)) for (const t of reassign(data.tasks)) tx.insert(tasks).values(t).onConflictDoNothing().run();
     if (Array.isArray(data.notes)) for (const n of reassign(data.notes)) tx.insert(notes).values(n).onConflictDoNothing().run();
-    if (Array.isArray(data.threads)) for (const t of reassign(data.threads)) tx.insert(threads).values(t).onConflictDoNothing().run();
+    if (Array.isArray(data.desktops)) for (const d of reassign(data.desktops)) tx.insert(desktops).values(d).onConflictDoNothing().run();
     if (Array.isArray(data.attachments)) for (const a of data.attachments) {
       tx.insert(taskAttachments).values({
         id: a.id, userId: u, taskId: a.taskId, mime: a.mime,

@@ -11,10 +11,6 @@ export interface Settings {
   volume: number; // master output level, percent (0–200); 100 is the default
   prepSeconds: number; // "get ready" countdown before a focus habit starts
   weekStart: number; // 0=Sun, 1=Mon
-  /** Max threads in flight on the Now board at once. */
-  wipLimit: number;
-  /** Desktop notifications when a waiting thread comes due. */
-  nowNudges: boolean;
   pomodoro: PomodoroConfig;
 }
 
@@ -197,20 +193,34 @@ export interface TaskAttachment {
   createdAt: number;
 }
 
-export type ThreadState = 'active' | 'waiting' | 'parked';
+export interface DesktopTask {
+  id: string;
+  text: string;
+  done: boolean;
+}
 
-/** One ball in the air. Not a Task: a Task is a day-scoped plan, a Thread is
- *  what is in flight right now and is usually created on the spot. */
-export interface Thread {
+/** One journal entry on a desktop card; newest first in the array. */
+export interface DesktopComment {
+  id: string;
+  text: string;
+  at: number;
+}
+
+/** One card per Ubuntu virtual desktop, mirroring the user's spatial layout.
+ *  The displayed number is index+1 in sortOrder order, so removing a desktop
+ *  collapses the numbering exactly like GNOME dynamic workspaces. */
+export interface Desktop {
   id: string;
   title: string;
   lane: string | null;
-  state: ThreadState;
-  nextStep: string | null;
-  wakeAt: number | null;
-  waitingOn: string | null;
-  taskId: string | null;
-  doneAt: number | null;
-  touchedAt: number;
+  description: string | null;
+  tasks: DesktopTask[];
+  comments: DesktopComment[];
+  /** At most one per user — the pinned card you are working on. */
+  focused: boolean;
+  sortOrder: number;
+  /** "Done" archives so the journal survives; null while on the board. */
+  archivedAt: number | null;
   createdAt: number;
+  updatedAt: number;
 }

@@ -152,28 +152,26 @@ export const notes = sqliteTable('notes', {
   updatedAt: integer('updated_at').notNull(),
 });
 
-/** One ball in the air: a unit of work that is in flight right now. Unlike a
- *  task (day-scoped, planned ahead) a thread lives for tens of minutes and is
- *  usually created on the spot. At most one is 'active' per user. */
-export const threads = sqliteTable('threads', {
+/** One card per Ubuntu virtual desktop, mirroring the user's spatial layout.
+ *  The displayed number is the row's index+1 in sort_order, so removing one
+ *  collapses the numbering exactly like GNOME dynamic workspaces. */
+export const desktops = sqliteTable('desktops', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
   title: text('title').notNull(),
-  /** Free-text project lane ("thesis"), typed inline as #lane. Null = none. */
+  /** Project tag; colors the chip via categoryColor(lane). */
   lane: text('lane'),
-  state: text('state').notNull().$type<'active' | 'waiting' | 'parked'>().default('parked'),
-  /** One line: where you were / what the next move is. */
-  nextStep: text('next_step'),
-  /** Epoch ms to poke you at; only meaningful while state = 'waiting'. */
-  wakeAt: integer('wake_at'),
-  /** Short label for what it is blocked on: "claude", "build", "Ana". */
-  waitingOn: text('waiting_on'),
-  /** Optional link to a Week task this thread advances. */
-  taskId: text('task_id'),
-  /** When it left the board; null while it is still in flight. */
-  doneAt: integer('done_at'),
-  touchedAt: integer('touched_at').notNull(),
+  description: text('description'),
+  tasks: text('tasks', { mode: 'json' }).notNull().$type<{ id: string; text: string; done: boolean }[]>(),
+  /** Append-only journal, newest first. */
+  comments: text('comments', { mode: 'json' }).notNull().$type<{ id: string; text: string; at: number }[]>(),
+  /** At most one per user — the desktop you are working on (the pinned card). */
+  focused: integer('focused', { mode: 'boolean' }).notNull().default(false),
+  sortOrder: integer('sort_order').notNull(),
+  /** "Done" archives so the journal survives; archived rows are hidden from GET. */
+  archivedAt: integer('archived_at'),
   createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
 });
 
 export const taskAttachments = sqliteTable('task_attachments', {
