@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 import { buildManualSession } from './sessionLog';
 import { applyReorder } from './order';
-import type { CalendarEvent, Habit, HabitGroup, Note, RestDay, Session, Settings, Task, TaskAttachment, TimerPreset, VacationDay } from './types';
+import type { CalendarEvent, Habit, HabitGroup, Note, RestDay, Session, Settings, Task, TaskAttachment, Thread, TimerPreset, VacationDay } from './types';
 
 export interface Me {
   user: { id: string; email: string } | null;
@@ -210,6 +210,26 @@ export function useDeleteNote() {
   return useMutation({
     mutationFn: (id: string) => api.del(`/notes/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notes'] }),
+  });
+}
+
+/* ---- threads (the Now board) ---- */
+export const useThreads = () => useQuery({ queryKey: ['threads'], queryFn: () => api.get<Thread[]>('/threads') });
+
+export function useSaveThread() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (t: Partial<Thread> & { id?: string }) =>
+      t.id ? api.patch<Thread>(`/threads/${t.id}`, t) : api.post<Thread>('/threads', t),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['threads'] }),
+  });
+}
+
+export function useDeleteThread() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.del(`/threads/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['threads'] }),
   });
 }
 
