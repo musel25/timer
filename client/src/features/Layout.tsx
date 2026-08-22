@@ -1,20 +1,18 @@
 import { useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  CalendarDays, Timer, Repeat, BarChart3, StickyNote, Settings, Bot, Layers, type LucideIcon,
+  CalendarDays, Timer, Repeat, BarChart3, StickyNote, Settings, Bot, Monitor, type LucideIcon,
 } from 'lucide-react';
 import { isTypingTarget } from '../lib/dom';
 import { useAgentsOptional } from './agents/AgentsContext';
 import { askingCount } from './agents/sessionView';
 import { CC_DASH_ENABLED } from './agents/enabled';
-import { useNowOptional } from './now/NowContext';
-import { NowStrip } from './now/NowStrip';
 
 const groups: { title: string; tabs: { to: string; label: string; icon: LucideIcon; end?: boolean }[] }[] = [
   {
     title: 'Plan',
     tabs: [
-      { to: '/now', label: 'Now', icon: Layers },
+      { to: '/desktops', label: 'Desktops', icon: Monitor },
       { to: '/week', label: 'Week', icon: CalendarDays },
     ],
   },
@@ -46,10 +44,10 @@ const shortcutKeyOf = (to: string) => {
 };
 
 // Most-used items for the mobile bottom bar.
-// Six slots (the bar is grid-cols-6). Now takes the first; Notes drops off here
-// and stays reachable from the sidebar on wider screens.
+// Six slots (the bar is grid-cols-6). Desktops takes the first; Notes drops off
+// here and stays reachable from the sidebar on wider screens.
 const mobileTabs: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
-  { to: '/now', label: 'Now', icon: Layers },
+  { to: '/desktops', label: 'Desktops', icon: Monitor },
   { to: '/week', label: 'Week', icon: CalendarDays },
   { to: '/timer', label: 'Timer', icon: Timer },
   { to: '/habits', label: 'Habits', icon: Repeat },
@@ -61,8 +59,6 @@ export function Layout() {
   const agents = useAgentsOptional();
   const navigate = useNavigate();
   const waiting = agents ? askingCount(agents.cards) : 0;
-  const nowCtx = useNowOptional();
-  const ready = nowCtx?.ready ?? 0;
 
   // 1-9 jump straight to a tab (1 Week, 2 Timer, 3 Habits, ...).
   useEffect(() => {
@@ -107,8 +103,6 @@ export function Layout() {
                 {t.label}
                 {t.to === '/agents' && waiting > 0 ? (
                   <span className="ml-auto rounded-full px-1.5 text-[11px] font-bold text-white" style={{ backgroundColor: 'rgb(217 144 30)' }}>{waiting}</span>
-                ) : t.to === '/now' && ready > 0 ? (
-                  <span className="ml-auto rounded-full px-1.5 text-[11px] font-bold text-white" style={{ backgroundColor: 'rgb(217 144 30)' }}>{ready}</span>
                 ) : shortcutKeyOf(t.to) && (
                   <span className="ml-auto text-[11px] font-semibold text-slate-500 opacity-0 transition-opacity group-hover:opacity-100">{shortcutKeyOf(t.to)}</span>
                 )}
@@ -120,7 +114,6 @@ export function Layout() {
 
       <main className="flex-1 overflow-y-auto px-4 pb-28 pt-[max(0.75rem,env(safe-area-inset-top))] md:px-10 md:pb-12 md:pt-8">
         <div className="mx-auto max-w-6xl">
-          <NowStrip />
           <Outlet />
         </div>
       </main>

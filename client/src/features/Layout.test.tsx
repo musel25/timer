@@ -5,10 +5,10 @@ import { Layout } from './Layout';
 
 function renderApp() {
   return render(
-    <MemoryRouter initialEntries={['/now']}>
+    <MemoryRouter initialEntries={['/desktops']}>
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/now" element={<div>now page</div>} />
+          <Route path="/desktops" element={<div>desktops page</div>} />
           <Route path="/week" element={<div>week page</div>} />
           <Route path="/timer" element={<div>timer page</div>} />
           <Route path="/habits" element={<div>habits page</div>} />
@@ -30,20 +30,20 @@ describe('Layout number shortcuts', () => {
     fireEvent.keyDown(window, { key: '2' });
     expect(screen.getByText('week page')).toBeDefined();
     fireEvent.keyDown(window, { key: '1' });
-    expect(screen.getByText('now page')).toBeDefined();
+    expect(screen.getByText('desktops page')).toBeDefined();
   });
 
   it('ignores digits with no tab, modifier chords, and typing in a field', () => {
     renderApp();
     fireEvent.keyDown(window, { key: '9' });
-    expect(screen.getByText('now page')).toBeDefined();
+    expect(screen.getByText('desktops page')).toBeDefined();
     fireEvent.keyDown(window, { key: '3', metaKey: true });
-    expect(screen.getByText('now page')).toBeDefined();
+    expect(screen.getByText('desktops page')).toBeDefined();
 
     const input = document.createElement('input');
     document.body.appendChild(input);
     fireEvent.keyDown(input, { key: '3' });
-    expect(screen.getByText('now page')).toBeDefined();
+    expect(screen.getByText('desktops page')).toBeDefined();
     input.remove();
   });
 
@@ -53,7 +53,7 @@ describe('Layout number shortcuts', () => {
     overlay.setAttribute('data-modal', '');
     document.body.appendChild(overlay);
     fireEvent.keyDown(window, { key: '3' });
-    expect(screen.getByText('now page')).toBeDefined();
+    expect(screen.getByText('desktops page')).toBeDefined();
     overlay.remove();
   });
 });
