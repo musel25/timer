@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Archive, ArchiveRestore, Check, ChevronLeft, ChevronRight, Flame, Timer as TimerIcon, Clock } from 'lucide-react';
-import { DndContext, closestCorners, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, closestCorners, useDroppable, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -21,15 +21,17 @@ function DraggableTask({ task, index, onEdit, dragHappened, onArchive }: { task:
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
   const toggle = useToggleTask();
   // The whole card is the drag source, checkbox and title included — the
-  // sensor's activation distance means a plain tap still clicks. After a real
-  // drag, `dragHappened` swallows the click that fires on pointer-up.
+  // sensors' activation constraints (mouse distance, touch long-press) mean a
+  // plain tap still clicks. After a real drag, `dragHappened` swallows the
+  // click that fires on pointer-up. touch-manipulation keeps the browser from
+  // eating the long-press for double-tap-zoom before the TouchSensor sees it.
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
       {...listeners}
-      className={`flex cursor-grab items-start gap-1.5 rounded-lg border border-ink-600 bg-ink-800 px-2.5 py-2 text-sm shadow-sm transition active:cursor-grabbing ${
+      className={`flex cursor-grab touch-manipulation items-start gap-1.5 rounded-lg border border-ink-600 bg-ink-800 px-2.5 py-2 text-sm shadow-sm transition active:cursor-grabbing ${
         isDragging ? 'opacity-50' : ''
       }`}
     >
@@ -140,7 +142,14 @@ export function WeekBoard() {
   const summary = todaySummary(sessions);
   const [editing, setEditing] = useState<Task | null>(null);
   const [showArchive, setShowArchive] = useState(false);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  // Mouse and touch need opposite activation rules. A mouse tap lands within a
+  // couple of px, so distance works; a fingertip rolls 5px on a plain tap, so a
+  // distance-based sensor turns taps into drags and the click never fires. On
+  // touch, drag is long-press (tolerance is finger wobble allowed during it).
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+  );
   // True while a drag is in flight; cleared a tick after drop so the click
   // that follows pointer-up doesn't toggle/edit the dragged task.
   const dragHappened = useRef(false);
