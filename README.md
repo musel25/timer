@@ -6,13 +6,18 @@ offline, syncs across devices behind a private login.
 
 ## Features
 
+- **Now board** — at most three *threads* in flight at once, each one either active, waiting on
+  something (with a timer that pokes you when it's ready), or parked with a one-line note about
+  where you left it. A strip on every page and a tab-title badge keep the set visible; the board
+  always names one **next up** so the switch between threads costs no decision.
 - **Timers** — build and run a *Focus block* (multi-round work/break Pomodoro) or a plain
   countdown *Timer*, with prep countdown, chimes, and reusable saved presets.
 - **One shared timer with habit tagging** — there's always at most one running timer. It keeps
   going as you navigate between pages. Start a Focus block, then on the **Habits** page tap a
   habit to count that block toward it (tap another to switch the tag). No nested second timer.
-- **Navigation** — a slim left bar: **Week · Habits · Timer · Progress · Settings**. The Week
-  planner is the home view (per-day tasks + Google Calendar events, today highlighted).
+- **Navigation** — a slim left bar: **Now · Week · Habits · Timer · Progress · Settings**. The Now
+  board is the home view; the Week planner (per-day tasks + Google Calendar events, today
+  highlighted) is one key away.
 - **Habit dashboard** — your daily habits grouped by time of day, each with duration presets.
   Tap a duration to start; click a habit to open its **drill-down** (Overview + Month).
 - **Per-habit drill-down** — an Overview (streak, activity grid, recent days vs. goal) and a
