@@ -10,6 +10,7 @@ import {
 } from '../../lib/hooks';
 import { Stepper } from '../../components/Stepper';
 import { audio, setVolume, unlockAudio } from '../../engine/audio';
+import { ensureNotifyPermission } from '../now/notify';
 
 export function SettingsPage() {
   const qc = useQueryClient();
@@ -44,7 +45,7 @@ export function SettingsPage() {
     qc.invalidateQueries();
   }
 
-  const Toggle = ({ k, label }: { k: 'beeps' | 'voice' | 'keepAwake'; label: string }) => (
+  const Toggle = ({ k, label }: { k: 'beeps' | 'voice' | 'keepAwake' | 'nowNudges'; label: string }) => (
     <label className="flex items-center justify-between py-1 text-sm">
       {label}
       <input
@@ -66,6 +67,26 @@ export function SettingsPage() {
         <div className="text-sm text-slate-400">Signed in as</div>
         <div className="font-medium">{me?.user?.email}</div>
         <button className="btn-outline mt-2 w-full" onClick={signOut}>Sign out</button>
+      </section>
+
+      <section className="card space-y-3 p-4">
+        <h2 className="font-semibold">Now board</h2>
+
+        <Stepper
+          label="Threads in flight at once"
+          value={s?.wipLimit ?? 3}
+          min={1}
+          max={6}
+          onChange={(v) => save.mutate({ wipLimit: v })}
+        />
+        <p className="text-xs text-slate-500">
+          The cap is the point: at the limit you have to finish or drop something before starting another.
+        </p>
+
+        <Toggle k="nowNudges" label="Desktop notification when a thread is ready" />
+        <button className="btn-outline w-full" onClick={() => ensureNotifyPermission()}>
+          Allow notifications
+        </button>
       </section>
 
       <ChangePassword />
