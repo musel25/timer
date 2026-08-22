@@ -11,6 +11,10 @@ export interface Settings {
   volume: number; // master output level, percent (0–200); 100 is the default
   prepSeconds: number; // "get ready" countdown before a focus habit starts
   weekStart: number; // 0=Sun, 1=Mon
+  /** Max threads in flight on the Now board at once. */
+  wipLimit: number;
+  /** Desktop notifications when a waiting thread comes due. */
+  nowNudges: boolean;
   pomodoro: PomodoroConfig;
 }
 
@@ -190,5 +194,23 @@ export interface TaskAttachment {
   mime: string;
   width: number | null;
   height: number | null;
+  createdAt: number;
+}
+
+export type ThreadState = 'active' | 'waiting' | 'parked';
+
+/** One ball in the air. Not a Task: a Task is a day-scoped plan, a Thread is
+ *  what is in flight right now and is usually created on the spot. */
+export interface Thread {
+  id: string;
+  title: string;
+  lane: string | null;
+  state: ThreadState;
+  nextStep: string | null;
+  wakeAt: number | null;
+  waitingOn: string | null;
+  taskId: string | null;
+  doneAt: number | null;
+  touchedAt: number;
   createdAt: number;
 }

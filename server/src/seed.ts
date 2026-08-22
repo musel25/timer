@@ -13,6 +13,8 @@ export const DEFAULT_SETTINGS = {
   volume: 100, // master output level, percent (0–200)
   prepSeconds: 5, // "get ready" countdown before a focus habit starts
   weekStart: 1, // Monday
+  wipLimit: 3, // max in-flight threads on the Now board
+  nowNudges: true, // desktop notification when a waiting thread comes due
   pomodoro: { work: 25, short: 5, long: 20, longEvery: 4, rounds: 4 },
 };
 

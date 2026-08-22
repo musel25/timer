@@ -152,6 +152,30 @@ export const notes = sqliteTable('notes', {
   updatedAt: integer('updated_at').notNull(),
 });
 
+/** One ball in the air: a unit of work that is in flight right now. Unlike a
+ *  task (day-scoped, planned ahead) a thread lives for tens of minutes and is
+ *  usually created on the spot. At most one is 'active' per user. */
+export const threads = sqliteTable('threads', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  title: text('title').notNull(),
+  /** Free-text project lane ("thesis"), typed inline as #lane. Null = none. */
+  lane: text('lane'),
+  state: text('state').notNull().$type<'active' | 'waiting' | 'parked'>().default('parked'),
+  /** One line: where you were / what the next move is. */
+  nextStep: text('next_step'),
+  /** Epoch ms to poke you at; only meaningful while state = 'waiting'. */
+  wakeAt: integer('wake_at'),
+  /** Short label for what it is blocked on: "claude", "build", "Ana". */
+  waitingOn: text('waiting_on'),
+  /** Optional link to a Week task this thread advances. */
+  taskId: text('task_id'),
+  /** When it left the board; null while it is still in flight. */
+  doneAt: integer('done_at'),
+  touchedAt: integer('touched_at').notNull(),
+  createdAt: integer('created_at').notNull(),
+});
+
 export const taskAttachments = sqliteTable('task_attachments', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),

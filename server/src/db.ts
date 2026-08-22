@@ -162,6 +162,22 @@ export function migrate(): void {
       created_at INTEGER NOT NULL
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_vacation_days_user_date ON vacation_days(user_id, date);
+
+    CREATE TABLE IF NOT EXISTS threads (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      lane TEXT,
+      state TEXT NOT NULL DEFAULT 'parked',
+      next_step TEXT,
+      wake_at INTEGER,
+      waiting_on TEXT,
+      task_id TEXT,
+      done_at INTEGER,
+      touched_at INTEGER NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_threads_user_touched ON threads(user_id, touched_at);
   `);
 
   // Idempotent column additions for databases created before a column existed.
