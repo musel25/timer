@@ -2,9 +2,9 @@ import { useEffect, useRef } from 'react';
 import { audio, requestNotificationPermission } from '../../engine/audio';
 import { askingCount } from './sessionView';
 import type { SessionCard } from './types';
+import { clearTitleCount, setTitleCount } from '../../lib/docTitle';
 
 const MUTE_KEY = 'cc_dash_muted';
-const BASE_TITLE = 'Timer';
 
 /** Sessions that are blocked asking you a question (the alert-worthy ones). */
 export function askingIds(cards: SessionCard[]): string[] {
@@ -47,12 +47,11 @@ export function useWaitingAlerts(cards: SessionCard[], muted: boolean): void {
     }
     prevAsking.current = nowAsking; // prime on first run; track thereafter
 
-    const n = askingCount(cards);
-    document.title = n > 0 ? `(${n}) ${BASE_TITLE}` : BASE_TITLE;
+    setTitleCount('agents', askingCount(cards));
   }, [cards, muted]);
 
-  // Restore the title when the alerts host unmounts.
-  useEffect(() => () => { document.title = BASE_TITLE; }, []);
+  // Drop this contributor when the alerts host unmounts (other badges stay).
+  useEffect(() => () => clearTitleCount('agents'), []);
 }
 
 /** Ask for notification permission — call from a click handler (a user gesture). */

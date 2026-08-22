@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Thread } from '../../lib/types';
 import { useSettings, useThreads } from '../../lib/hooks';
+import { clearTitleCount, setTitleCount } from '../../lib/docTitle';
 import { activeThread, atCap, nextUp, readyCount } from './nextUp';
 import { dueThreads, fireThreadNotification, loadNotified, saveNotified } from './notify';
 
@@ -50,9 +51,11 @@ export function NowProvider({ children }: { children: ReactNode }) {
   }, [threads, now, muted]);
 
   // The tab title is the one surface visible with the window in the background.
+  // It is shared with the agents dashboard, so go through the single owner.
   useEffect(() => {
-    document.title = ready > 0 ? `(${ready}) ready · Timer` : 'Timer';
+    setTitleCount('now', ready);
   }, [ready]);
+  useEffect(() => () => clearTitleCount('now'), []);
 
   const value = useMemo<NowValue>(() => ({
     threads,

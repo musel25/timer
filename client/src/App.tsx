@@ -14,6 +14,8 @@ import { HabitEditor } from './features/habits/HabitEditor';
 import { HabitDetail } from './features/habits/HabitDetail';
 import { Progress } from './features/stats/Progress';
 import { Notes } from './features/notes/Notes';
+import { NowBoard } from './features/now/NowBoard';
+import { NowProvider } from './features/now/NowContext';
 import { SettingsPage } from './features/settings/Settings';
 import { AgentsProvider } from './features/agents/AgentsContext';
 import { AgentsDashboard } from './features/agents/AgentsDashboard';
@@ -42,7 +44,8 @@ function AuthedApp() {
   const routes = (
     <Routes>
       <Route element={<Layout />}>
-        <Route path="/" element={<Navigate to="/week" replace />} />
+        <Route path="/" element={<Navigate to="/now" replace />} />
+        <Route path="/now" element={<NowBoard />} />
         <Route path="/week" element={<WeekBoard />} />
         <Route path="/timer" element={<Timer />} />
         <Route path="/focus" element={<Navigate to="/timer" replace />} />
@@ -63,9 +66,15 @@ function AuthedApp() {
     </Routes>
   );
 
-  // Wrap the app in the dashboard provider only when enabled, so a session needing
-  // attention alerts you anywhere (not just on /agents).
-  return CC_DASH_ENABLED ? <AgentsProvider>{routes}</AgentsProvider> : routes;
+  // NowProvider wraps everything: the strip, the sidebar badge and the tab title
+  // have to work on every page, not just /now. The dashboard provider is nested
+  // inside it and only when enabled, so a session needing attention alerts you
+  // anywhere (not just on /agents).
+  return (
+    <NowProvider>
+      {CC_DASH_ENABLED ? <AgentsProvider>{routes}</AgentsProvider> : routes}
+    </NowProvider>
+  );
 }
 
 export function App() {
