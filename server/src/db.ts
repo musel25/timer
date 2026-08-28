@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import * as schema from './schema';
+import { CADENCE_PLAN, TEMPLATE_BY_NAME, type PlannedHabit } from './habitPlan';
 
 const dbPath = process.env.TIMER_DB || './timer.db';
 
@@ -195,12 +196,18 @@ export function migrate(): void {
   addColumnIfMissing('habits', 'weekend_goal_min', 'INTEGER');
   addColumnIfMissing('habits', 'vacation_goal_min', 'INTEGER');
   addColumnIfMissing('notes', 'archived_at', 'INTEGER');
-  addColumnIfMissing('habits', 'cadence', "TEXT NOT NULL DEFAULT 'daily'");
   addColumnIfMissing('habits', 'anchor', 'INTEGER');
   addColumnIfMissing('habits', 'target_count', 'INTEGER NOT NULL DEFAULT 1');
   addColumnIfMissing('habits', 'template', 'TEXT');
   addColumnIfMissing('sessions', 'period_key', 'TEXT');
   addColumnIfMissing('sessions', 'entry', 'TEXT');
+
+  // Pre-existing DBs: introduce cadence and, one time only, install the weekly
+  // and monthly layers plus the entry forms for habits that predate templates.
+  // New installs get the same list from seed.ts, which shares habitPlan.ts.
+  if (addColumnIfMissing('habits', 'cadence', "TEXT NOT NULL DEFAULT 'daily'")) {
+    backfillCadencePlan();
+  }
   addColumnIfMissing('tasks', 'archived_at', 'INTEGER');
 
   // Pre-existing DBs: add the flag and mark the conventional 'Work' group once.
@@ -249,6 +256,64 @@ function backfillDefaults(): void {
       emoji: a.emoji,
       note: a.note,
       durations: JSON.stringify([20]),
+      sortOrder: maxSort + 1 + i,
+      createdAt: now,
+    });
+  });
+}
+
+/**
+ * One-time install of the three-layer habit plan for an account that predates
+ * it: point the existing daily habits at their entry forms, then add the habits
+ * from {@link CADENCE_PLAN} that are missing.
+ *
+ * Additive on purpose — it never archives or deletes anything. Trimming the
+ * daily list down to four is a decision to make in the editor, not a side effect
+ * of deploying. Matching by name makes it re-runnable without duplicating rows.
+ */
+function backfillCadencePlan(): void {
+  const user = sqlite.prepare('SELECT id FROM users LIMIT 1').get() as { id: string } | undefined;
+  if (!user) return; // fresh DB: seed.ts installs the plan instead
+
+  const setTemplate = sqlite.prepare('UPDATE habits SET template = ? WHERE user_id = ? AND name = ? AND template IS NULL');
+  for (const [name, template] of Object.entries(TEMPLATE_BY_NAME)) setTemplate.run(template, user.id, name);
+
+  const groupId = (name: string | null): string | null => {
+    if (!name) return null;
+    const g = sqlite.prepare('SELECT id FROM habit_groups WHERE user_id = ? AND name = ?').get(user.id, name) as
+      | { id: string }
+      | undefined;
+    return g?.id ?? null;
+  };
+
+  const exists = sqlite.prepare('SELECT 1 FROM habits WHERE user_id = ? AND name = ?');
+  const insert = sqlite.prepare(
+    `INSERT INTO habits (id, user_id, group_id, name, emoji, note, kind, cadence, anchor, target_count, template,
+                         durations, default_duration_min, daily_goal_min, timer_type, default_timer_id,
+                         sort_order, archived, hidden_on, created_at)
+     VALUES (@id, @userId, @groupId, @name, @emoji, @note, @kind, @cadence, @anchor, @targetCount, @template,
+             @durations, @defaultDurationMin, @dailyGoalMin, 'simple', NULL, @sortOrder, 0, NULL, @createdAt)`,
+  );
+  const maxSort = (sqlite.prepare('SELECT MAX(sort_order) AS m FROM habits WHERE user_id = ?').get(user.id) as { m: number | null }).m ?? 0;
+  const now = Date.now();
+
+  CADENCE_PLAN.forEach((h: PlannedHabit, i: number) => {
+    if (exists.get(user.id, h.name)) return;
+    insert.run({
+      id: randomBytes(16).toString('hex'),
+      userId: user.id,
+      groupId: groupId(h.group),
+      name: h.name,
+      emoji: h.emoji,
+      note: h.note,
+      kind: h.kind,
+      cadence: h.cadence,
+      anchor: h.anchor,
+      targetCount: h.targetCount,
+      template: h.template,
+      durations: JSON.stringify(h.durations),
+      defaultDurationMin: h.defaultDurationMin,
+      dailyGoalMin: h.dailyGoalMin,
       sortOrder: maxSort + 1 + i,
       createdAt: now,
     });

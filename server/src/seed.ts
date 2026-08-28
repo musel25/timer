@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import { db } from './db';
 import { users, userSettings, habitGroups, habits, timers } from './schema';
 import { hashPassword, newId } from './auth';
+import { CADENCE_PLAN, TEMPLATE_BY_NAME } from './habitPlan';
 
 export const DEFAULT_SETTINGS = {
   theme: 'night' as const, // default theme
@@ -57,9 +58,11 @@ export function bootstrap(): void {
     { g: night, name: 'App P', emoji: 'phone-off', note: "End of day: confirm you didn't doomscroll", durations: [20], def: null, kind: 'abstain', goal: null },
     { g: night, name: 'App I', emoji: 'phone-off', note: "End of day: confirm you didn't doomscroll", durations: [20], def: null, kind: 'abstain', goal: null },
   ];
+  const groupByName = { Morning: morning, Work: work, Night: night } as const;
+
   db.insert(habits)
-    .values(
-      seedHabits.map((h, i) => ({
+    .values([
+      ...seedHabits.map((h, i) => ({
         id: newId(),
         userId,
         groupId: h.g.id,
@@ -67,6 +70,7 @@ export function bootstrap(): void {
         emoji: h.emoji,
         note: h.note,
         kind: h.kind,
+        template: TEMPLATE_BY_NAME[h.name] ?? null,
         durations: h.durations,
         defaultDurationMin: h.def,
         dailyGoalMin: h.goal,
@@ -74,7 +78,28 @@ export function bootstrap(): void {
         archived: false,
         createdAt: now,
       })),
-    )
+      // The weekly and monthly layers, shared with the upgrade backfill in db.ts
+      // so a fresh install and an existing account end up with the same plan.
+      ...CADENCE_PLAN.map((h, i) => ({
+        id: newId(),
+        userId,
+        groupId: h.group ? groupByName[h.group].id : null,
+        name: h.name,
+        emoji: h.emoji,
+        note: h.note,
+        kind: h.kind,
+        cadence: h.cadence,
+        anchor: h.anchor,
+        targetCount: h.targetCount,
+        template: h.template,
+        durations: h.durations,
+        defaultDurationMin: h.defaultDurationMin,
+        dailyGoalMin: h.dailyGoalMin,
+        sortOrder: seedHabits.length + i,
+        archived: false,
+        createdAt: now,
+      })),
+    ])
     .run();
 
   // A couple of example interval presets so the Timers library isn't empty.
