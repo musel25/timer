@@ -45,6 +45,7 @@ export const habits = sqliteTable('habits', {
   // Weekly: weekday 0-6 (0 = Sunday). Monthly: day of month 1-28. Daily: NULL.
   // Soft — it decides when the habit surfaces, not when it counts.
   anchor: integer('anchor'),
+  anchorWeek: integer('anchor_week'),
   targetCount: integer('target_count').notNull().default(1),
   // Which structured entry form a completion opens; NULL = done + a note.
   template: text('template'),

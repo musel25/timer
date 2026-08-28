@@ -1,14 +1,9 @@
 import type { Habit, Session } from '../../lib/types';
-import { cadenceOf, occurrencesByPeriod, periodKey, targetOf } from '../../lib/cadence';
+import { cadenceOf, monthlyAnchorDay, occurrencesByPeriod, ordinal, periodKey, targetOf } from '../../lib/cadence';
 
 export const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-/** "1st", "2nd", "3rd", "7th", "21st"… for a monthly habit's day. */
-export function ordinal(n: number): string {
-  const rem100 = n % 100;
-  if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
-  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
-}
+export { ordinal };
 
 /** A weekly/monthly habit as one row of the layer's agenda. */
 export interface CadenceRow {
@@ -52,7 +47,9 @@ export function cadenceRows(
     .map((h) => {
       const cadence = cadenceOf(h);
       const monthly = cadence === 'monthly';
-      const anchor = h.anchor ?? 1;
+      // For a monthly habit the anchor resolves to a day of *this* month, so a
+      // "last Sunday" rule lands on the right date whatever month it is read in.
+      const anchor = monthly ? monthlyAnchorDay(h, now) : h.anchor ?? 1;
       const target = targetOf(h);
       const done = occurrencesByPeriod(h, sessions)[periodKey(cadence, now)] ?? 0;
       const satisfied = done >= target;

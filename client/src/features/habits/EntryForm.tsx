@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Check, Lightbulb, X } from 'lucide-react';
 import type { EntryData, Habit } from '../../lib/types';
 import { templateFor, type Field, type Template } from './templates';
+import { cadenceLabel } from '../../lib/cadence';
 import { categoryColor, gradient, solid, tint } from '../../lib/palette';
 import { HabitIcon } from '../../lib/habitIcons';
 
@@ -55,6 +56,7 @@ export function EntryForm({
   const [note, setNote] = useState('');
   const [showIdeas, setShowIdeas] = useState(false);
   const color = categoryColor(habit.id);
+  const cadence = cadenceLabel(habit);
 
   const set = (id: string, v: string | number) => setValues((prev) => ({ ...prev, [id]: v }));
 
@@ -165,7 +167,12 @@ export function EntryForm({
         >
           <HabitIcon name={habit.emoji} size={16} />
         </span>
-        <div className="min-w-0 flex-1 truncate font-semibold">{template?.title ?? habit.name}</div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-semibold">{template?.title ?? habit.name}</div>
+          {/* A weekly or monthly habit is otherwise only told its day by the
+              agenda; here is where you are actually about to log it. */}
+          {cadence && <div className="truncate text-xs text-slate-500">{cadence}</div>}
+        </div>
         <button onClick={onCancel} aria-label="Cancel" className="shrink-0 text-slate-500 transition hover:text-slate-200">
           <X size={16} />
         </button>

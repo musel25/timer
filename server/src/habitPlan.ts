@@ -18,8 +18,11 @@ export interface PlannedHabit {
   group: 'Morning' | 'Work' | 'Night' | null;
   kind: 'time' | 'check';
   cadence: 'daily' | 'weekly' | 'monthly';
-  /** Weekly: weekday 0-6 (0 = Sunday). Monthly: day of month 1-28. */
+  /** Weekly: weekday 0-6 (0 = Sunday). Monthly: the weekday `anchorWeek` picks
+   *  an occurrence of. */
   anchor: number | null;
+  /** Monthly: which occurrence of `anchor`'s weekday — 1-4, or 5 for the last. */
+  anchorWeek: number | null;
   targetCount: number;
   template: string | null;
   durations: number[];
@@ -33,18 +36,23 @@ const daily = (
   name: string, emoji: string, note: string | null, group: PlannedHabit['group'],
   goal: number, durations: number[], template: string | null,
 ): PlannedHabit => ({
-  name, emoji, note, group, kind: 'time', cadence: 'daily', anchor: null, targetCount: 1,
-  template, durations, defaultDurationMin: goal, dailyGoalMin: goal,
+  name, emoji, note, group, kind: 'time', cadence: 'daily', anchor: null, anchorWeek: null,
+  targetCount: 1, template, durations, defaultDurationMin: goal, dailyGoalMin: goal,
 });
 
 /**
  * The daily layer. Journaling and the end-of-day check already exist on older
  * accounts; these are the ones the plan adds, each with the form it logs into.
+ *
+ * No notes and a 10-minute goal, both for the same reason: the card already
+ * shows the minutes underneath, so a note repeating them is noise, and a floor
+ * low enough to clear on a bad day is the one that survives a bad week. Ten
+ * minutes is a decision to start, which is the part that is actually hard.
  */
 export const NEW_DAILY: PlannedHabit[] = [
-  daily('Portuguese', 'languages', '15–20 min', 'Morning', 15, [5, 10, 15, 20, 25], null),
-  daily('LeetCode', 'swords', '1 problem or 20 min', 'Morning', 20, [10, 15, 20, 25, 30, 45], 'leetcode'),
-  daily('Read', 'book-open', '20 min', 'Night', 20, [10, 15, 20, 25, 30, 45], 'read'),
+  daily('Portuguese', 'languages', null, 'Morning', 10, [5, 10, 15, 20, 25], null),
+  daily('LeetCode', 'swords', null, 'Morning', 10, [10, 15, 20, 25, 30, 45], 'leetcode'),
+  daily('Read', 'book-open', null, 'Night', 10, [10, 15, 20, 25, 30, 45], 'read'),
 ];
 
 /**
@@ -56,17 +64,17 @@ export const NEW_DAILY: PlannedHabit[] = [
 export const WEEKLY: PlannedHabit[] = [
   {
     name: 'Music', emoji: 'guitar', note: 'Play — it does not have to be productive practice', group: null,
-    kind: 'time', cadence: 'weekly', anchor: 3, targetCount: 2, template: null,
+    kind: 'time', cadence: 'weekly', anchor: 3, anchorWeek: null, targetCount: 2, template: null,
     durations: [20, 30, 45, 60], defaultDurationMin: 20, dailyGoalMin: 20,
   },
   {
     name: 'Courage', emoji: 'flame', note: 'One uncomfortable thing', group: null,
-    kind: 'check', cadence: 'weekly', anchor: 6, targetCount: 1, template: 'courage',
+    kind: 'check', cadence: 'weekly', anchor: 6, anchorWeek: null, targetCount: 1, template: 'courage',
     durations: [20], defaultDurationMin: null, dailyGoalMin: null,
   },
   {
     name: 'Weekly review', emoji: 'target', note: 'Review the week and plan the next', group: null,
-    kind: 'check', cadence: 'weekly', anchor: 0, targetCount: 1, template: 'weekly-review',
+    kind: 'check', cadence: 'weekly', anchor: 0, anchorWeek: null, targetCount: 1, template: 'weekly-review',
     durations: [20], defaultDurationMin: null, dailyGoalMin: null,
   },
 ];
@@ -80,8 +88,10 @@ export const WEEKLY: PlannedHabit[] = [
  */
 export const MONTHLY: PlannedHabit[] = [
   {
+    // The last Sunday, not the 28th: a fixed weekday keeps the ritual on the
+    // kind of day it needs, where a number lands on a Tuesday two months in.
     name: 'Life review', emoji: 'graduation-cap', note: 'Rate the nine areas, then the seven questions', group: null,
-    kind: 'check', cadence: 'monthly', anchor: 28, targetCount: 1, template: 'life-review',
+    kind: 'check', cadence: 'monthly', anchor: 0, anchorWeek: 5, targetCount: 1, template: 'life-review',
     durations: [30], defaultDurationMin: null, dailyGoalMin: null,
   },
 ];

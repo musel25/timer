@@ -2,14 +2,23 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { Stepper } from '../../components/Stepper';
+import { cadenceLabel, ordinal } from '../../lib/cadence';
 import { useDeleteHabit, useGroups, useHabits, useSaveGroup, useSaveHabit } from '../../lib/hooks';
 import { HabitIcon, HABIT_ICONS, HABIT_ICON_NAMES, DEFAULT_HABIT_ICON } from '../../lib/habitIcons';
-import type { Cadence, EntryTemplate, HabitKind } from '../../lib/types';
+import type { Cadence, EntryTemplate, Habit, HabitKind } from '../../lib/types';
 import { TEMPLATE_IDS, templateTitle } from './templates';
 
 const DURATION_CHOICES = [3, 5, 10, 15, 20, 25, 30, 45, 60]; // minutes
 const DEFAULT_DURATIONS = [5, 10, 20];
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+/** Which occurrence of the weekday a monthly habit falls on; 5 = the last. */
+const WEEKS: { value: number; label: string }[] = [
+  { value: 1, label: '1st' }, { value: 2, label: '2nd' }, { value: 3, label: '3rd' },
+  { value: 4, label: '4th' }, { value: 5, label: 'Last' },
+];
+/** A monthly habit with no week set predates the weekday anchor: default it to
+ *  the last of its weekday rather than leaving the picker blank. */
+const DEFAULT_ANCHOR_WEEK = 5;
 const KINDS: { id: HabitKind; label: string; hint: string }[] = [
   { id: 'time', label: 'Log time', hint: 'Log the minutes you spent by hand — habits never run a timer.' },
   { id: 'check', label: 'Just done', hint: 'No minutes worth asking for: it either happened or it did not.' },
@@ -36,6 +45,7 @@ export function HabitEditor() {
   const [kind, setKind] = useState<HabitKind>('time');
   const [cadence, setCadence] = useState<Cadence>('daily');
   const [anchor, setAnchor] = useState<number | null>(null);
+  const [anchorWeek, setAnchorWeek] = useState<number>(DEFAULT_ANCHOR_WEEK);
   const [targetCount, setTargetCount] = useState(1);
   const [template, setTemplate] = useState<EntryTemplate | null>(null);
   const [goal, setGoal] = useState(20); // daily goal in minutes (0 = none)
@@ -52,7 +62,10 @@ export function HabitEditor() {
     setGroupId(existing.groupId);
     setKind(existing.kind ?? 'time');
     setCadence(existing.cadence ?? 'daily');
-    setAnchor(existing.anchor ?? null);
+    // A pre-weekday monthly row stores a day of month in `anchor`; it has no
+    // weekday to show, so start the picker on its default rather than on 28.
+    setAnchor(existing.cadence === 'monthly' && !existing.anchorWeek ? null : existing.anchor ?? null);
+    setAnchorWeek(existing.anchorWeek ?? DEFAULT_ANCHOR_WEEK);
     setTargetCount(existing.targetCount ?? 1);
     setTemplate(existing.template ?? null);
     setGoal(existing.dailyGoalMin ?? 0);
@@ -92,9 +105,12 @@ export function HabitEditor() {
       groupId,
       kind,
       cadence,
-      // A daily habit has no anchor; a weekly one defaults to Monday, a monthly
-      // one to the 1st, so it always has a day to surface on.
-      anchor: cadence === 'daily' ? null : anchor ?? (cadence === 'weekly' ? 1 : 1),
+      // A daily habit has no anchor; a weekly one defaults to Monday and a
+      // monthly one to Sunday, so it always has a day to surface on.
+      anchor: cadence === 'daily' ? null : anchor ?? (cadence === 'weekly' ? 1 : 0),
+      // Monthly habits are anchored to a weekday ("last Sunday"), never a
+      // number: which weekday the 28th is changes every month.
+      anchorWeek: cadence === 'monthly' ? anchorWeek : null,
       targetCount: cadence === 'daily' ? 1 : Math.max(1, targetCount),
       template,
       durations,
@@ -105,6 +121,18 @@ export function HabitEditor() {
     });
     navigate('/habits');
   }
+
+  // Phrased by the same helper the log modal and detail page use, so the editor
+  // states the day in exactly the words the rest of the app will.
+  const anchorSummary = cadence === 'daily' || (cadence === 'monthly' && anchor === null)
+    ? null
+    : cadenceLabel({
+        ...(existing ?? ({} as Habit)),
+        cadence,
+        anchor: anchor ?? (cadence === 'weekly' ? 1 : 0),
+        anchorWeek: cadence === 'monthly' ? anchorWeek : null,
+        targetCount,
+      });
 
   return (
     <div className="mx-auto max-w-xl space-y-5">
@@ -175,24 +203,35 @@ export function HabitEditor() {
         <div className="card space-y-3 p-4">
           <div>
             <label className="label">Shows up on</label>
-            {cadence === 'weekly' ? (
+            {cadence === 'monthly' && (
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {WEEKDAYS.map((d, i) => (
+                {WEEKS.map((w) => (
                   <button
-                    key={d}
-                    onClick={() => setAnchor(i)}
-                    className={`chip px-3 py-1.5 ${(anchor ?? 1) === i ? 'chip-active' : ''}`}
+                    key={w.value}
+                    onClick={() => setAnchorWeek(w.value)}
+                    className={`chip px-3 py-1.5 ${anchorWeek === w.value ? 'chip-active' : ''}`}
                   >
-                    {d}
+                    {w.label}
                   </button>
                 ))}
               </div>
-            ) : (
-              <div className="mt-2">
-                <Stepper label="Day of month" value={anchor ?? 1} onChange={setAnchor} min={1} max={28} step={1} editable />
-                <p className="mt-2 text-xs text-slate-400">Capped at the 28th so it exists in every month.</p>
-              </div>
             )}
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {WEEKDAYS.map((d, i) => (
+                <button
+                  key={d}
+                  onClick={() => setAnchor(i)}
+                  className={`chip px-3 py-1.5 ${anchor === i ? 'chip-active' : ''}`}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-slate-400">
+              {cadence === 'monthly' && anchor === null
+                ? `Currently the ${ordinal(existing?.anchor ?? 1)} of the month — pick a weekday to anchor it properly.`
+                : anchorSummary ?? ''}
+            </p>
           </div>
           <div className="border-t border-ink-600/60 pt-3">
             <Stepper label="Times per period" value={targetCount} onChange={setTargetCount} min={1} max={7} step={1} editable />

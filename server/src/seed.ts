@@ -92,6 +92,7 @@ export function bootstrap(): void {
         kind: h.kind,
         cadence: h.cadence,
         anchor: h.anchor,
+        anchorWeek: h.anchorWeek,
         targetCount: h.targetCount,
         template: h.template,
         durations: h.durations,

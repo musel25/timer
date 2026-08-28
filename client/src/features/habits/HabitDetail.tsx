@@ -7,7 +7,7 @@ import { dateToKey, keyToDate, todayKey, addDaysKey, monthMatrix, monthLabel } f
 import { HabitGrid } from '../../components/HabitGrid';
 import { categoryColor } from '../../lib/palette';
 import { INITIAL_RANGE, tapDay } from './rangeSelect';
-import { cadenceOf } from '../../lib/cadence';
+import { cadenceLabel, cadenceOf } from '../../lib/cadence';
 import { PeriodHistory } from './PeriodHistory';
 import { EntryHistory } from './EntryHistory';
 
@@ -65,7 +65,12 @@ export function HabitDetail() {
       <Link to="/habits" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200"><ArrowLeft size={15} /> Habits</Link>
 
       <header className="hero flex items-start justify-between gap-3">
-        <h1 className="text-3xl font-bold md:text-4xl">{habit.name}</h1>
+        <div className="min-w-0">
+          <h1 className="text-3xl font-bold md:text-4xl">{habit.name}</h1>
+          {/* The day a weekly/monthly habit comes round, stated where you look
+              it up rather than only on the agenda that nudges you. */}
+          {cadenceLabel(habit) && <p className="mt-1 text-sm text-slate-400">{cadenceLabel(habit)}</p>}
+        </div>
         <Link to={`/habits/${habit.id}/edit`} className="flex items-center gap-1.5 rounded-full border border-ink-600/60 bg-ink-900/30 px-3 py-2 text-sm text-slate-300 backdrop-blur hover:text-slate-100">
           <Pencil size={15} /> Edit
         </Link>

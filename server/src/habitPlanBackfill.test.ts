@@ -67,10 +67,20 @@ describe('installing the cadence plan on an existing account', () => {
     expect(habitNamed('Weekly review')).toMatchObject({ cadence: 'weekly', anchor: 0, template: 'weekly-review' });
   });
 
-  it('spreads monthly anchors so they never land on the same day', () => {
-    const anchors = MONTHLY.map((h) => (habitNamed(h.name) as { anchor: number }).anchor);
-    expect(new Set(anchors).size).toBe(MONTHLY.length);
-    expect(anchors.every((a) => a >= 1 && a <= 28)).toBe(true);
+  it('anchors monthly habits to a weekday, not a drifting day of the month', () => {
+    const rows = MONTHLY.map((h) => habitNamed(h.name) as { anchor: number; anchor_week: number });
+    for (const r of rows) {
+      expect(r.anchor).toBeGreaterThanOrEqual(0);
+      expect(r.anchor).toBeLessThanOrEqual(6);
+      expect(r.anchor_week).toBeGreaterThanOrEqual(1);
+      expect(r.anchor_week).toBeLessThanOrEqual(5);
+    }
+    // Distinct week+weekday pairs, so two rituals never fall on the same day.
+    expect(new Set(rows.map((r) => `${r.anchor_week}-${r.anchor}`)).size).toBe(MONTHLY.length);
+  });
+
+  it('puts the life review on the last Sunday', () => {
+    expect(habitNamed('Life review')).toMatchObject({ anchor: 0, anchor_week: 5 });
   });
 
   it('spreads weekly anchors across distinct weekdays', () => {
@@ -84,8 +94,8 @@ describe('installing the cadence plan on an existing account', () => {
   });
 
   it('adds the daily habits with the form each one logs into', () => {
-    expect(habitNamed('Read')).toMatchObject({ cadence: 'daily', template: 'read', group_id: 'g-night', daily_goal_min: 20 });
-    expect(habitNamed('LeetCode')).toMatchObject({ cadence: 'daily', template: 'leetcode', group_id: 'g-morning', daily_goal_min: 20 });
+    expect(habitNamed('Read')).toMatchObject({ cadence: 'daily', template: 'read', group_id: 'g-night', daily_goal_min: 10 });
+    expect(habitNamed('LeetCode')).toMatchObject({ cadence: 'daily', template: 'leetcode', group_id: 'g-morning', daily_goal_min: 10 });
   });
 
   it('leaves untouched habits alone', () => {
@@ -95,7 +105,13 @@ describe('installing the cadence plan on an existing account', () => {
   });
 
   it('puts Portuguese in the Morning group', () => {
-    expect(habitNamed('Portuguese')).toMatchObject({ cadence: 'daily', group_id: 'g-morning', daily_goal_min: 15 });
+    expect(habitNamed('Portuguese')).toMatchObject({ cadence: 'daily', group_id: 'g-morning', daily_goal_min: 10 });
+  });
+
+  it('adds the daily habits with no note — the minutes already show underneath', () => {
+    for (const name of ['Portuguese', 'LeetCode', 'Read']) {
+      expect(habitNamed(name), name).toMatchObject({ note: null });
+    }
   });
 
   it('leaves weekly and monthly habits ungrouped', () => {

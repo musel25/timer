@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import * as schema from './schema';
-import { CADENCE_PLAN, TEMPLATE_BY_NAME, type PlannedHabit } from './habitPlan';
+import { CADENCE_PLAN, NEW_DAILY, TEMPLATE_BY_NAME, type PlannedHabit } from './habitPlan';
 
 const dbPath = process.env.TIMER_DB || './timer.db';
 
@@ -65,6 +65,7 @@ export function migrate(): void {
       hidden_on TEXT,
       cadence TEXT NOT NULL DEFAULT 'daily',
       anchor INTEGER,
+      anchor_week INTEGER,
       target_count INTEGER NOT NULL DEFAULT 1,
       template TEXT,
       created_at INTEGER NOT NULL
@@ -201,6 +202,7 @@ export function migrate(): void {
   addColumnIfMissing('tasks', 'gcal_event_id', 'TEXT');
   addColumnIfMissing('sessions', 'category', "TEXT NOT NULL DEFAULT 'habit'");
   addColumnIfMissing('sessions', 'parent_session_id', 'TEXT');
+  addColumnIfMissing('habits', 'anchor_week', 'INTEGER');
   addColumnIfMissing('habits', 'weekend_goal_min', 'INTEGER');
   addColumnIfMissing('habits', 'vacation_goal_min', 'INTEGER');
   addColumnIfMissing('notes', 'archived_at', 'INTEGER');
@@ -217,6 +219,7 @@ export function migrate(): void {
   // because that fires exactly once for the whole database — which silently
   // skipped every account but one.
   backfillCadencePlan();
+  backfillHabitTrim();
   addColumnIfMissing('tasks', 'archived_at', 'INTEGER');
 
   // Pre-existing DBs: add the flag and mark the conventional 'Work' group once.
@@ -297,6 +300,46 @@ function backfillCadencePlan(): void {
   }
 }
 
+/**
+ * Bring the accounts that already have the plan into line with the trimmed
+ * version of it: no time-repeating notes, a 10-minute floor on the three daily
+ * habits, and a monthly ritual anchored to a weekday instead of a number.
+ *
+ * The plan install above is additive — it skips a habit that already exists —
+ * so a change to {@link CADENCE_PLAN} reaches a new machine and nowhere else
+ * without this. Recorded per user under its own key, and it runs exactly once:
+ * a goal you raise again in the editor afterwards is yours to keep.
+ */
+function backfillHabitTrim(): void {
+  const users = sqlite.prepare('SELECT id FROM users').all() as { id: string }[];
+  const done = sqlite.prepare('SELECT 1 FROM applied_backfills WHERE key = ?');
+  const markDone = sqlite.prepare('INSERT OR IGNORE INTO applied_backfills (key, applied_at) VALUES (?, ?)');
+
+  const trim = sqlite.prepare(
+    `UPDATE habits SET note = NULL, daily_goal_min = @goal, default_duration_min = @goal
+     WHERE user_id = @userId AND name = @name`,
+  );
+  // Only the habits whose note was the goal restated; Music and Courage say
+  // something the minutes underneath do not.
+  const trimmed = NEW_DAILY.filter((h) => h.note === null && h.dailyGoalMin !== null);
+
+  // Monthly habits still on a day-of-month: move them to the weekday the plan
+  // now names, so "the 28th" stops drifting across the week month to month.
+  const reanchor = sqlite.prepare(
+    `UPDATE habits SET anchor = @anchor, anchor_week = @anchorWeek
+     WHERE user_id = @userId AND name = @name AND cadence = 'monthly' AND anchor_week IS NULL`,
+  );
+  const monthly = CADENCE_PLAN.filter((h) => h.cadence === 'monthly' && h.anchorWeek !== null);
+
+  for (const user of users) {
+    const key = `habit-trim-v1:${user.id}`;
+    if (done.get(key)) continue;
+    for (const h of trimmed) trim.run({ userId: user.id, name: h.name, goal: h.dailyGoalMin });
+    for (const h of monthly) reanchor.run({ userId: user.id, name: h.name, anchor: h.anchor, anchorWeek: h.anchorWeek });
+    markDone.run(key, Date.now());
+  }
+}
+
 /** The plan install for one account. Name-matched, so it never duplicates rows. */
 function installCadencePlan(userId: string): void {
   const user = { id: userId };
@@ -314,11 +357,12 @@ function installCadencePlan(userId: string): void {
 
   const exists = sqlite.prepare('SELECT 1 FROM habits WHERE user_id = ? AND name = ?');
   const insert = sqlite.prepare(
-    `INSERT INTO habits (id, user_id, group_id, name, emoji, note, kind, cadence, anchor, target_count, template,
-                         durations, default_duration_min, daily_goal_min, timer_type, default_timer_id,
-                         sort_order, archived, hidden_on, created_at)
-     VALUES (@id, @userId, @groupId, @name, @emoji, @note, @kind, @cadence, @anchor, @targetCount, @template,
-             @durations, @defaultDurationMin, @dailyGoalMin, 'simple', NULL, @sortOrder, 0, NULL, @createdAt)`,
+    `INSERT INTO habits (id, user_id, group_id, name, emoji, note, kind, cadence, anchor, anchor_week,
+                         target_count, template, durations, default_duration_min, daily_goal_min,
+                         timer_type, default_timer_id, sort_order, archived, hidden_on, created_at)
+     VALUES (@id, @userId, @groupId, @name, @emoji, @note, @kind, @cadence, @anchor, @anchorWeek,
+             @targetCount, @template, @durations, @defaultDurationMin, @dailyGoalMin,
+             'simple', NULL, @sortOrder, 0, NULL, @createdAt)`,
   );
   const maxSort = (sqlite.prepare('SELECT MAX(sort_order) AS m FROM habits WHERE user_id = ?').get(user.id) as { m: number | null }).m ?? 0;
   const now = Date.now();
@@ -335,6 +379,7 @@ function installCadencePlan(userId: string): void {
       kind: h.kind,
       cadence: h.cadence,
       anchor: h.anchor,
+      anchorWeek: h.anchorWeek,
       targetCount: h.targetCount,
       template: h.template,
       durations: JSON.stringify(h.durations),

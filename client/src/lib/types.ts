@@ -73,10 +73,15 @@ export interface Habit {
      before these columns existed must read as a plain daily habit, not crash
      the dashboard (same rule as `isArchived` in features/notes). --- */
   cadence?: Cadence;
-  /** Weekly: weekday 0-6 (0 = Sunday). Monthly: day of month 1-28. Daily: null.
+  /** Weekly: weekday 0-6 (0 = Sunday). Monthly: a weekday 0-6 when `anchorWeek`
+   *  is set, otherwise a day of month 1-28. Daily: null.
    *  A *soft* anchor — it decides when the habit surfaces in Today, not when it
    *  counts; completing it any time in the period satisfies the period. */
   anchor?: number | null;
+  /** Monthly only: which occurrence of `anchor`'s weekday — 1-4, or 5 for the
+   *  last one ("last Sunday"). Null keeps the older day-of-month reading, so a
+   *  row written before this column existed still surfaces on its number. */
+  anchorWeek?: number | null;
   /** Occurrences needed per period (Music = 2). Absent = 1. */
   targetCount?: number;
   template?: EntryTemplate | null;

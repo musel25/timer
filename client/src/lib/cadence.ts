@@ -104,18 +104,78 @@ export function periodStreak(habit: Habit, sessions: Session[], now = Date.now()
   return streak;
 }
 
+export const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+/** 1–4 pick an occurrence; 5 means the last one, however many the month has. */
+export const WEEK_NAMES: Record<number, string> = { 1: 'first', 2: 'second', 3: 'third', 4: 'fourth', 5: 'last' };
+
+/** "1st", "2nd", "3rd", "7th", "21st"… */
+export function ordinal(n: number): string {
+  const rem100 = n % 100;
+  if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
+  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+}
+
+/**
+ * The day of the month a monthly habit lands on, in the month containing `ts`.
+ *
+ * With `anchorWeek` set the anchor is a weekday and the habit falls on that
+ * weekday's nth occurrence ("last Sunday") — a fixed day of the week rather than
+ * a number that drifts across weekdays month to month. Week 5 resolves to the
+ * last occurrence, so a four-Sunday month is not skipped.
+ *
+ * Without it the anchor keeps its older day-of-month reading, so a row written
+ * before the column existed still surfaces on its number.
+ */
+export function monthlyAnchorDay(habit: Pick<Habit, 'anchor' | 'anchorWeek'>, ts = Date.now()): number {
+  const anchor = habit.anchor ?? 1;
+  const week = habit.anchorWeek;
+  if (!week) return anchor;
+
+  const d = new Date(ts);
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  if (week >= 5) {
+    const last = new Date(year, month + 1, 0);
+    return last.getDate() - ((last.getDay() - anchor + 7) % 7);
+  }
+  const firstMatch = 1 + ((anchor - new Date(year, month, 1).getDay() + 7) % 7);
+  return firstMatch + 7 * (week - 1); // at most 7 + 21 = 28, so always a real day
+}
+
 /**
  * Whether a weekly/monthly habit should surface in Today: its anchor lands on
  * this day and the period is still unsatisfied. Weekly anchors are weekdays
- * (0 = Sunday); monthly anchors are days of the month (1–28). An anchorless
- * habit surfaces on the period's first day so it never disappears entirely.
+ * (0 = Sunday); monthly ones resolve through {@link monthlyAnchorDay}. An
+ * anchorless habit surfaces on the period's first day so it never disappears.
  */
 export function isAnchorDay(habit: Habit, ts = Date.now()): boolean {
   const cadence = cadenceOf(habit);
   const d = new Date(ts);
   if (cadence === 'weekly') return (habit.anchor ?? 1) === d.getDay();
-  if (cadence === 'monthly') return (habit.anchor ?? 1) === d.getDate();
+  if (cadence === 'monthly') return monthlyAnchorDay(habit, ts) === d.getDate();
   return true;
+}
+
+/**
+ * How often the habit comes round and on which day — "Weekly · Wednesdays",
+ * "Monthly · last Sunday". Daily habits get null: their day is every day, and
+ * saying so is noise. Shown wherever the habit is met away from the agenda,
+ * which is otherwise the only place its day is stated.
+ */
+export function cadenceLabel(habit: Habit): string | null {
+  const cadence = cadenceOf(habit);
+  if (cadence === 'daily') return null;
+  const target = targetOf(habit);
+
+  const day = cadence === 'weekly'
+    ? `${WEEKDAY_NAMES[(habit.anchor ?? 1) % 7]}s`
+    : habit.anchorWeek
+      ? `${WEEK_NAMES[habit.anchorWeek] ?? 'last'} ${WEEKDAY_NAMES[(habit.anchor ?? 0) % 7]}`
+      : `the ${ordinal(habit.anchor ?? 1)}`;
+
+  const every = cadence === 'weekly' ? 'week' : 'month';
+  const times = target > 1 ? ` · ${target}× per ${every}` : '';
+  return `${cadence === 'weekly' ? 'Weekly' : 'Monthly'} · ${day}${times}`;
 }
 
 /** One period in a habit's history. */

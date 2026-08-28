@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  addPeriods, cadenceOf, isAnchorDay, isoWeekKey, isPeriodSatisfied, monthKey,
-  occurrencesByPeriod, periodKey, periodStreak, targetOf,
+  addPeriods, cadenceLabel, cadenceOf, isAnchorDay, isoWeekKey, isPeriodSatisfied,
+  monthKey, monthlyAnchorDay, occurrencesByPeriod, periodKey, periodStreak, targetOf,
 } from './cadence';
 import type { Habit, Session } from './types';
 
@@ -152,6 +152,65 @@ describe('anchors', () => {
 
   it('always surfaces a daily habit', () => {
     expect(isAnchorDay(habit({ cadence: 'daily', anchor: null }), at(2026, 8, 27))).toBe(true);
+  });
+});
+
+describe('monthlyAnchorDay — nth weekday of the month', () => {
+  // August 2026: the 1st is a Saturday, so Sundays fall on 2, 9, 16, 23, 30.
+  const sunday = (week: number) => habit({ cadence: 'monthly', anchor: 0, anchorWeek: week });
+
+  it('finds the nth occurrence of the weekday', () => {
+    expect(monthlyAnchorDay(sunday(1), at(2026, 8, 15))).toBe(2);
+    expect(monthlyAnchorDay(sunday(2), at(2026, 8, 15))).toBe(9);
+    expect(monthlyAnchorDay(sunday(3), at(2026, 8, 15))).toBe(16);
+    expect(monthlyAnchorDay(sunday(4), at(2026, 8, 15))).toBe(23);
+  });
+
+  it('week 5 means the last one, whether the month has four or five', () => {
+    expect(monthlyAnchorDay(sunday(5), at(2026, 8, 15))).toBe(30); // Aug 2026 has five Sundays
+    expect(monthlyAnchorDay(sunday(5), at(2026, 2, 15))).toBe(22); // Feb 2026 has four
+  });
+
+  it('lands on the weekday it names, in every month of a year', () => {
+    for (let m = 1; m <= 12; m++) {
+      const day = monthlyAnchorDay(sunday(5), at(2026, m, 15));
+      expect(new Date(2026, m - 1, day).getDay()).toBe(0);
+    }
+  });
+
+  it('falls back to the day of month when no week is set (rows predating the column)', () => {
+    expect(monthlyAnchorDay(habit({ cadence: 'monthly', anchor: 28 }), at(2026, 8, 15))).toBe(28);
+    expect(monthlyAnchorDay(habit({ cadence: 'monthly', anchor: null }), at(2026, 8, 15))).toBe(1);
+  });
+
+  it('surfaces the habit on that day and no other', () => {
+    const review = sunday(5);
+    expect(isAnchorDay(review, at(2026, 8, 30))).toBe(true);
+    expect(isAnchorDay(review, at(2026, 8, 23))).toBe(false);
+  });
+});
+
+describe('cadenceLabel', () => {
+  it('names the weekday a weekly habit falls on', () => {
+    expect(cadenceLabel(habit({ cadence: 'weekly', anchor: 3 }))).toBe('Weekly · Wednesdays');
+  });
+
+  it('counts the occurrences when more than one is needed', () => {
+    expect(cadenceLabel(habit({ cadence: 'weekly', anchor: 3, targetCount: 2 })))
+      .toBe('Weekly · Wednesdays · 2× per week');
+  });
+
+  it('names the week and weekday a monthly habit falls on', () => {
+    expect(cadenceLabel(habit({ cadence: 'monthly', anchor: 0, anchorWeek: 5 }))).toBe('Monthly · last Sunday');
+    expect(cadenceLabel(habit({ cadence: 'monthly', anchor: 1, anchorWeek: 1 }))).toBe('Monthly · first Monday');
+  });
+
+  it('still reads a day-of-month anchor', () => {
+    expect(cadenceLabel(habit({ cadence: 'monthly', anchor: 28 }))).toBe('Monthly · the 28th');
+  });
+
+  it('says nothing for a daily habit — its day is every day', () => {
+    expect(cadenceLabel(habit({ cadence: 'daily', anchor: null }))).toBeNull();
   });
 });
 

@@ -162,6 +162,7 @@ const habitInput = z.object({
   kind: z.enum(['time', 'abstain', 'check']).optional(),
   cadence: z.enum(['daily', 'weekly', 'monthly']).optional(),
   anchor: z.number().int().min(0).max(31).nullable().optional(),
+  anchorWeek: z.number().int().min(1).max(5).nullable().optional(),
   targetCount: z.number().int().min(1).max(31).optional(),
   template: z.string().max(40).nullable().optional(),
   durations: z.array(z.number().int().positive()).min(1),
@@ -186,6 +187,7 @@ api.post('/habits', async (c) => {
     defaultDurationMin: p.data.defaultDurationMin ?? null, dailyGoalMin: p.data.dailyGoalMin ?? null,
     weekendGoalMin: p.data.weekendGoalMin ?? null, vacationGoalMin: p.data.vacationGoalMin ?? null,
     cadence: p.data.cadence ?? 'daily', anchor: p.data.anchor ?? null,
+    anchorWeek: p.data.anchorWeek ?? null,
     targetCount: p.data.targetCount ?? 1, template: p.data.template ?? null,
     sortOrder: p.data.sortOrder ?? Date.now(), archived: p.data.archived ?? false, createdAt: Date.now(),
   };
