@@ -14,6 +14,10 @@ const pomo = (config: Partial<PomodoroConfig> = {}): TimerPreset => ({
 });
 
 describe('runSpecFromPreset — focus block prep countdown', () => {
+  it('defaults to a 5s countdown — long enough to put the phone down, short enough not to wait', () => {
+    expect(DEFAULT_POMODORO_PREP).toBe(5);
+  });
+
   it('prepends a Get Ready prep phase by default (so focus blocks count down like intervals)', () => {
     const spec = runSpecFromPreset(pomo());
     expect(spec.phases?.[0]).toMatchObject({ kind: 'prep', seconds: DEFAULT_POMODORO_PREP });

@@ -4,7 +4,7 @@ import { buildPomodoroPhases, totalSeconds, workSeconds } from '../engine/buildP
 /** Default "Get Ready" countdown for a focus block when the preset predates the
  *  prepSeconds field — so every focus block starts with a countdown like the
  *  interval timers do. An explicit 0 in the config disables it. */
-export const DEFAULT_POMODORO_PREP = 10;
+export const DEFAULT_POMODORO_PREP = 5;
 const pomodoroPrep = (cfg: PomodoroConfig): number => cfg.prepSeconds ?? DEFAULT_POMODORO_PREP;
 
 export function presetSeconds(p: TimerPreset): number {

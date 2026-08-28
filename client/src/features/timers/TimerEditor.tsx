@@ -21,7 +21,7 @@ export function TimerEditor() {
 
   const [type, setType] = useState<PresetType>('interval');
   const [name, setName] = useState('');
-  const [prep, setPrep] = useState(10);
+  const [prep, setPrep] = useState(DEFAULT_POMODORO_PREP);
   const [minutes, setMinutes] = useState(10);
   const [sets, setSets] = useState(5);
   const [cooldown, setCooldown] = useState(0);
