@@ -28,6 +28,7 @@ seedDb.exec(`
     archived INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL
   );
   INSERT INTO users VALUES ('u1', 'me@example.com', 'x', 0);
+  INSERT INTO users VALUES ('u2', 'someone-else@example.com', 'x', 0);
   INSERT INTO habit_groups (id, user_id, name, sort_order) VALUES ('g-night', 'u1', 'Night', 2);
   INSERT INTO habits (id, user_id, group_id, name, durations, daily_goal_min, sort_order, created_at)
     VALUES ('h-journal', 'u1', 'g-night', 'Journaling', '[5,10]', 20, 5, 0),
@@ -41,8 +42,10 @@ describe('installing the cadence plan on an existing account', () => {
   let sqlite: import('better-sqlite3').Database;
   let migrate: typeof import('./db').migrate;
 
-  const habitNamed = (name: string) =>
-    sqlite.prepare('SELECT * FROM habits WHERE name = ?').get(name) as Record<string, unknown> | undefined;
+  const habitNamed = (name: string, userId = 'u1') =>
+    sqlite.prepare('SELECT * FROM habits WHERE name = ? AND user_id = ?').get(name, userId) as
+      | Record<string, unknown>
+      | undefined;
 
   beforeAll(async () => {
     ({ sqlite, migrate } = await import('./db'));
@@ -94,10 +97,24 @@ describe('installing the cadence plan on an existing account', () => {
     for (const h of [...WEEKLY, ...MONTHLY]) expect(habitNamed(h.name)).toMatchObject({ group_id: null });
   });
 
+  it('installs the plan on every account, not just the first', () => {
+    // A production instance held two accounts; keying the backfill off
+    // `SELECT id FROM users LIMIT 1` gave the whole plan to one of them and the
+    // active account nothing.
+    for (const h of CADENCE_PLAN) expect(habitNamed(h.name, 'u2'), `${h.name} for u2`).toBeDefined();
+  });
+
   it('does not duplicate rows when migrate runs again', () => {
     migrate();
     migrate();
     const count = sqlite.prepare('SELECT COUNT(*) AS n FROM habits').get() as { n: number };
-    expect(count.n).toBe(3 + CADENCE_PLAN.length);
+    expect(count.n).toBe(3 + CADENCE_PLAN.length * 2); // three legacy habits, plan installed for both users
+  });
+
+  it('does not resurrect a habit the user deleted', () => {
+    // The marker is durable, so a later deploy must not bring Nature back.
+    sqlite.prepare("DELETE FROM habits WHERE name = 'Nature' AND user_id = 'u1'").run();
+    migrate();
+    expect(habitNamed('Nature', 'u1')).toBeUndefined();
   });
 });

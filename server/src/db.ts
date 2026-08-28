@@ -185,6 +185,14 @@ export function migrate(): void {
       updated_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_desktops_user_sort ON desktops(user_id, sort_order);
+
+    -- One-time data backfills that have already been applied. Keyed per user so
+    -- an account created later still receives them, and so a habit the user
+    -- deliberately deleted is never resurrected by the next deploy.
+    CREATE TABLE IF NOT EXISTS applied_backfills (
+      key TEXT PRIMARY KEY,
+      applied_at INTEGER NOT NULL
+    );
   `);
 
   // Idempotent column additions for databases created before a column existed.
@@ -202,12 +210,13 @@ export function migrate(): void {
   addColumnIfMissing('sessions', 'period_key', 'TEXT');
   addColumnIfMissing('sessions', 'entry', 'TEXT');
 
-  // Pre-existing DBs: introduce cadence and, one time only, install the weekly
-  // and monthly layers plus the entry forms for habits that predate templates.
-  // New installs get the same list from seed.ts, which shares habitPlan.ts.
-  if (addColumnIfMissing('habits', 'cadence', "TEXT NOT NULL DEFAULT 'daily'")) {
-    backfillCadencePlan();
-  }
+  addColumnIfMissing('habits', 'cadence', "TEXT NOT NULL DEFAULT 'daily'");
+
+  // Install the weekly/monthly layers once per account. Driven by
+  // applied_backfills rather than by "the cadence column was just added",
+  // because that fires exactly once for the whole database — which silently
+  // skipped every account but one.
+  backfillCadencePlan();
   addColumnIfMissing('tasks', 'archived_at', 'INTEGER');
 
   // Pre-existing DBs: add the flag and mark the conventional 'Work' group once.
@@ -263,17 +272,34 @@ function backfillDefaults(): void {
 }
 
 /**
- * One-time install of the three-layer habit plan for an account that predates
- * it: point the existing daily habits at their entry forms, then add the habits
- * from {@link CADENCE_PLAN} that are missing.
+ * Install the three-layer habit plan on every account that has not had it yet:
+ * point existing daily habits at their entry forms, then add the habits from
+ * {@link CADENCE_PLAN} that are missing.
  *
- * Additive on purpose — it never archives or deletes anything. Trimming the
- * daily list down to four is a decision to make in the editor, not a side effect
- * of deploying. Matching by name makes it re-runnable without duplicating rows.
+ * Runs per user, recorded in `applied_backfills`. Two things this must get
+ * right: an instance can hold more than one account (an earlier version keyed
+ * off `SELECT id FROM users LIMIT 1` and installed the plan on exactly one of
+ * them), and a habit the user later deletes must not come back on the next
+ * deploy — hence a durable marker rather than "did we just add the column".
+ *
+ * Additive on purpose: it never archives or deletes anything. Trimming the daily
+ * list down is a decision to make in the editor, not a side effect of deploying.
  */
 function backfillCadencePlan(): void {
-  const user = sqlite.prepare('SELECT id FROM users LIMIT 1').get() as { id: string } | undefined;
-  if (!user) return; // fresh DB: seed.ts installs the plan instead
+  const users = sqlite.prepare('SELECT id FROM users').all() as { id: string }[];
+  const done = sqlite.prepare('SELECT 1 FROM applied_backfills WHERE key = ?');
+  const markDone = sqlite.prepare('INSERT OR IGNORE INTO applied_backfills (key, applied_at) VALUES (?, ?)');
+  for (const user of users) {
+    const key = `cadence-plan-v1:${user.id}`;
+    if (done.get(key)) continue;
+    installCadencePlan(user.id);
+    markDone.run(key, Date.now());
+  }
+}
+
+/** The plan install for one account. Name-matched, so it never duplicates rows. */
+function installCadencePlan(userId: string): void {
+  const user = { id: userId };
 
   const setTemplate = sqlite.prepare('UPDATE habits SET template = ? WHERE user_id = ? AND name = ? AND template IS NULL');
   for (const [name, template] of Object.entries(TEMPLATE_BY_NAME)) setTemplate.run(template, user.id, name);
