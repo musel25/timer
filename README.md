@@ -20,6 +20,16 @@ offline, syncs across devices behind a private login.
   highlighted) is one key away.
 - **Habit dashboard** — your daily habits grouped by time of day, each with duration presets.
   Tap a duration to start; click a habit to open its **drill-down** (Overview + Month).
+- **Three habit layers — daily · weekly · monthly** — a habit's *cadence* decides what its streak
+  counts. Weekly and monthly habits carry a **soft anchor day**: they surface in Today on that day
+  (Nature on Saturday, the life review on the 28th) but count anywhere in the period, so a walk
+  taken on Wednesday still satisfies the week. A pill strip per layer keeps the whole week and
+  month visible and loggable without adding a dozen standing rows.
+- **Structured entries** — a habit can open a real form instead of a note: the journal's theme
+  rotates by weekday (self-awareness, beliefs, character, gratitude, problems, curiosity), courage
+  records *anticipated vs actual* discomfort 1–5, and the monthly life review rates nine areas 0–10.
+  Those numbers become charts in the drill-down — the gap between anticipated and actual is the
+  whole point.
 - **Per-habit drill-down** — an Overview (streak, activity grid, recent days vs. goal) and a
   **Month** calendar where you paint **vacation** (lighter goal) and **rest** (streak-skip) days
   as ranges — tap a start day then an end day. (Vacation/rest dates are global across habits.)

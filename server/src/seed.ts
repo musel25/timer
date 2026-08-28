@@ -132,5 +132,5 @@ export function bootstrap(): void {
     ])
     .run();
 
-  console.log(`[seed] Created account ${email} with ${seedHabits.length} habits.`);
+  console.log(`[seed] Created account ${email} with ${seedHabits.length + CADENCE_PLAN.length} habits.`);
 }
