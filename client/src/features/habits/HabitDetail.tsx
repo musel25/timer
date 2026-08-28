@@ -7,6 +7,9 @@ import { dateToKey, keyToDate, todayKey, addDaysKey, monthMatrix, monthLabel } f
 import { HabitGrid } from '../../components/HabitGrid';
 import { categoryColor } from '../../lib/palette';
 import { INITIAL_RANGE, tapDay } from './rangeSelect';
+import { cadenceOf } from '../../lib/cadence';
+import { PeriodHistory } from './PeriodHistory';
+import { EntryHistory } from './EntryHistory';
 
 type Tab = 'overview' | 'month';
 type Mode = 'vacation' | 'rest';
@@ -68,15 +71,19 @@ export function HabitDetail() {
         </Link>
       </header>
 
-      <div className="flex gap-2">
-        {(['overview', 'month'] as Tab[]).map((t) => (
-          <button key={t} className={`chip flex-1 ${tab === t ? 'chip-active' : ''}`} onClick={() => setTab(t)}>
-            {t === 'overview' ? 'Overview' : 'Month'}
-          </button>
-        ))}
-      </div>
+      {/* The Month tab paints rest/vacation days, which only bear on daily
+          streaks — a weekly habit has nothing to paint there. */}
+      {cadenceOf(habit) === 'daily' && (
+        <div className="flex gap-2">
+          {(['overview', 'month'] as Tab[]).map((t) => (
+            <button key={t} className={`chip flex-1 ${tab === t ? 'chip-active' : ''}`} onClick={() => setTab(t)}>
+              {t === 'overview' ? 'Overview' : 'Month'}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {tab === 'overview' ? (
+      {tab === 'overview' || cadenceOf(habit) !== 'daily' ? (
         <OverviewTab habit={habit} sessions={sessions} weekStart={weekStart} streak={streak} avgPerActiveDay={avgPerActiveDay} minutesByDay={minutesByDay} goalMetOn={goalMetOn} vacationDays={vacationDays} restDays={restDays} />
       ) : (
         <MonthTab
@@ -107,6 +114,28 @@ function OverviewTab({ habit, sessions, weekStart, streak, avgPerActiveDay, minu
   // Last 14 days, most recent first.
   const today = todayKey();
   const recent = Array.from({ length: 14 }, (_, i) => addDaysKey(today, -i));
+  const cadence = cadenceOf(habit);
+  const unit = cadence === 'weekly' ? 'week' : cadence === 'monthly' ? 'month' : 'day';
+
+  if (cadence !== 'daily') {
+    return (
+      <div className="space-y-5">
+        <div className="flex flex-wrap gap-2">
+          <span className="stat-pill" style={{ color: 'rgb(217 144 30)' }}>
+            <Flame size={15} /> {streak > 0 ? `${streak}-${unit} streak` : 'No streak yet'}
+          </span>
+        </div>
+
+        <section className="card p-4">
+          <h2 className="label mb-3">History</h2>
+          <PeriodHistory habit={habit} sessions={sessions} />
+        </section>
+
+        <EntryHistory habit={habit} sessions={sessions} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap gap-2">
@@ -141,6 +170,8 @@ function OverviewTab({ habit, sessions, weekStart, streak, avgPerActiveDay, minu
           })}
         </div>
       </section>
+
+      <EntryHistory habit={habit} sessions={sessions} />
     </div>
   );
 }

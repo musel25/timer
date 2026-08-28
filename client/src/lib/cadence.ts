@@ -117,3 +117,36 @@ export function isAnchorDay(habit: Habit, ts = Date.now()): boolean {
   if (cadence === 'monthly') return (habit.anchor ?? 1) === d.getDate();
   return true;
 }
+
+/** One period in a habit's history. */
+export interface PeriodCell {
+  key: string;
+  label: string;
+  count: number;
+  satisfied: boolean;
+}
+
+/**
+ * The last `count` periods, oldest first — the weekly/monthly answer to the
+ * daily activity grid, which has nothing to show when a habit only comes round
+ * once a month.
+ */
+export function periodHistory(habit: Habit, sessions: Session[], count: number, now = Date.now()): PeriodCell[] {
+  const cadence = cadenceOf(habit);
+  const counts = occurrencesByPeriod(habit, sessions);
+  const target = targetOf(habit);
+  const label = (ts: number) => {
+    const d = new Date(ts);
+    if (cadence === 'monthly') return d.toLocaleDateString(undefined, { month: 'short' });
+    if (cadence === 'weekly') return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return d.toLocaleDateString(undefined, { day: 'numeric' });
+  };
+  const out: PeriodCell[] = [];
+  for (let i = count - 1; i >= 0; i--) {
+    const ts = addPeriods(cadence, now, -i);
+    const key = periodKey(cadence, ts);
+    const n = counts[key] ?? 0;
+    out.push({ key, label: label(ts), count: n, satisfied: n >= target });
+  }
+  return out;
+}
