@@ -71,13 +71,14 @@ export const WEEKLY: PlannedHabit[] = [
   },
 ];
 
-/** Monthly habits, a week apart so they never land on the same day. */
+/**
+ * The monthly layer: one ritual, not several. A separate "beliefs & values"
+ * reflection was dropped because Tuesday's journal theme already asks what you
+ * might be wrong about every week, and the life review's questions cover the
+ * values sweep — a monthly habit that duplicates two existing ones is the kind
+ * of thing that quietly turns the tracker back into a chore.
+ */
 export const MONTHLY: PlannedHabit[] = [
-  {
-    name: 'Beliefs & values', emoji: 'brain', note: 'Long-form reflection', group: null,
-    kind: 'check', cadence: 'monthly', anchor: 21, targetCount: 1, template: null,
-    durations: [30], defaultDurationMin: null, dailyGoalMin: null,
-  },
   {
     name: 'Life review', emoji: 'graduation-cap', note: 'Rate the nine areas, then the seven questions', group: null,
     kind: 'check', cadence: 'monthly', anchor: 28, targetCount: 1, template: 'life-review',

@@ -11,6 +11,7 @@ import { HabitCard, type LogEntry } from '../habits/HabitCard';
 import { CadenceSection } from '../habits/CadenceSection';
 import { EntryForm, type EntrySubmission } from '../habits/EntryForm';
 import { lastEntryFor } from '../habits/entries';
+import { dailyProgress } from '../habits/dailyProgress';
 
 /**
  * The Habits dashboard: every habit as a card you log by hand. Habits are never
@@ -44,6 +45,7 @@ export function Dashboard() {
   const [showDone, setShowDone] = useState(false);
   const [entryFor, setEntryFor] = useState<Habit | null>(null);
 
+  const progress = dailyProgress(active, sessions, vacationDays);
   const daily = active.filter((h) => cadenceOf(h) === 'daily');
   const weekly = active.filter((h) => cadenceOf(h) === 'weekly');
   const monthly = active.filter((h) => cadenceOf(h) === 'monthly');
@@ -110,9 +112,30 @@ export function Dashboard() {
       <header className="hero flex items-start justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold md:text-4xl">Habits</h1>
-          <div className="mt-1 text-sm text-slate-300">
-            {today.count > 0 ? `Today · ${today.count} done · ${today.minutes} min` : 'Nothing logged yet today'}
+          {/* A count with nothing to compare it against says nothing — this is
+              the day's work as a fraction of what the day actually asks. */}
+          <div className="mt-1 flex items-center gap-2 text-sm text-slate-300">
+            {progress.total > 0 ? (
+              <>
+                <span className={progress.done === progress.total ? 'font-semibold text-accent' : ''}>
+                  Today {progress.done}/{progress.total}
+                </span>
+                {progress.goalMinutes > 0 && (
+                  <span className="text-slate-400">· {progress.minutes} of {progress.goalMinutes} min</span>
+                )}
+              </>
+            ) : (
+              <span>Nothing logged yet today</span>
+            )}
           </div>
+          {progress.goalMinutes > 0 && (
+            <div className="mt-2 h-1.5 w-40 overflow-hidden rounded-full bg-ink-700">
+              <div
+                className="h-full rounded-full bg-accent transition-all"
+                style={{ width: `${Math.min(100, (progress.minutes / progress.goalMinutes) * 100)}%` }}
+              />
+            </div>
+          )}
         </div>
         <Link to="/habits/new" className="btn-accent shrink-0"><Plus size={16} /> New habit</Link>
       </header>

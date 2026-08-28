@@ -51,6 +51,27 @@ describe('cadenceRows — weekly', () => {
     expect(cadenceRows(week, [], 0, friday).map((r) => r.label)).toEqual(['Sun', 'Tue', 'Wed', 'Sat']);
   });
 
+  it('says when the habit is due, then how long is left once its day has passed', () => {
+    const on = (d: number) => Object.fromEntries(
+      cadenceRows(week, [], 1, at(2026, 8, d)).map((r) => [r.habit.name, r.due]),
+    );
+    // Thursday 27th. Tuesday and Wednesday have gone, so those switch to the
+    // real deadline — Sunday, when the ISO week ends.
+    expect(on(27)).toEqual({
+      Music: '3 days left',      // Tue, passed
+      Courage: '3 days left',    // Wed, passed
+      Nature: 'in 2 days',       // Sat
+      'Weekly review': 'in 3 days', // Sun
+    });
+    // Sunday 30th: the last day of the ISO week.
+    expect(on(30)['Nature']).toBe('last day');
+  });
+
+  it('stops nagging once the period is satisfied', () => {
+    const rows = cadenceRows(week, [session('Nature', at(2026, 8, 25))], 1, at(2026, 8, 27));
+    expect(rows.find((r) => r.habit.name === 'Nature')?.due).toBeNull();
+  });
+
   it('marks the row whose anchor is today', () => {
     // Friday 2026-08-28: nothing here is anchored to Friday.
     expect(cadenceRows(week, [], 1, friday).some((r) => r.isToday)).toBe(false);
@@ -79,12 +100,32 @@ describe('cadenceRows — monthly', () => {
     habit('Beliefs & values', { cadence: 'monthly', anchor: 21 }),
   ];
 
-  it('orders by day of month with ordinal labels', () => {
-    expect(cadenceRows(month, [], 1, at(2026, 8, 28)).map((r) => r.label)).toEqual(['7th', '21st', '28th']);
+  it('labels the real date, not a bare ordinal', () => {
+    // "28th" leaves you working out the weekday yourself — the thing that made
+    // monthly habits feel unschedulable. Asserted loosely because the exact
+    // wording is the viewer's locale ("Mon 28 Sept" vs "Mon, Sep 28").
+    const labels = cadenceRows(month, [], 1, at(2026, 9, 15)).map((r) => r.label);
+    expect(labels.every((l) => /Mon/.test(l))).toBe(true); // Sep 2026: 7/21/28 are all Mondays
+    expect(labels.map((l) => l.match(/\d+/)![0])).toEqual(['7', '21', '28']);
+  });
+
+  it('orders by day of month', () => {
+    expect(cadenceRows(month, [], 1, at(2026, 8, 28)).map((r) => r.habit.name))
+      .toEqual(['Simplify', 'Beliefs & values', 'Life review']);
   });
 
   it('marks the habit due on today date', () => {
     const rows = cadenceRows(month, [], 1, at(2026, 8, 28));
     expect(rows.find((r) => r.isToday)?.habit.name).toBe('Life review');
+  });
+
+  it('counts down to the anchor, then to the end of the month', () => {
+    const on = (d: number) => Object.fromEntries(
+      cadenceRows(month, [], 1, at(2026, 9, d)).map((r) => [r.habit.name, r.due]),
+    );
+    // Sep 15: the 7th has gone (30 - 15 = 15 days left in the month); the
+    // others are still ahead.
+    expect(on(15)).toEqual({ 'Simplify': '15 days left', 'Beliefs & values': 'in 6 days', 'Life review': 'in 13 days' });
+    expect(on(30)['Life review']).toBe('last day'); // September has 30 days
   });
 });

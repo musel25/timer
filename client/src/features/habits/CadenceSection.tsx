@@ -86,8 +86,13 @@ export function CadenceSection({
               {r.target > 1 && (
                 <span className="shrink-0 text-xs tabular-nums text-slate-400">{r.done}/{r.target}</span>
               )}
-              {r.isToday && !r.satisfied && (
-                <span className="shrink-0 text-xs font-medium" style={{ color: solid(color.rgb) }}>today</span>
+              {r.due && (
+                <span
+                  className={`shrink-0 text-xs ${r.isToday ? 'font-medium' : 'text-slate-500'}`}
+                  style={r.isToday ? { color: solid(color.rgb) } : undefined}
+                >
+                  {r.due}
+                </span>
               )}
             </button>
             {r.done > 0 && onUndo && (
