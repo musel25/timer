@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, EyeOff, Flame, MoreHorizontal, Pencil, Plus, ShieldCheck } from 'lucide-react';
+import { Check, EyeOff, Flame, MoreHorizontal, Pencil, Plus, ShieldCheck, SquarePen, Undo2 } from 'lucide-react';
 import type { Habit } from '../../lib/types';
 import { HabitIcon } from '../../lib/habitIcons';
 import { categoryColor, gradient, tint, solid } from '../../lib/palette';
@@ -22,10 +22,16 @@ export interface LogEntry {
  * abstinence habit ('abstain' kind) instead shows an end-of-day "stayed off
  * today" toggle and a clean-day streak.
  *
+ * A 'check' habit ('did I do it at all?' — a courageous act, a monthly review)
+ * shows one button that opens its entry form.
+ *
  * Props: `onLog` commits a {@link LogEntry} for a time habit; the abstain trio
  * (`markedToday`, `streak`, `onToggle`) drives the avoid-habit check; `onHide`
  * is the Today hide control; `editTo` links to the editor and `detailTo` to the
- * drill-down; `goalMin` is the effective goal for today.
+ * drill-down; `goalMin` is the effective goal for today. `onOpenEntry` opens the
+ * structured composer (a habit with a template); `streakUnit` names what the
+ * streak counts, and `progressLabel` replaces the goal bar for weekly/monthly
+ * habits, where minutes are not the point.
  */
 export function HabitCard({
   habit,
@@ -38,6 +44,9 @@ export function HabitCard({
   streak = 0,
   goalMin,
   onToggle,
+  onOpenEntry,
+  streakUnit = 'day',
+  progressLabel,
 }: {
   habit: Habit;
   minutesToday: number;
@@ -49,6 +58,9 @@ export function HabitCard({
   streak?: number;
   goalMin?: number | null; // effective goal for today; falls back to habit.dailyGoalMin
   onToggle?: (h: Habit) => void;
+  onOpenEntry?: (h: Habit) => void;
+  streakUnit?: 'day' | 'week' | 'month';
+  progressLabel?: string;
 }) {
   const color = categoryColor(habit.id);
   const rawGoal = goalMin !== undefined ? goalMin : habit.dailyGoalMin;
@@ -116,6 +128,34 @@ export function HabitCard({
     </div>
   );
 
+  // Check habit: done or not for its period, with an entry form behind it.
+  // Minutes are meaningless here, so there is no duration picker or goal bar.
+  if (habit.kind === 'check') {
+    return (
+      <div className="card group relative overflow-hidden p-4">
+        <div className="absolute inset-x-0 top-0 h-1" style={{ backgroundImage: gradient(color.rgb) }} />
+        {header}
+        <button
+          onClick={() => (markedToday ? onToggle?.(habit) : onOpenEntry?.(habit))}
+          className="chip w-full justify-center gap-1.5 py-2 font-medium"
+          style={
+            markedToday
+              ? { borderColor: solid(color.rgb), backgroundImage: gradient(color.rgb, 0.9, 0.6), color: '#fff' }
+              : { borderColor: tint(color.rgb, 0.5), backgroundColor: tint(color.rgb, 0.08), color: solid(color.rgb) }
+          }
+        >
+          {markedToday ? <Undo2 size={14} /> : <SquarePen size={14} />}
+          {markedToday ? 'Done — undo' : 'Log it'}
+        </button>
+        {progressLabel && <div className="mt-2 text-xs text-slate-400">{progressLabel}</div>}
+        <div className="mt-2 flex items-center gap-1 text-xs text-slate-400">
+          <Flame size={13} className={streak > 0 ? 'text-amber-500' : ''} />
+          {streak > 0 ? `${streak}-${streakUnit} streak` : `Start a ${streakUnit}ly streak`}
+        </div>
+      </div>
+    );
+  }
+
   // Abstinence habit: one end-of-day toggle + clean-day streak, nothing to log.
   if (habit.kind === 'abstain') {
     return (
@@ -158,19 +198,19 @@ export function HabitCard({
             <Plus size={14} /> Log {defaultMin} min
           </button>
           <button
-            onClick={openLog}
-            aria-label="Custom log"
-            aria-expanded={logging}
-            title="Log a specific amount"
+            onClick={() => (onOpenEntry ? onOpenEntry(habit) : openLog())}
+            aria-label={onOpenEntry ? 'Open entry form' : 'Custom log'}
+            aria-expanded={onOpenEntry ? undefined : logging}
+            title={onOpenEntry ? 'Log with the full entry form' : 'Log a specific amount'}
             className="chip shrink-0 justify-center px-3 py-2"
             style={{ borderColor: tint(color.rgb, 0.5), backgroundColor: tint(color.rgb, 0.1), color: solid(color.rgb) }}
           >
-            <MoreHorizontal size={16} />
+            {onOpenEntry ? <SquarePen size={16} /> : <MoreHorizontal size={16} />}
           </button>
         </div>
       )}
 
-      {onLog && logging && (
+      {onLog && !onOpenEntry && logging && (
         <div className="mt-2 flex items-center gap-1.5 rounded-xl border border-ink-600/60 bg-ink-900/40 p-2.5">
           {/* just a number box for a specific amount */}
           <input
@@ -196,7 +236,9 @@ export function HabitCard({
         </div>
       )}
 
-      {goal ? (
+      {progressLabel ? (
+        <div className="mt-3 text-xs text-slate-400">{progressLabel}</div>
+      ) : goal ? (
         <div className="mt-3">
           <GoalBar done={minutesToday} goal={goal} rgb={color.rgb} />
         </div>
@@ -205,7 +247,7 @@ export function HabitCard({
       ) : null}
       <div className="mt-2 flex items-center gap-1 text-xs text-slate-400">
         <Flame size={13} className={streak > 0 ? 'text-amber-500' : ''} />
-        {streak > 0 ? `${streak}-day streak` : 'Start a streak'}
+        {streak > 0 ? `${streak}-${streakUnit} streak` : 'Start a streak'}
       </div>
     </div>
   );

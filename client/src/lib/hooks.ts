@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 import { buildManualSession } from './sessionLog';
+import { periodKey } from './cadence';
 import { applyReorder } from './order';
-import type { CalendarEvent, Desktop, Habit, HabitGroup, Note, RestDay, Session, Settings, Task, TaskAttachment, TimerPreset, VacationDay } from './types';
+import type { Cadence, CalendarEvent, Desktop, EntryData, Habit, HabitGroup, Note, RestDay, Session, Settings, Task, TaskAttachment, TimerPreset, VacationDay } from './types';
 
 export interface Me {
   user: { id: string; email: string } | null;
@@ -19,13 +20,22 @@ export const useSessions = () =>
 /**
  * Log a habit by hand (no timer): POST a completed session, refresh today's
  * stats. `note` records what was done; `endedAt` back-dates the log (defaults to
- * now) so a forgotten day can be filled in.
+ * now) so a forgotten day can be filled in. `cadence` decides which period the
+ * completion is stamped with — resolved here, in the browser, because the server
+ * has no idea what timezone the user is in. `entry` holds template answers.
  */
 export function useLogSession() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ habitId, minutes, note, endedAt }: { habitId: string; minutes: number; note?: string | null; endedAt?: number }) =>
-      api.post('/sessions', buildManualSession(habitId, minutes, endedAt ?? Date.now(), note ?? null)),
+    mutationFn: ({ habitId, minutes, note, endedAt, cadence = 'daily', entry }: {
+      habitId: string; minutes: number; note?: string | null; endedAt?: number;
+      cadence?: Cadence; entry?: EntryData | null;
+    }) => {
+      const at = endedAt ?? Date.now();
+      return api.post('/sessions', buildManualSession(habitId, minutes, at, note ?? null, {
+        periodKey: periodKey(cadence, at), entry: entry ?? null,
+      }));
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['sessions'] }),
   });
 }

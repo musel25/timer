@@ -4,9 +4,20 @@ import { Plus } from 'lucide-react';
 import { Stepper } from '../../components/Stepper';
 import { useDeleteHabit, useGroups, useHabits, useSaveGroup, useSaveHabit } from '../../lib/hooks';
 import { HabitIcon, HABIT_ICONS, HABIT_ICON_NAMES, DEFAULT_HABIT_ICON } from '../../lib/habitIcons';
+import type { Cadence, EntryTemplate, HabitKind } from '../../lib/types';
+import { TEMPLATE_IDS, templateTitle } from './templates';
 
 const DURATION_CHOICES = [3, 5, 10, 15, 20, 25, 30, 45, 60]; // minutes
 const DEFAULT_DURATIONS = [5, 10, 20];
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const KINDS: { id: HabitKind; label: string; hint: string }[] = [
+  { id: 'time', label: 'Log time', hint: 'Log the minutes you spent by hand — habits never run a timer.' },
+  { id: 'check', label: 'Just done', hint: 'No minutes worth asking for: it either happened or it did not.' },
+  { id: 'abstain', label: 'Avoid', hint: 'Mark "stayed off it" at the end of each day to build a clean streak.' },
+];
+const CADENCES: { id: Cadence; label: string }[] = [
+  { id: 'daily', label: 'Daily' }, { id: 'weekly', label: 'Weekly' }, { id: 'monthly', label: 'Monthly' },
+];
 
 export function HabitEditor() {
   const { id } = useParams();
@@ -22,7 +33,11 @@ export function HabitEditor() {
   const [icon, setIcon] = useState(DEFAULT_HABIT_ICON);
   const [note, setNote] = useState('');
   const [groupId, setGroupId] = useState<string | null>(null);
-  const [kind, setKind] = useState<'time' | 'abstain'>('time');
+  const [kind, setKind] = useState<HabitKind>('time');
+  const [cadence, setCadence] = useState<Cadence>('daily');
+  const [anchor, setAnchor] = useState<number | null>(null);
+  const [targetCount, setTargetCount] = useState(1);
+  const [template, setTemplate] = useState<EntryTemplate | null>(null);
   const [goal, setGoal] = useState(20); // daily goal in minutes (0 = none)
   const [weekendGoal, setWeekendGoal] = useState(0); // 0 = same as daily goal
   const [vacationGoal, setVacationGoal] = useState(0); // 0 = same as weekend/daily
@@ -36,6 +51,10 @@ export function HabitEditor() {
     setNote(existing.note ?? '');
     setGroupId(existing.groupId);
     setKind(existing.kind ?? 'time');
+    setCadence(existing.cadence ?? 'daily');
+    setAnchor(existing.anchor ?? null);
+    setTargetCount(existing.targetCount ?? 1);
+    setTemplate(existing.template ?? null);
     setGoal(existing.dailyGoalMin ?? 0);
     setWeekendGoal(existing.weekendGoalMin ?? 0);
     setVacationGoal(existing.vacationGoalMin ?? 0);
@@ -72,8 +91,14 @@ export function HabitEditor() {
       note: note.trim() || null,
       groupId,
       kind,
+      cadence,
+      // A daily habit has no anchor; a weekly one defaults to Monday, a monthly
+      // one to the 1st, so it always has a day to surface on.
+      anchor: cadence === 'daily' ? null : anchor ?? (cadence === 'weekly' ? 1 : 1),
+      targetCount: cadence === 'daily' ? 1 : Math.max(1, targetCount),
+      template,
       durations,
-      defaultDurationMin: kind === 'abstain' ? null : defaultMin,
+      defaultDurationMin: kind === 'time' ? defaultMin : null,
       dailyGoalMin: kind === 'time' && goal > 0 ? goal : null,
       weekendGoalMin: kind === 'time' && weekendGoal > 0 ? weekendGoal : null,
       vacationGoalMin: kind === 'time' && vacationGoal > 0 ? vacationGoal : null,
@@ -112,23 +137,95 @@ export function HabitEditor() {
       <div>
         <label className="label">Type</label>
         <div className="mt-1 flex gap-1.5">
-          <button
-            onClick={() => setKind('time')}
-            className={`chip flex-1 justify-center px-3 py-1.5 ${kind === 'time' ? 'chip-active' : ''}`}
-          >
-            Log time
-          </button>
-          <button
-            onClick={() => setKind('abstain')}
-            className={`chip flex-1 justify-center px-3 py-1.5 ${kind === 'abstain' ? 'chip-active' : ''}`}
-          >
-            Avoid (daily check)
-          </button>
+          {KINDS.map((k) => (
+            <button
+              key={k.id}
+              onClick={() => setKind(k.id)}
+              className={`chip flex-1 justify-center px-3 py-1.5 ${kind === k.id ? 'chip-active' : ''}`}
+            >
+              {k.label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-1.5 text-xs text-slate-400">{KINDS.find((k) => k.id === kind)?.hint}</p>
+      </div>
+
+      <div>
+        <label className="label">How often</label>
+        <div className="mt-1 flex gap-1.5">
+          {CADENCES.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => { setCadence(c.id); if (c.id === 'daily') { setAnchor(null); setTargetCount(1); } }}
+              className={`chip flex-1 justify-center px-3 py-1.5 ${cadence === c.id ? 'chip-active' : ''}`}
+              disabled={kind === 'abstain' && c.id !== 'daily'}
+            >
+              {c.label}
+            </button>
+          ))}
         </div>
         <p className="mt-1.5 text-xs text-slate-400">
-          {kind === 'time'
-            ? 'Log the minutes you spent by hand — habits never run a timer.'
-            : 'Mark "stayed off it" at the end of each day to build a clean streak.'}
+          {cadence === 'daily'
+            ? 'Counts a streak of consecutive days.'
+            : `Counts a streak of consecutive ${cadence === 'weekly' ? 'weeks' : 'months'}. The day below is when it surfaces — logging it any time in the ${cadence === 'weekly' ? 'week' : 'month'} still counts.`}
+        </p>
+      </div>
+
+      {cadence !== 'daily' && (
+        <div className="card space-y-3 p-4">
+          <div>
+            <label className="label">Shows up on</label>
+            {cadence === 'weekly' ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {WEEKDAYS.map((d, i) => (
+                  <button
+                    key={d}
+                    onClick={() => setAnchor(i)}
+                    className={`chip px-3 py-1.5 ${(anchor ?? 1) === i ? 'chip-active' : ''}`}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-2">
+                <Stepper label="Day of month" value={anchor ?? 1} onChange={setAnchor} min={1} max={28} step={1} editable />
+                <p className="mt-2 text-xs text-slate-400">Capped at the 28th so it exists in every month.</p>
+              </div>
+            )}
+          </div>
+          <div className="border-t border-ink-600/60 pt-3">
+            <Stepper label="Times per period" value={targetCount} onChange={setTargetCount} min={1} max={7} step={1} editable />
+            <p className="mt-2 text-xs text-slate-400">
+              {targetCount > 1
+                ? `${targetCount}× per ${cadence === 'weekly' ? 'week' : 'month'} to keep the streak.`
+                : `Once per ${cadence === 'weekly' ? 'week' : 'month'}.`}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div>
+        <label className="label">Entry form</label>
+        <div className="mt-1 flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setTemplate(null)}
+            className={`chip px-3 py-1.5 ${template === null ? 'chip-active' : ''}`}
+          >
+            Plain note
+          </button>
+          {TEMPLATE_IDS.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTemplate(t)}
+              className={`chip px-3 py-1.5 ${template === t ? 'chip-active' : ''}`}
+            >
+              {templateTitle(t)}
+            </button>
+          ))}
+        </div>
+        <p className="mt-1.5 text-xs text-slate-400">
+          {template ? 'Logging this habit opens its structured questions.' : 'Logging asks only for minutes and an optional note.'}
         </p>
       </div>
 
