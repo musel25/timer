@@ -83,6 +83,33 @@ describe('desktops table + CRUD', () => {
     expect(created.id).toBe(list[0].id);
   });
 
+  it('round-trips a task with subtasks', async () => {
+    const cookie = await makeUser('subs');
+    const tasks = [
+      { id: 't1', text: 'rewrite methods', done: false, subtasks: [
+        { id: 's1', text: 'pull the 2024 numbers', done: true },
+        { id: 's2', text: 'redo figure 3', done: false },
+      ] },
+      { id: 't2', text: 'draft intro', done: true },
+    ];
+    const d = await (await api.request('/desktops', send('POST', cookie, { title: 'Thesis', tasks }))).json();
+    expect(d.tasks).toEqual(tasks);
+
+    const patched = await (await api.request(`/desktops/${d.id}`, send('PATCH', cookie, {
+      tasks: [{ ...tasks[0], subtasks: [...tasks[0].subtasks, { id: 's3', text: 'recheck the stats', done: false }] }],
+    }))).json();
+    expect(patched.tasks[0].subtasks.map((s: { id: string }) => s.id)).toEqual(['s1', 's2', 's3']);
+  });
+
+  it('still accepts a task with no subtasks field (rows written before subtasks existed)', async () => {
+    const cookie = await makeUser('legacy');
+    const res = await api.request('/desktops', send('POST', cookie, {
+      title: 'Old', tasks: [{ id: 't1', text: 'build grid', done: false }],
+    }));
+    expect(res.status).toBe(201);
+    expect((await res.json()).tasks[0].subtasks).toBeUndefined();
+  });
+
   it('focusing a desktop demotes the previously focused one', async () => {
     const cookie = await makeUser('bob');
     const a = await (await api.request('/desktops', send('POST', cookie, { title: 'A', focused: true }))).json();

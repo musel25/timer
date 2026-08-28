@@ -1,21 +1,18 @@
 import { useState, type KeyboardEvent } from 'react';
-import { Archive, ChevronUp, Plus, Trash2, X } from 'lucide-react';
+import { Archive, ChevronUp, Trash2 } from 'lucide-react';
 import type { Desktop } from '../../lib/types';
 import { useDeleteDesktop, useSaveDesktop } from '../../lib/hooks';
 import { categoryColor, solid, tint } from '../../lib/palette';
-import { addComment, addTask, removeTask, taskProgress, toggleTask } from './cardOps';
-
-/** Comment timestamp: time of day today, short date otherwise. */
-function fmtAt(at: number): string {
-  const d = new Date(at);
-  return d.toDateString() === new Date().toDateString()
-    ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-}
+import { taskProgress } from './cardOps';
+import { TaskList } from './TaskList';
 
 /**
  * The pinned full-width editor for the focused desktop. Mount it with
  * key={desktop.id} so the local drafts reset when a different card is pinned.
+ *
+ * A desktop is an organiser, not a journal: tasks and their steps take the whole
+ * width. Cards still carry the `comments` written before the log was dropped —
+ * the column is left untouched so nothing already written is lost.
  */
 export function DesktopStage({ desktop, number }: { desktop: Desktop; number: number }) {
   const save = useSaveDesktop();
@@ -25,8 +22,6 @@ export function DesktopStage({ desktop, number }: { desktop: Desktop; number: nu
   const [title, setTitle] = useState(desktop.title);
   const [lane, setLane] = useState(desktop.lane ?? '');
   const [desc, setDesc] = useState(desktop.description ?? '');
-  const [newTask, setNewTask] = useState('');
-  const [newNote, setNewNote] = useState('');
 
   const { done, total } = taskProgress(desktop.tasks);
 
@@ -42,19 +37,6 @@ export function DesktopStage({ desktop, number }: { desktop: Desktop; number: nu
   };
   const blurOnEnter = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-  };
-
-  const submitTask = () => {
-    const t = newTask.trim();
-    if (!t) return;
-    save.mutate({ id: desktop.id, tasks: addTask(desktop.tasks, t) });
-    setNewTask('');
-  };
-  const submitNote = () => {
-    const t = newNote.trim();
-    if (!t) return;
-    save.mutate({ id: desktop.id, comments: addComment(desktop.comments, t, Date.now()) });
-    setNewNote('');
   };
 
   return (
@@ -105,66 +87,12 @@ export function DesktopStage({ desktop, number }: { desktop: Desktop; number: nu
         placeholder="Describe what lives on this desktop…"
       />
 
-      {/* tasks + log */}
-      <div className="grid gap-5 md:grid-cols-2">
-        <div className="space-y-1.5">
-          <div className="flex items-baseline justify-between">
-            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Tasks</h3>
-            {total > 0 && <span className="font-mono text-[11px] tabular-nums text-slate-500">{done}/{total}</span>}
-          </div>
-          {desktop.tasks.map((t) => (
-            <div key={t.id} className="group flex items-center gap-2.5 rounded-lg px-1 py-0.5 hover:bg-ink-700/40">
-              <input
-                type="checkbox"
-                checked={t.done}
-                onChange={() => save.mutate({ id: desktop.id, tasks: toggleTask(desktop.tasks, t.id) })}
-                className="h-4 w-4 accent-accent"
-              />
-              <span className={`flex-1 text-sm ${t.done ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
-                {t.text}
-              </span>
-              <button
-                onClick={() => save.mutate({ id: desktop.id, tasks: removeTask(desktop.tasks, t.id) })}
-                className="rounded p-1 text-slate-600 opacity-0 transition-opacity hover:text-slate-300 group-hover:opacity-100"
-                title="Remove task"
-              >
-                <X size={13} />
-              </button>
-            </div>
-          ))}
-          <div className="flex items-center gap-2 pt-1">
-            <Plus size={14} className="shrink-0 text-slate-600" />
-            <input
-              value={newTask}
-              onChange={(e) => setNewTask(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') submitTask(); }}
-              className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none placeholder:text-slate-600"
-              placeholder="Add a task…"
-            />
-          </div>
+      <div className="space-y-1.5">
+        <div className="flex items-baseline justify-between">
+          <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Tasks</h3>
+          {total > 0 && <span className="font-mono text-[11px] tabular-nums text-slate-500">{done}/{total}</span>}
         </div>
-
-        <div className="space-y-1.5">
-          <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Log</h3>
-          <div className="flex items-center gap-2">
-            <Plus size={14} className="shrink-0 text-slate-600" />
-            <input
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') submitNote(); }}
-              className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none placeholder:text-slate-600"
-              placeholder="Note what just happened…"
-            />
-          </div>
-          <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
-            {desktop.comments.map((cm) => (
-              <div key={cm.id} className="border-l-2 pl-2.5" style={{ borderColor: tint(color.rgb, 0.5) }}>
-                <div className="font-mono text-[10px] tabular-nums text-slate-500">{fmtAt(cm.at)}</div>
-                <div className="text-sm text-slate-300">{cm.text}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <TaskList tasks={desktop.tasks} onChange={(tasks) => save.mutate({ id: desktop.id, tasks })} />
       </div>
 
       {/* footer actions */}
@@ -172,12 +100,12 @@ export function DesktopStage({ desktop, number }: { desktop: Desktop; number: nu
         <button
           onClick={() => save.mutate({ id: desktop.id, archivedAt: Date.now(), focused: false })}
           className="btn-outline flex items-center gap-1.5 text-sm"
-          title="Archive — the journal survives; later desktops renumber down"
+          title="Archive — the card survives; later desktops renumber down"
         >
           <Archive size={15} /> Done
         </button>
         <button
-          onClick={() => { if (window.confirm(`Delete “${desktop.title}” and its journal?`)) del.mutate(desktop.id); }}
+          onClick={() => { if (window.confirm(`Delete “${desktop.title}” and its tasks?`)) del.mutate(desktop.id); }}
           className="btn-outline flex items-center gap-1.5 text-sm text-slate-400"
         >
           <Trash2 size={15} /> Delete

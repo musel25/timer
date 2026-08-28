@@ -1,18 +1,17 @@
-import { MessageSquare } from 'lucide-react';
 import type { Desktop } from '../../lib/types';
 import { categoryColor, solid, tint } from '../../lib/palette';
-import { taskProgress } from './cardOps';
+import { subtaskProgress, taskProgress } from './cardOps';
 
 /**
  * One compact card in the Exposé grid. Everything on it is glanceable state:
- * number (its workspace position), title, lane, progress, the next open tasks,
- * and the latest journal line. Clicking pins it as the focused stage.
+ * number (its workspace position), title, lane, progress and the next open
+ * tasks, each with how far through its steps it is. Clicking pins it as the
+ * focused stage.
  */
 export function DesktopCard({ desktop, number, onOpen }: { desktop: Desktop; number: number; onOpen: () => void }) {
   const color = categoryColor(desktop.lane || desktop.id);
   const { done, total } = taskProgress(desktop.tasks);
   const open = desktop.tasks.filter((t) => !t.done).slice(0, 3);
-  const latest = desktop.comments[0];
 
   return (
     <button
@@ -53,20 +52,21 @@ export function DesktopCard({ desktop, number, onOpen }: { desktop: Desktop; num
 
       {open.length > 0 && (
         <ul className="space-y-0.5 text-xs text-slate-400">
-          {open.map((t) => (
-            <li key={t.id} className="flex items-baseline gap-1.5 truncate">
-              <span className="text-slate-600">○</span>
-              <span className="truncate">{t.text}</span>
-            </li>
-          ))}
+          {open.map((t) => {
+            const sub = subtaskProgress(t);
+            return (
+              <li key={t.id} className="flex items-baseline gap-1.5">
+                <span className="shrink-0 text-slate-600">○</span>
+                <span className="truncate">{t.text}</span>
+                {sub.total > 0 && (
+                  <span className="ml-auto shrink-0 font-mono tabular-nums text-slate-600">
+                    {sub.done}/{sub.total}
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ul>
-      )}
-
-      {latest && (
-        <div className="flex items-baseline gap-1.5 border-l-2 border-ink-600 pl-2 text-xs text-slate-500">
-          <MessageSquare size={11} className="shrink-0 translate-y-px" />
-          <span className="truncate">{latest.text}</span>
-        </div>
       )}
     </button>
   );

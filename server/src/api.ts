@@ -486,7 +486,8 @@ api.delete('/notes/:id', (c) => {
 });
 
 /* ---------- desktops (one card per Ubuntu workspace) ---------- */
-const desktopTask = z.object({ id: z.string(), text: z.string().min(1), done: z.boolean() });
+const desktopSubtask = z.object({ id: z.string(), text: z.string().min(1), done: z.boolean() });
+const desktopTask = desktopSubtask.extend({ subtasks: z.array(desktopSubtask).optional() });
 const desktopComment = z.object({ id: z.string(), text: z.string().min(1), at: z.number() });
 const desktopInput = z.object({
   title: z.string().min(1),

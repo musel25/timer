@@ -224,10 +224,22 @@ export interface TaskAttachment {
   createdAt: number;
 }
 
+/** A task's breakdown — one level deep on purpose: a desktop card is a place to
+ *  organise a workspace, not a project tree. */
+export interface DesktopSubtask {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
 export interface DesktopTask {
   id: string;
   text: string;
   done: boolean;
+  /** Optional on read: rows the service worker cached before subtasks existed
+   *  have no such field, and a missing list must read as an empty one (the
+   *  `isArchived` precedent in features/notes). */
+  subtasks?: DesktopSubtask[];
 }
 
 /** One journal entry on a desktop card; newest first in the array. */
