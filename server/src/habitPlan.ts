@@ -37,9 +37,14 @@ const daily = (
   template, durations, defaultDurationMin: goal, dailyGoalMin: goal,
 });
 
-/** The one daily habit missing from the original seed. */
+/**
+ * The daily layer. Journaling and the end-of-day check already exist on older
+ * accounts; these are the ones the plan adds, each with the form it logs into.
+ */
 export const NEW_DAILY: PlannedHabit[] = [
   daily('Portuguese', 'languages', '15–20 min', 'Morning', 15, [5, 10, 15, 20, 25], null),
+  daily('LeetCode', 'swords', '1 problem or 20 min', 'Morning', 20, [10, 15, 20, 25, 30, 45], 'leetcode'),
+  daily('Read', 'book-open', '20 min', 'Night', 20, [10, 15, 20, 25, 30, 45], 'read'),
 ];
 
 /**

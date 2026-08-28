@@ -54,11 +54,13 @@ export function bootstrap(): void {
     { g: work, name: 'Prog. Read', emoji: '💻', note: null, durations: [5, 10, 15, 20], def: 10, kind: 'time', goal: 20 },
     { g: work, name: 'LeetCode', emoji: '⚔️', note: 'review / build from memory', durations: [5, 10, 15, 20, 25, 30], def: 15, kind: 'time', goal: 20 },
     { g: night, name: 'Journaling', emoji: '✍️', note: 'in French', durations: [5, 10, 15, 20], def: 10, kind: 'time', goal: 20 },
-    { g: night, name: 'Reading', emoji: '📖', note: 'meaning + pronunciation', durations: [5, 10, 15, 20, 25, 30], def: 20, kind: 'time', goal: 20 },
     { g: night, name: 'App P', emoji: 'phone-off', note: "End of day: confirm you didn't doomscroll", durations: [20], def: null, kind: 'abstain', goal: null },
     { g: night, name: 'App I', emoji: 'phone-off', note: "End of day: confirm you didn't doomscroll", durations: [20], def: null, kind: 'abstain', goal: null },
   ];
   const groupByName = { Morning: morning, Work: work, Night: night } as const;
+  // The legacy list above already carries some plan habits (LeetCode); seeding a
+  // duplicate would be indistinguishable from a real second habit.
+  const planHabits = CADENCE_PLAN.filter((h) => !seedHabits.some((sh) => sh.name === h.name));
 
   db.insert(habits)
     .values([
@@ -78,9 +80,9 @@ export function bootstrap(): void {
         archived: false,
         createdAt: now,
       })),
-      // The weekly and monthly layers, shared with the upgrade backfill in db.ts
-      // so a fresh install and an existing account end up with the same plan.
-      ...CADENCE_PLAN.map((h, i) => ({
+      // The cadence plan, shared with the upgrade backfill in db.ts so a fresh
+      // install and an existing account end up with the same habits.
+      ...planHabits.map((h, i) => ({
         id: newId(),
         userId,
         groupId: h.group ? groupByName[h.group].id : null,
@@ -132,5 +134,5 @@ export function bootstrap(): void {
     ])
     .run();
 
-  console.log(`[seed] Created account ${email} with ${seedHabits.length + CADENCE_PLAN.length} habits.`);
+  console.log(`[seed] Created account ${email} with ${seedHabits.length + planHabits.length} habits.`);
 }

@@ -83,6 +83,11 @@ describe('installing the cadence plan on an existing account', () => {
     expect(habitNamed('Reading')).toMatchObject({ template: 'read' });
   });
 
+  it('adds the daily habits with the form each one logs into', () => {
+    expect(habitNamed('Read')).toMatchObject({ cadence: 'daily', template: 'read', group_id: 'g-night', daily_goal_min: 20 });
+    expect(habitNamed('LeetCode')).toMatchObject({ cadence: 'daily', template: 'leetcode', group_id: 'g-morning', daily_goal_min: 20 });
+  });
+
   it('leaves untouched habits alone', () => {
     // Additive only: trimming the daily list is a decision for the editor, not
     // a side effect of deploying.
