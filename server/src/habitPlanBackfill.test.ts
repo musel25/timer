@@ -29,7 +29,7 @@ seedDb.exec(`
   );
   INSERT INTO users VALUES ('u1', 'me@example.com', 'x', 0);
   INSERT INTO users VALUES ('u2', 'someone-else@example.com', 'x', 0);
-  INSERT INTO habit_groups (id, user_id, name, sort_order) VALUES ('g-night', 'u1', 'Night', 2);
+  INSERT INTO habit_groups (id, user_id, name, sort_order) VALUES ('g-night', 'u1', 'Night', 2), ('g-morning', 'u1', 'Morning', 0);
   INSERT INTO habits (id, user_id, group_id, name, durations, daily_goal_min, sort_order, created_at)
     VALUES ('h-journal', 'u1', 'g-night', 'Journaling', '[5,10]', 20, 5, 0),
            ('h-read', 'u1', 'g-night', 'Reading', '[10,20]', 20, 6, 0),
@@ -89,8 +89,8 @@ describe('installing the cadence plan on an existing account', () => {
     expect(habitNamed('Anki')).toMatchObject({ template: null, cadence: 'daily', archived: 0, daily_goal_min: 20 });
   });
 
-  it('puts Portuguese in the Night group alongside the other evening study', () => {
-    expect(habitNamed('Portuguese')).toMatchObject({ cadence: 'daily', group_id: 'g-night', daily_goal_min: 15 });
+  it('puts Portuguese in the Morning group', () => {
+    expect(habitNamed('Portuguese')).toMatchObject({ cadence: 'daily', group_id: 'g-morning', daily_goal_min: 15 });
   });
 
   it('leaves weekly and monthly habits ungrouped', () => {

@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
-import { useHabits, useGroups, useSessions, useLogSession, useDeleteSession, useRestDays, useVacationDays } from '../../lib/hooks';
+import { useHabits, useGroups, useSessions, useLogSession, useDeleteSession, useRestDays, useVacationDays, useSettings } from '../../lib/hooks';
 import type { EntryData, Habit } from '../../lib/types';
 import { habitStreak, todaySummary, todaysHabitSession, effectiveGoal, isHabitDoneToday } from '../../lib/stats';
 import { startOfToday } from '../../lib/time';
-import { cadenceOf, isAnchorDay, isPeriodSatisfied, occurrencesByPeriod, periodKey, targetOf } from '../../lib/cadence';
+import { cadenceOf, periodKey } from '../../lib/cadence';
 import { HabitIcon } from '../../lib/habitIcons';
 import { HabitCard, type LogEntry } from '../habits/HabitCard';
-import { CadenceStrip } from '../habits/CadenceStrip';
+import { CadenceSection } from '../habits/CadenceSection';
 import { EntryForm, type EntrySubmission } from '../habits/EntryForm';
 import { lastEntryFor } from '../habits/entries';
 
@@ -18,11 +18,12 @@ import { lastEntryFor } from '../habits/entries';
  * composer; abstinence habits toggle a daily "stayed off it" check; habits with
  * a template open their structured entry form.
  *
- * Three layers share the page. Daily habits fill Today, grouped by time of day.
- * A weekly or monthly habit joins them only on its anchor day and only while its
- * period is unsatisfied — so Saturday shows Nature, and shows nothing once the
- * walk is logged. Underneath, one pill strip per layer keeps the whole week and
- * month visible (and loggable) without adding a dozen standing rows.
+ * Three layers are kept visually separate, because they answer different
+ * questions. "Daily" is today's list, grouped by time of day. "This week" and
+ * "This month" are agendas: a row per habit ordered by the day it comes round,
+ * with that day named, so there is never any doubt about when a habit is meant
+ * to happen. Today's row is highlighted — that highlight is the nudge, which is
+ * why a weekly habit needs no separate "due today" callout.
  */
 export function Dashboard() {
   const { data: habits = [] } = useHabits();
@@ -30,6 +31,7 @@ export function Dashboard() {
   const { data: sessions = [] } = useSessions();
   const { data: restDayRows = [] } = useRestDays();
   const { data: vacationRows = [] } = useVacationDays();
+  const { data: settings } = useSettings();
   const logSession = useLogSession();
   const deleteSession = useDeleteSession();
 
@@ -50,11 +52,6 @@ export function Dashboard() {
   const byTime = (a: Habit, b: Habit) => durOf(a) - durOf(b) || a.name.localeCompare(b.name);
   const doneToday = (h: Habit) => isHabitDoneToday(h, today, effectiveGoal(h, startOfToday(), vacationDays), sessions);
   const doneHabits = daily.filter(doneToday).sort(byTime);
-
-  /** Weekly/monthly habits that want attention today: anchored here, not yet met. */
-  const dueNow = [...weekly, ...monthly]
-    .filter((h) => isAnchorDay(h) && !isPeriodSatisfied(h, sessions))
-    .sort(byTime);
 
   const log = (habit: Habit, entry: LogEntry) =>
     logSession.mutate({
@@ -86,38 +83,24 @@ export function Dashboard() {
     setEntryFor(null);
   };
 
-  /** "1/2 this week" — the goal bar means nothing when minutes are not the point. */
-  const progressLabel = (h: Habit) => {
-    const cadence = cadenceOf(h);
-    if (cadence === 'daily') return undefined;
-    const target = targetOf(h);
-    const done = occurrencesByPeriod(h, sessions)[periodKey(cadence, Date.now())] ?? 0;
-    const unit = cadence === 'weekly' ? 'this week' : 'this month';
-    return target > 1 ? `${done}/${target} ${unit}` : done > 0 ? `Done ${unit}` : `Not yet ${unit}`;
-  };
-
   const hasForm = (h: Habit) => Boolean(h.template) || h.kind === 'check';
 
-  const card = (h: Habit) => {
-    const cadence = cadenceOf(h);
-    return (
-      <HabitCard
-        key={h.id}
-        habit={h}
-        minutesToday={today.minutesByHabit[h.id] ?? 0}
-        onLog={log}
-        editTo={`/habits/${h.id}/edit`}
-        detailTo={`/habits/${h.id}`}
-        markedToday={cadence === 'daily' ? today.doneHabitIds.has(h.id) : isPeriodSatisfied(h, sessions)}
-        streak={streakFor(h)}
-        streakUnit={cadence === 'weekly' ? 'week' : cadence === 'monthly' ? 'month' : 'day'}
-        progressLabel={progressLabel(h)}
-        goalMin={effectiveGoal(h, startOfToday(), vacationDays)}
-        onToggle={h.kind === 'abstain' ? toggleAbstain : undo}
-        onOpenEntry={hasForm(h) ? setEntryFor : undefined}
-      />
-    );
-  };
+  /** Daily habits only — the weekly and monthly layers render as agendas below. */
+  const card = (h: Habit) => (
+    <HabitCard
+      key={h.id}
+      habit={h}
+      minutesToday={today.minutesByHabit[h.id] ?? 0}
+      onLog={log}
+      editTo={`/habits/${h.id}/edit`}
+      detailTo={`/habits/${h.id}`}
+      markedToday={today.doneHabitIds.has(h.id)}
+      streak={streakFor(h)}
+      goalMin={effectiveGoal(h, startOfToday(), vacationDays)}
+      onToggle={h.kind === 'abstain' ? toggleAbstain : undo}
+      onOpenEntry={hasForm(h) ? setEntryFor : undefined}
+    />
+  );
 
   const ordered = [...groups].sort((a, b) => a.sortOrder - b.sortOrder);
   const ungrouped = daily.filter((h) => (!h.groupId || !groups.some((g) => g.id === h.groupId)) && !doneToday(h)).sort(byTime);
@@ -134,14 +117,16 @@ export function Dashboard() {
         <Link to="/habits/new" className="btn-accent shrink-0"><Plus size={16} /> New habit</Link>
       </header>
 
+      {daily.length > 0 && <h2 className="label border-b border-ink-600/60 pb-1">Daily</h2>}
+
       {ordered.map((group) => {
         const list = daily.filter((h) => h.groupId === group.id && !doneToday(h)).sort(byTime);
         if (list.length === 0) return null;
         return (
           <section key={group.id}>
-            <h2 className="label mb-2 flex items-center gap-2">
+            <h3 className="label mb-2 flex items-center gap-2">
               <HabitIcon name={group.emoji} size={16} /> {group.name}
-            </h2>
+            </h3>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {list.map(card)}
             </div>
@@ -151,18 +136,9 @@ export function Dashboard() {
 
       {ungrouped.length > 0 && (
         <section>
-          <h2 className="label mb-2">Other</h2>
+          <h3 className="label mb-2">Other</h3>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {ungrouped.map(card)}
-          </div>
-        </section>
-      )}
-
-      {dueNow.length > 0 && (
-        <section>
-          <h2 className="label mb-2">Due today</h2>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {dueNow.map(card)}
           </div>
         </section>
       )}
@@ -171,8 +147,8 @@ export function Dashboard() {
         <p className="py-8 text-center text-slate-500">No habits yet — add your first one above.</p>
       )}
 
-      <CadenceStrip title="This week" habits={weekly} sessions={sessions} onOpen={setEntryFor} />
-      <CadenceStrip title="This month" habits={monthly} sessions={sessions} onOpen={setEntryFor} />
+      <CadenceSection title="This week" habits={weekly} sessions={sessions} onOpen={setEntryFor} onUndo={undo} weekStart={settings?.weekStart ?? 1} />
+      <CadenceSection title="This month" habits={monthly} sessions={sessions} onOpen={setEntryFor} onUndo={undo} />
 
       {doneHabits.length > 0 && (
         <section>

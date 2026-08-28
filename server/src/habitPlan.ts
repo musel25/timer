@@ -14,7 +14,7 @@ export interface PlannedHabit {
   emoji: string;
   note: string | null;
   /** Habit group by name; weekly/monthly habits are ungrouped — they surface via
-   *  their anchor day and the cadence strips, not a time-of-day group. */
+   *  their anchor day in the weekly/monthly agenda, not a time-of-day group. */
   group: 'Morning' | 'Work' | 'Night' | null;
   kind: 'time' | 'check';
   cadence: 'daily' | 'weekly' | 'monthly';
@@ -39,7 +39,7 @@ const daily = (
 
 /** The one daily habit missing from the original seed. */
 export const NEW_DAILY: PlannedHabit[] = [
-  daily('Portuguese', 'languages', '15–20 min', 'Night', 15, [5, 10, 15, 20, 25], null),
+  daily('Portuguese', 'languages', '15–20 min', 'Morning', 15, [5, 10, 15, 20, 25], null),
 ];
 
 /**

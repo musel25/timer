@@ -29,9 +29,8 @@ export interface LogEntry {
  * (`markedToday`, `streak`, `onToggle`) drives the avoid-habit check; `onHide`
  * is the Today hide control; `editTo` links to the editor and `detailTo` to the
  * drill-down; `goalMin` is the effective goal for today. `onOpenEntry` opens the
- * structured composer (a habit with a template); `streakUnit` names what the
- * streak counts, and `progressLabel` replaces the goal bar for weekly/monthly
- * habits, where minutes are not the point.
+ * structured composer (a habit with a template) and `streakUnit` names what the
+ * streak counts.
  */
 export function HabitCard({
   habit,
@@ -46,7 +45,6 @@ export function HabitCard({
   onToggle,
   onOpenEntry,
   streakUnit = 'day',
-  progressLabel,
 }: {
   habit: Habit;
   minutesToday: number;
@@ -60,7 +58,6 @@ export function HabitCard({
   onToggle?: (h: Habit) => void;
   onOpenEntry?: (h: Habit) => void;
   streakUnit?: 'day' | 'week' | 'month';
-  progressLabel?: string;
 }) {
   const color = categoryColor(habit.id);
   const rawGoal = goalMin !== undefined ? goalMin : habit.dailyGoalMin;
@@ -147,10 +144,9 @@ export function HabitCard({
           {markedToday ? <Undo2 size={14} /> : <SquarePen size={14} />}
           {markedToday ? 'Done — undo' : 'Log it'}
         </button>
-        {progressLabel && <div className="mt-2 text-xs text-slate-400">{progressLabel}</div>}
         <div className="mt-2 flex items-center gap-1 text-xs text-slate-400">
           <Flame size={13} className={streak > 0 ? 'text-amber-500' : ''} />
-          {streak > 0 ? `${streak}-${streakUnit} streak` : `Start a ${streakUnit}ly streak`}
+          {streak > 0 ? `${streak}-${streakUnit} streak` : 'Start a streak'}
         </div>
       </div>
     );
@@ -236,9 +232,7 @@ export function HabitCard({
         </div>
       )}
 
-      {progressLabel ? (
-        <div className="mt-3 text-xs text-slate-400">{progressLabel}</div>
-      ) : goal ? (
+      {goal ? (
         <div className="mt-3">
           <GoalBar done={minutesToday} goal={goal} rgb={color.rgb} />
         </div>

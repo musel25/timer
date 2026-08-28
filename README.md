@@ -20,11 +20,13 @@ offline, syncs across devices behind a private login.
   highlighted) is one key away.
 - **Habit dashboard** — your daily habits grouped by time of day, each with duration presets.
   Tap a duration to start; click a habit to open its **drill-down** (Overview + Month).
-- **Three habit layers — daily · weekly · monthly** — a habit's *cadence* decides what its streak
-  counts. Weekly and monthly habits carry a **soft anchor day**: they surface in Today on that day
-  (Nature on Saturday, the life review on the 28th) but count anywhere in the period, so a walk
-  taken on Wednesday still satisfies the week. A pill strip per layer keeps the whole week and
-  month visible and loggable without adding a dozen standing rows.
+- **Three habit layers — daily · weekly · monthly** — kept visually separate, because they answer
+  different questions. **Daily** is today's list, grouped by time of day. **This week** and **This
+  month** are agendas: one row per habit ordered by the day it comes round, with that day named
+  (`Sat · Nature`, `28th · Life review`) and today's row highlighted, so there is never any doubt
+  about when a habit is meant to happen. The anchor day is **soft** — it decides when a habit
+  surfaces and nudges, while logging it any time in the period counts, so a walk taken on Wednesday
+  still satisfies the week.
 - **Structured entries** — a habit can open a real form instead of a note: the journal's theme
   rotates by weekday (self-awareness, beliefs, character, gratitude, problems, curiosity), courage
   records *anticipated vs actual* discomfort 1–5, and the monthly life review rates nine areas 0–10.
