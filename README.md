@@ -23,10 +23,10 @@ offline, syncs across devices behind a private login.
 - **Three habit layers — daily · weekly · monthly** — kept visually separate, because they answer
   different questions. **Daily** is today's list, grouped by time of day. **This week** and **This
   month** are agendas: one row per habit ordered by the day it comes round, with that day named
-  (`Sat · Nature`, `28th · Life review`) and today's row highlighted, so there is never any doubt
+  (`Sat · Courage`, `28th · Life review`) and today's row highlighted, so there is never any doubt
   about when a habit is meant to happen. The anchor day is **soft** — it decides when a habit
-  surfaces and nudges, while logging it any time in the period counts, so a walk taken on Wednesday
-  still satisfies the week.
+  surfaces and nudges, while logging it any time in the period counts, so a Saturday habit done on
+  Wednesday still satisfies the week.
 - **Structured entries** — a habit can open a real form instead of a note: the journal's theme
   rotates by weekday (self-awareness, beliefs, character, gratitude, problems, curiosity), courage
   records *anticipated vs actual* discomfort 1–5, and the monthly life review rates nine areas 0–10.

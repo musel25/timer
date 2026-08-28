@@ -62,8 +62,8 @@ describe('installing the cadence plan on an existing account', () => {
   });
 
   it('gives weekly habits their cadence, anchor and target', () => {
-    expect(habitNamed('Nature')).toMatchObject({ cadence: 'weekly', anchor: 6, target_count: 1, kind: 'time', daily_goal_min: 30 });
-    expect(habitNamed('Music')).toMatchObject({ cadence: 'weekly', target_count: 2, daily_goal_min: 20 });
+    expect(habitNamed('Courage')).toMatchObject({ cadence: 'weekly', anchor: 6, target_count: 1, kind: 'check', template: 'courage' });
+    expect(habitNamed('Music')).toMatchObject({ cadence: 'weekly', anchor: 3, target_count: 2, kind: 'time', daily_goal_min: 20 });
     expect(habitNamed('Weekly review')).toMatchObject({ cadence: 'weekly', anchor: 0, template: 'weekly-review' });
   });
 
@@ -112,9 +112,9 @@ describe('installing the cadence plan on an existing account', () => {
   });
 
   it('does not resurrect a habit the user deleted', () => {
-    // The marker is durable, so a later deploy must not bring Nature back.
-    sqlite.prepare("DELETE FROM habits WHERE name = 'Nature' AND user_id = 'u1'").run();
+    // The marker is durable, so a later deploy must not bring Music back.
+    sqlite.prepare("DELETE FROM habits WHERE name = 'Music' AND user_id = 'u1'").run();
     migrate();
-    expect(habitNamed('Nature', 'u1')).toBeUndefined();
+    expect(habitNamed('Music', 'u1')).toBeUndefined();
   });
 });

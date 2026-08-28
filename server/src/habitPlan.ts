@@ -1,5 +1,5 @@
 /**
- * The V1 three-layer habit plan: four daily habits, six weekly, four monthly.
+ * The three-layer habit plan: the daily habits, three weekly, two monthly.
  *
  * Kept here so the fresh-install seed (seed.ts) and the upgrade backfill (db.ts)
  * cannot drift apart — a habit added to one and forgotten in the other would
@@ -43,36 +43,21 @@ export const NEW_DAILY: PlannedHabit[] = [
 ];
 
 /**
- * Weekly habits. Anchors are spread across the week so no single day carries
- * more than one, and they are *soft*: the anchor decides when a habit surfaces
- * in Today, never whether it counts. Courage and social opportunities vary by
- * week — a hard day would force either a faked log or a broken streak.
+ * Weekly habits. The anchor is *soft*: it decides when a habit surfaces in Today,
+ * never whether it counts — courage opportunities vary by week, and a hard day
+ * would force either a faked log or a broken streak. Music and Courage share
+ * midweek/weekend deliberately: they are the two that need a standing slot.
  */
 export const WEEKLY: PlannedHabit[] = [
   {
-    name: 'Courage', emoji: 'flame', note: 'One uncomfortable thing', group: null,
-    kind: 'check', cadence: 'weekly', anchor: 3, targetCount: 1, template: 'courage',
-    durations: [20], defaultDurationMin: null, dailyGoalMin: null,
-  },
-  {
-    name: 'Connection', emoji: 'heart', note: 'One intentional conversation with someone you care about', group: null,
-    kind: 'check', cadence: 'weekly', anchor: 5, targetCount: 1, template: null,
-    durations: [30], defaultDurationMin: null, dailyGoalMin: null,
-  },
-  {
     name: 'Music', emoji: 'guitar', note: 'Play — it does not have to be productive practice', group: null,
-    kind: 'time', cadence: 'weekly', anchor: 2, targetCount: 2, template: null,
+    kind: 'time', cadence: 'weekly', anchor: 3, targetCount: 2, template: null,
     durations: [20, 30, 45, 60], defaultDurationMin: 20, dailyGoalMin: 20,
   },
   {
-    name: 'Nature', emoji: 'sprout', note: 'Somewhere pleasant, 30 min+', group: null,
-    kind: 'time', cadence: 'weekly', anchor: 6, targetCount: 1, template: null,
-    durations: [30, 45, 60, 90], defaultDurationMin: 45, dailyGoalMin: 30,
-  },
-  {
-    name: 'Create', emoji: 'palette', note: 'Produce something that did not exist before', group: null,
-    kind: 'check', cadence: 'weekly', anchor: 4, targetCount: 1, template: null,
-    durations: [30], defaultDurationMin: null, dailyGoalMin: null,
+    name: 'Courage', emoji: 'flame', note: 'One uncomfortable thing', group: null,
+    kind: 'check', cadence: 'weekly', anchor: 6, targetCount: 1, template: 'courage',
+    durations: [20], defaultDurationMin: null, dailyGoalMin: null,
   },
   {
     name: 'Weekly review', emoji: 'target', note: 'Review the week and plan the next', group: null,
@@ -81,18 +66,8 @@ export const WEEKLY: PlannedHabit[] = [
   },
 ];
 
-/** Monthly habits, spread a week apart so they never all land on one day. */
+/** Monthly habits, a week apart so they never land on the same day. */
 export const MONTHLY: PlannedHabit[] = [
-  {
-    name: 'Simplify', emoji: 'ban', note: 'Declutter one thing — possessions, apps, commitments', group: null,
-    kind: 'check', cadence: 'monthly', anchor: 7, targetCount: 1, template: 'simplify',
-    durations: [30], defaultDurationMin: null, dailyGoalMin: null,
-  },
-  {
-    name: 'Try something new', emoji: 'sun', note: 'One thing you have never done before', group: null,
-    kind: 'check', cadence: 'monthly', anchor: 14, targetCount: 1, template: null,
-    durations: [60], defaultDurationMin: null, dailyGoalMin: null,
-  },
   {
     name: 'Beliefs & values', emoji: 'brain', note: 'Long-form reflection', group: null,
     kind: 'check', cadence: 'monthly', anchor: 21, targetCount: 1, template: null,
