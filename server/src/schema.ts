@@ -36,8 +36,18 @@ export const habits = sqliteTable('habits', {
   name: text('name').notNull(),
   emoji: text('emoji'),
   note: text('note'),
-  // 'time' = run/log in minutes; 'abstain' = end-of-day "stayed off it" check
+  // 'time' = run/log in minutes; 'abstain' = end-of-day "stayed off it" check;
+  // 'check' = simply done or not, no minutes worth asking for
   kind: text('kind').notNull().default('time'),
+  // 'daily' | 'weekly' | 'monthly'. Daily habits sum minutes against a per-day
+  // goal; weekly/monthly count occurrences against targetCount.
+  cadence: text('cadence').notNull().default('daily'),
+  // Weekly: weekday 0-6 (0 = Sunday). Monthly: day of month 1-28. Daily: NULL.
+  // Soft — it decides when the habit surfaces, not when it counts.
+  anchor: integer('anchor'),
+  targetCount: integer('target_count').notNull().default(1),
+  // Which structured entry form a completion opens; NULL = done + a note.
+  template: text('template'),
   // number[] of minutes offered, e.g. [5,10,15,20,25,30]
   durations: text('durations', { mode: 'json' }).notNull().$type<number[]>(),
   defaultDurationMin: integer('default_duration_min'),
@@ -88,6 +98,12 @@ export const sessions = sqliteTable('sessions', {
   // Legacy: unused by the app (nested focus sessions were removed). Column kept
   // dormant so old rows and export/import dumps stay valid.
   parentSessionId: text('parent_session_id'),
+  // The period this completion counts toward: '2026-08-28' | '2026-W35' |
+  // '2026-08'. Written by the client, which is the only side that knows the
+  // user's timezone and therefore which day/week a write belongs to.
+  periodKey: text('period_key'),
+  // Answers to the habit template's fields, keyed by field id.
+  entry: text('entry', { mode: 'json' }).$type<Record<string, string | number>>(),
   createdAt: integer('created_at').notNull(),
 });
 

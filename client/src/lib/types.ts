@@ -36,8 +36,22 @@ export type TimerType = 'simple' | 'interval';
 export type PresetType = TimerType | 'pomodoro';
 
 /** 'time' habits are run/logged in minutes; 'abstain' habits are an end-of-day
- *  "I stayed off it" check whose streak counts consecutive clean days. */
-export type HabitKind = 'time' | 'abstain';
+ *  "I stayed off it" check whose streak counts consecutive clean days; 'check'
+ *  habits are simply done or not, with no minutes worth asking for (a courageous
+ *  act, a monthly review). */
+export type HabitKind = 'time' | 'abstain' | 'check';
+
+/** How often a habit comes round. Daily habits keep the original semantics:
+ *  minutes summed against a per-day goal. Weekly/monthly habits instead count
+ *  occurrences against {@link Habit.targetCount}. */
+export type Cadence = 'daily' | 'weekly' | 'monthly';
+
+/** Which structured form a completion opens. NULL = done + an optional note. */
+export type EntryTemplate =
+  | 'journal' | 'read' | 'leetcode' | 'courage' | 'weekly-review' | 'life-review' | 'simplify';
+
+/** Answers to a template's fields, keyed by field id. */
+export type EntryData = Record<string, string | number>;
 
 export interface Habit {
   id: string;
@@ -55,6 +69,17 @@ export interface Habit {
   archived: boolean;
   hiddenOn: string | null; // 'YYYY-MM-DD' the habit was hidden from Today, or null
   createdAt: number;
+  /* --- cadence. All four are optional: a response the service worker cached
+     before these columns existed must read as a plain daily habit, not crash
+     the dashboard (same rule as `isArchived` in features/notes). --- */
+  cadence?: Cadence;
+  /** Weekly: weekday 0-6 (0 = Sunday). Monthly: day of month 1-28. Daily: null.
+   *  A *soft* anchor — it decides when the habit surfaces in Today, not when it
+   *  counts; completing it any time in the period satisfies the period. */
+  anchor?: number | null;
+  /** Occurrences needed per period (Music = 2). Absent = 1. */
+  targetCount?: number;
+  template?: EntryTemplate | null;
 }
 
 export interface Interval {
@@ -105,6 +130,12 @@ export interface Session {
   /** Always 'habit' now. 'focus' is legacy: it tagged the old focus-session
    *  "umbrella" (removed) and is still excluded from time totals for old rows. */
   category?: 'habit' | 'focus';
+  /** The period this completion counts toward: '2026-08-28' | '2026-W35' |
+   *  '2026-08'. Computed on the client — the server does not know the user's
+   *  timezone, so it cannot tell which day (let alone week) a write belongs to. */
+  periodKey?: string | null;
+  /** Answers to the habit template's fields, if it has one. */
+  entry?: EntryData | null;
   createdAt: number;
 }
 

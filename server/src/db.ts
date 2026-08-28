@@ -62,6 +62,10 @@ export function migrate(): void {
       sort_order INTEGER NOT NULL DEFAULT 0,
       archived INTEGER NOT NULL DEFAULT 0,
       hidden_on TEXT,
+      cadence TEXT NOT NULL DEFAULT 'daily',
+      anchor INTEGER,
+      target_count INTEGER NOT NULL DEFAULT 1,
+      template TEXT,
       created_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_habits_user ON habits(user_id);
@@ -94,6 +98,8 @@ export function migrate(): void {
       note TEXT,
       category TEXT NOT NULL DEFAULT 'habit',
       parent_session_id TEXT,
+      period_key TEXT,
+      entry TEXT,
       created_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
@@ -189,6 +195,12 @@ export function migrate(): void {
   addColumnIfMissing('habits', 'weekend_goal_min', 'INTEGER');
   addColumnIfMissing('habits', 'vacation_goal_min', 'INTEGER');
   addColumnIfMissing('notes', 'archived_at', 'INTEGER');
+  addColumnIfMissing('habits', 'cadence', "TEXT NOT NULL DEFAULT 'daily'");
+  addColumnIfMissing('habits', 'anchor', 'INTEGER');
+  addColumnIfMissing('habits', 'target_count', 'INTEGER NOT NULL DEFAULT 1');
+  addColumnIfMissing('habits', 'template', 'TEXT');
+  addColumnIfMissing('sessions', 'period_key', 'TEXT');
+  addColumnIfMissing('sessions', 'entry', 'TEXT');
   addColumnIfMissing('tasks', 'archived_at', 'INTEGER');
 
   // Pre-existing DBs: add the flag and mark the conventional 'Work' group once.

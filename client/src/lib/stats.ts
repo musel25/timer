@@ -1,5 +1,6 @@
 import type { Habit, Session } from './types';
 import { dayKey, startOfToday, addDays } from './time';
+import { cadenceOf, isPeriodSatisfied, periodStreak } from './cadence';
 
 /** Legacy guard: the old focus-session "umbrella" (since removed) overlapped the
  *  habit runs inside it, so any such historical row must stay excluded from
@@ -182,12 +183,18 @@ export function goalStreak(
 }
 
 /**
- * The streak to show for a habit: clean-day {@link currentStreak} for abstinence
- * habits, goal-met {@link goalStreak} for time habits. `restDays` bridge both;
- * `vacationDays` apply the lighter goal to time habits.
+ * The streak to show for a habit, in whatever unit its cadence counts.
+ *
+ * Weekly/monthly habits count consecutive satisfied *periods* via
+ * {@link periodStreak}; rest and vacation days deliberately do not apply to
+ * them, since a single rest day should not excuse a whole month. Daily habits
+ * keep their original behaviour exactly: clean-day {@link currentStreak} for
+ * abstinence and 'check' habits, goal-met {@link goalStreak} for time habits,
+ * with `restDays` bridging both and `vacationDays` lightening the goal.
  */
 export function habitStreak(habit: Habit, sessions: Session[], restDays: Set<string> = new Set(), vacationDays: Set<string> = new Set()): number {
-  return habit.kind === 'abstain'
+  if (cadenceOf(habit) !== 'daily') return periodStreak(habit, sessions);
+  return habit.kind === 'abstain' || habit.kind === 'check'
     ? currentStreak(sessions, habit.id, restDays)
     : goalStreak(sessions, habit, restDays, vacationDays);
 }
@@ -223,10 +230,12 @@ export function habitHeatmap(sessions: Session[], days: number, habitId: string)
 }
 
 /** Whether a habit counts as completed for today (drives the dashboard auto-hide).
- *  Abstain → marked today. Time → minutes reach today's effective goal; a habit
- *  with no configured goal today is never auto-completed. */
-export function isHabitDoneToday(habit: Habit, summary: TodaySummary, effectiveGoalToday: number | null): boolean {
-  if (habit.kind === 'abstain') return summary.doneHabitIds.has(habit.id);
+ *  Abstain/check → marked today. Time → minutes reach today's effective goal; a
+ *  habit with no configured goal today is never auto-completed. Weekly and
+ *  monthly habits are "done" for the whole period, not the day. */
+export function isHabitDoneToday(habit: Habit, summary: TodaySummary, effectiveGoalToday: number | null, sessions: Session[] = []): boolean {
+  if (cadenceOf(habit) !== 'daily') return isPeriodSatisfied(habit, sessions);
+  if (habit.kind === 'abstain' || habit.kind === 'check') return summary.doneHabitIds.has(habit.id);
   if (effectiveGoalToday == null) return false;
   return (summary.minutesByHabit[habit.id] ?? 0) >= effectiveGoalToday - 1e-9;
 }

@@ -159,7 +159,11 @@ const habitInput = z.object({
   name: z.string().min(1),
   emoji: z.string().nullable().optional(),
   note: z.string().nullable().optional(),
-  kind: z.enum(['time', 'abstain']).optional(),
+  kind: z.enum(['time', 'abstain', 'check']).optional(),
+  cadence: z.enum(['daily', 'weekly', 'monthly']).optional(),
+  anchor: z.number().int().min(0).max(31).nullable().optional(),
+  targetCount: z.number().int().min(1).max(31).optional(),
+  template: z.string().max(40).nullable().optional(),
   durations: z.array(z.number().int().positive()).min(1),
   defaultDurationMin: z.number().int().positive().nullable().optional(),
   dailyGoalMin: z.number().int().positive().nullable().optional(),
@@ -181,6 +185,8 @@ api.post('/habits', async (c) => {
     emoji: p.data.emoji ?? null, note: p.data.note ?? null, kind: p.data.kind ?? 'time', durations: p.data.durations,
     defaultDurationMin: p.data.defaultDurationMin ?? null, dailyGoalMin: p.data.dailyGoalMin ?? null,
     weekendGoalMin: p.data.weekendGoalMin ?? null, vacationGoalMin: p.data.vacationGoalMin ?? null,
+    cadence: p.data.cadence ?? 'daily', anchor: p.data.anchor ?? null,
+    targetCount: p.data.targetCount ?? 1, template: p.data.template ?? null,
     sortOrder: p.data.sortOrder ?? Date.now(), archived: p.data.archived ?? false, createdAt: Date.now(),
   };
   db.insert(habits).values(row).run();
@@ -215,6 +221,10 @@ const sessionInput = z.object({
   endedAt: z.number().int(),
   note: z.string().nullable().optional(),
   category: z.enum(['habit', 'focus']).optional(), // 'focus' accepted only for legacy/import data
+  // Client-computed: only the browser knows the user's timezone, so only it can
+  // say which day/week/month a completion belongs to.
+  periodKey: z.string().max(20).nullable().optional(),
+  entry: z.record(z.union([z.string(), z.number()])).nullable().optional(),
 });
 
 api.get('/sessions', (c) => {
@@ -238,7 +248,7 @@ api.post('/sessions', async (c) => {
     id: s.id ?? newId(), userId: uid(c), habitId: s.habitId ?? null, timerId: s.timerId ?? null,
     label: s.label ?? null, type: s.type, plannedSeconds: s.plannedSeconds, actualSeconds: s.actualSeconds,
     completed: s.completed ?? true, startedAt: s.startedAt, endedAt: s.endedAt, note: s.note ?? null,
-    category: s.category ?? 'habit', createdAt: now,
+    category: s.category ?? 'habit', periodKey: s.periodKey ?? null, entry: s.entry ?? null, createdAt: now,
   }));
   if (rows.length) db.insert(sessions).values(rows).onConflictDoNothing().run();
   return c.json({ inserted: rows.length, ids: rows.map((r) => r.id) }, 201);
