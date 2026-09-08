@@ -85,6 +85,22 @@ function touchTap(el: HTMLElement, wiggle = 8) {
   fireEvent.click(el, { ...to, detail: 1 });
 }
 
+/** The events a mouse fires for one click. `drift` is how far the pointer
+ *  slides between press and release — a hand on a 17px checkbox rarely holds
+ *  still, and once the drag sensor activates dnd-kit swallows the click
+ *  outright, so a realistic click must survive a few px of drift. */
+function mouseClick(el: HTMLElement, drift = 8) {
+  const from = { clientX: 40, clientY: 40 };
+  const to = { clientX: 40 + drift, clientY: 40 };
+  fireEvent.mouseDown(el, { ...from, button: 0, detail: 1 });
+  if (drift) {
+    fireEvent.mouseMove(document, { ...to, button: 0 });
+    fireEvent.mouseMove(document, { ...to, button: 0 });
+  }
+  fireEvent.mouseUp(document, { ...to, button: 0 });
+  fireEvent.click(el, { ...to, detail: 1 });
+}
+
 describe('WeekBoard touch taps', () => {
   beforeEach(() => {
     toggleMutate.mockClear();
@@ -101,5 +117,30 @@ describe('WeekBoard touch taps', () => {
     render(<WeekBoard />);
     touchTap(screen.getByText('Buy milk'));
     expect(screen.getByPlaceholderText('Task title')).toBeDefined();
+  });
+});
+
+describe('WeekBoard mouse clicks', () => {
+  beforeEach(() => {
+    toggleMutate.mockClear();
+    saveMutate.mockClear();
+  });
+
+  it('a click with a small hand drift still completes the task', () => {
+    render(<WeekBoard />);
+    mouseClick(screen.getByLabelText('Mark done'));
+    expect(toggleMutate).toHaveBeenCalledWith({ id: 't1', done: true });
+  });
+
+  it('a click with a small hand drift still opens the editor', () => {
+    render(<WeekBoard />);
+    mouseClick(screen.getByText('Buy milk'));
+    expect(screen.getByPlaceholderText('Task title')).toBeDefined();
+  });
+
+  it('a real drag does not toggle the task it picked up', () => {
+    render(<WeekBoard />);
+    mouseClick(screen.getByLabelText('Mark done'), 120);
+    expect(toggleMutate).not.toHaveBeenCalled();
   });
 });

@@ -142,12 +142,16 @@ export function WeekBoard() {
   const summary = todaySummary(sessions);
   const [editing, setEditing] = useState<Task | null>(null);
   const [showArchive, setShowArchive] = useState(false);
-  // Mouse and touch need opposite activation rules. A mouse tap lands within a
-  // couple of px, so distance works; a fingertip rolls 5px on a plain tap, so a
-  // distance-based sensor turns taps into drags and the click never fires. On
-  // touch, drag is long-press (tolerance is finger wobble allowed during it).
+  // Mouse and touch need opposite activation rules. On touch, drag is
+  // long-press (tolerance is finger wobble allowed during it); on mouse it is
+  // distance — but the distance has to clear the drift of an ordinary click,
+  // not just a twitch. The moment a sensor activates, dnd-kit stops the next
+  // click dead at the document (capture-phase stopPropagation), so a threshold
+  // a hand crosses on the way to ticking a 17px checkbox doesn't merely start a
+  // stray drag: it eats the click outright, and the task never gets marked
+  // done. 5px was under that drift, which silently swallowed clicks all day.
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 12 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
   );
   // True while a drag is in flight; cleared a tick after drop so the click
