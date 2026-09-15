@@ -12,8 +12,8 @@ const groups: { title: string; tabs: { to: string; label: string; icon: LucideIc
   {
     title: 'Plan',
     tabs: [
-      { to: '/desktops', label: 'Desktops', icon: Monitor },
       { to: '/week', label: 'Week', icon: CalendarDays },
+      { to: '/desktops', label: 'Desktops', icon: Monitor },
     ],
   },
   {
@@ -44,11 +44,11 @@ const shortcutKeyOf = (to: string) => {
 };
 
 // Most-used items for the mobile bottom bar.
-// Six slots (the bar is grid-cols-6). Desktops takes the first; Notes drops off
+// Six slots (the bar is grid-cols-6). Week takes the first; Notes drops off
 // here and stays reachable from the sidebar on wider screens.
 const mobileTabs: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
-  { to: '/desktops', label: 'Desktops', icon: Monitor },
   { to: '/week', label: 'Week', icon: CalendarDays },
+  { to: '/desktops', label: 'Desktops', icon: Monitor },
   { to: '/timer', label: 'Timer', icon: Timer },
   { to: '/habits', label: 'Habits', icon: Repeat },
   { to: '/stats', label: 'Progress', icon: BarChart3 },
@@ -60,7 +60,7 @@ export function Layout() {
   const navigate = useNavigate();
   const waiting = agents ? askingCount(agents.cards) : 0;
 
-  // 1-9 jump straight to a tab (1 Week, 2 Timer, 3 Habits, ...).
+  // 1-9 jump straight to a tab (1 Week, 2 Desktops, 3 Timer, ...).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Never steal a key from a text field, a browser/OS chord (Cmd-1 switches

@@ -43,7 +43,7 @@ function AuthedApp() {
   const routes = (
     <Routes>
       <Route element={<Layout />}>
-        <Route path="/" element={<Navigate to="/desktops" replace />} />
+        <Route path="/" element={<Navigate to="/week" replace />} />
         <Route path="/desktops" element={<DesktopsBoard />} />
         <Route path="/now" element={<Navigate to="/desktops" replace />} />
         <Route path="/week" element={<WeekBoard />} />

@@ -5,7 +5,7 @@ import { Layout } from './Layout';
 
 function renderApp() {
   return render(
-    <MemoryRouter initialEntries={['/desktops']}>
+    <MemoryRouter initialEntries={['/week']}>
       <Routes>
         <Route element={<Layout />}>
           <Route path="/desktops" element={<div>desktops page</div>} />
@@ -28,22 +28,22 @@ describe('Layout number shortcuts', () => {
     fireEvent.keyDown(window, { key: '3' });
     expect(screen.getByText('timer page')).toBeDefined();
     fireEvent.keyDown(window, { key: '2' });
-    expect(screen.getByText('week page')).toBeDefined();
-    fireEvent.keyDown(window, { key: '1' });
     expect(screen.getByText('desktops page')).toBeDefined();
+    fireEvent.keyDown(window, { key: '1' });
+    expect(screen.getByText('week page')).toBeDefined();
   });
 
   it('ignores digits with no tab, modifier chords, and typing in a field', () => {
     renderApp();
     fireEvent.keyDown(window, { key: '9' });
-    expect(screen.getByText('desktops page')).toBeDefined();
+    expect(screen.getByText('week page')).toBeDefined();
     fireEvent.keyDown(window, { key: '3', metaKey: true });
-    expect(screen.getByText('desktops page')).toBeDefined();
+    expect(screen.getByText('week page')).toBeDefined();
 
     const input = document.createElement('input');
     document.body.appendChild(input);
     fireEvent.keyDown(input, { key: '3' });
-    expect(screen.getByText('desktops page')).toBeDefined();
+    expect(screen.getByText('week page')).toBeDefined();
     input.remove();
   });
 
@@ -53,7 +53,7 @@ describe('Layout number shortcuts', () => {
     overlay.setAttribute('data-modal', '');
     document.body.appendChild(overlay);
     fireEvent.keyDown(window, { key: '3' });
-    expect(screen.getByText('desktops page')).toBeDefined();
+    expect(screen.getByText('week page')).toBeDefined();
     overlay.remove();
   });
 });
