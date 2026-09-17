@@ -154,7 +154,7 @@ api.delete('/habit-groups/:id', (c) => {
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /* ---------- habits ---------- */
-const habitInput = z.object({
+export const habitInput = z.object({
   groupId: z.string().nullable().optional(),
   name: z.string().min(1),
   emoji: z.string().nullable().optional(),
@@ -169,7 +169,9 @@ const habitInput = z.object({
   defaultDurationMin: z.number().int().positive().nullable().optional(),
   dailyGoalMin: z.number().int().positive().nullable().optional(),
   weekendGoalMin: z.number().int().positive().nullable().optional(),
-  vacationGoalMin: z.number().int().positive().nullable().optional(),
+  // 0 is a real answer here — "this habit takes vacation days off" — so it
+  // must survive validation, unlike the other goals where 0 means "unset".
+  vacationGoalMin: z.number().int().nonnegative().nullable().optional(),
   sortOrder: z.number().int().optional(),
   archived: z.boolean().optional(),
   hiddenOn: z.string().regex(DATE_RE).nullable().optional(),

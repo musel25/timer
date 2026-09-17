@@ -9,7 +9,7 @@ import type { Cadence, EntryTemplate, Habit, HabitKind } from '../../lib/types';
 import { TEMPLATE_IDS, templateTitle } from './templates';
 
 const DURATION_CHOICES = [3, 5, 10, 15, 20, 25, 30, 45, 60]; // minutes
-const DEFAULT_DURATIONS = [5, 10, 20];
+const DEFAULT_DURATIONS = [25];
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 /** Which occurrence of the weekday a monthly habit falls on; 5 = the last. */
 const WEEKS: { value: number; label: string }[] = [
@@ -50,7 +50,7 @@ export function HabitEditor() {
   const [template, setTemplate] = useState<EntryTemplate | null>(null);
   const [goal, setGoal] = useState(20); // daily goal in minutes (0 = none)
   const [weekendGoal, setWeekendGoal] = useState(0); // 0 = same as daily goal
-  const [vacationGoal, setVacationGoal] = useState(0); // 0 = same as weekend/daily
+  const [vacationGoal, setVacationGoal] = useState(0); // 0 = the habit takes vacation days off
   const [durations, setDurations] = useState<number[]>(DEFAULT_DURATIONS);
   const [defaultMin, setDefaultMin] = useState(10);
 
@@ -117,7 +117,7 @@ export function HabitEditor() {
       defaultDurationMin: kind === 'time' ? defaultMin : null,
       dailyGoalMin: kind === 'time' && goal > 0 ? goal : null,
       weekendGoalMin: kind === 'time' && weekendGoal > 0 ? weekendGoal : null,
-      vacationGoalMin: kind === 'time' && vacationGoal > 0 ? vacationGoal : null,
+      vacationGoalMin: kind === 'time' ? vacationGoal : null,
     });
     navigate('/habits');
   }
@@ -284,8 +284,12 @@ export function HabitEditor() {
       {kind === 'time' && (
       <div className="card space-y-3 p-4">
         <div>
-          <label className="label">Quick-log amounts</label>
-          <p className="mb-2 mt-1 text-xs text-slate-400">One-tap minute buttons shown on the habit card.</p>
+          <label className="label">Log button</label>
+          <p className="mb-2 mt-1 text-xs text-slate-400">
+            {durations.length === 1
+              ? `The habit card logs ${durations[0]} min in one tap. Pick more lengths only if you want a choice.`
+              : 'The habit card shows one button per length. One is usually enough.'}
+          </p>
           <div className="flex flex-wrap gap-1.5">
             {DURATION_CHOICES.map((min) => (
               <button
@@ -332,7 +336,9 @@ export function HabitEditor() {
         <div className="mt-4 border-t border-ink-600/60 pt-3">
           <Stepper label="Vacation goal" value={vacationGoal} onChange={setVacationGoal} min={0} max={120} step={1} suffix="min" editable />
           <p className="mt-2 text-xs text-slate-400">
-            {vacationGoal > 0 ? `${vacationGoal} min on vacation days` : weekendGoal > 0 ? 'Vacation days use the weekend goal' : 'Vacation days use the daily goal'}
+            {vacationGoal > 0
+              ? `${vacationGoal} min on vacation days`
+              : 'Vacation days off — nothing required, and the streak survives'}
           </p>
         </div>
       </div>

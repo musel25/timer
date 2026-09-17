@@ -57,3 +57,17 @@ describe('vacation_days table + habit goal columns', () => {
 
 // Imported at the bottom so the TIMER_DB env stub above runs first.
 import { and, eq } from 'drizzle-orm';
+
+describe('habit input validation', () => {
+  it('accepts a vacation goal of 0 — the habit takes vacation days off', async () => {
+    const { habitInput } = await import('./api');
+    const parsed = habitInput.safeParse({ name: 'Work', durations: [25], vacationGoalMin: 0 });
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.vacationGoalMin).toBe(0);
+  });
+
+  it('still rejects a negative vacation goal', async () => {
+    const { habitInput } = await import('./api');
+    expect(habitInput.safeParse({ name: 'Work', durations: [25], vacationGoalMin: -5 }).success).toBe(false);
+  });
+});

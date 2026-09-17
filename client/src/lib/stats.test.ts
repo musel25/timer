@@ -219,6 +219,21 @@ describe('tiered goals (weekend / vacation)', () => {
     expect(effectiveGoal(v, mon, new Set([k]))).toBe(2);
   });
 
+  it('effectiveGoal: a vacation goal of 0 takes the day off instead of inheriting one', () => {
+    const k = dayKey(mon);
+    const off = { id: 'h1', dailyGoalMin: 30, weekendGoalMin: 5, vacationGoalMin: 0 };
+    expect(effectiveGoal(off, mon, new Set([k]))).toBe(0);
+    expect(effectiveGoal(off, mon, new Set())).toBe(30); // an ordinary day is untouched
+  });
+
+  it('a day off never breaks the streak — 0 minutes already meets a 0 goal', () => {
+    const off = { id: 'h1', dailyGoalMin: 30, weekendGoalMin: null, vacationGoalMin: 0 };
+    const today = startOfToday() + 12 * 3600_000;
+    const s = [session(today, { habitId: 'h1', actualSeconds: 30 * 60 })];
+    // Yesterday is a vacation day with nothing logged: the streak walks through it.
+    expect(goalStreak(s, off, new Set(), new Set([dayKey(addDays(today, -1))]))).toBe(2);
+  });
+
   it('effectiveGoal: no daily goal → null on a weekday', () => {
     expect(effectiveGoal({ id: 'h1', dailyGoalMin: null, weekendGoalMin: null, vacationGoalMin: null }, mon, new Set())).toBeNull();
   });

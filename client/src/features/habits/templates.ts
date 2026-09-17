@@ -129,7 +129,6 @@ const TEMPLATES: Record<EntryTemplate, Template> = {
     fields: [
       { id: 'minutes', label: 'Minutes', type: 'minutes' },
       { id: 'problem', label: 'Problem', type: 'line', placeholder: 'e.g. 146. LRU Cache' },
-      { id: 'difficulty', label: 'Difficulty', type: 'choice', options: ['Easy', 'Medium', 'Hard'] },
     ],
   },
   courage: {

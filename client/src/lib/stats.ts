@@ -131,12 +131,16 @@ type GoalHabit = { id: string; dailyGoalMin: number | null; weekendGoalMin?: num
  * use the weekend goal, falling back to the daily goal; weekdays use the daily
  * goal. No 10-minute fallback here — that stays inside goalStreak so it does not
  * leak into the completion/auto-hide check.
+ *
+ * A vacation goal of exactly 0 is a real answer, not a missing one: the habit
+ * takes the day off. Zero minutes then already meets the day, so a vacation
+ * never breaks a streak and the habit drops out of the day's count. Only
+ * null/undefined inherits the lighter goal below it.
  */
 export function effectiveGoal(habit: GoalHabit, ts: number, vacationDays: Set<string>): number | null {
   const daily = habit.dailyGoalMin && habit.dailyGoalMin > 0 ? habit.dailyGoalMin : null;
   const weekend = habit.weekendGoalMin && habit.weekendGoalMin > 0 ? habit.weekendGoalMin : null;
-  const vacation = habit.vacationGoalMin && habit.vacationGoalMin > 0 ? habit.vacationGoalMin : null;
-  if (vacationDays.has(dayKey(ts))) return vacation ?? weekend ?? daily;
+  if (vacationDays.has(dayKey(ts))) return habit.vacationGoalMin ?? weekend ?? daily;
   if (isWeekend(ts)) return weekend ?? daily;
   return daily;
 }
