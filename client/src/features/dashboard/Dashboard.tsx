@@ -8,10 +8,10 @@ import { startOfToday } from '../../lib/time';
 import { cadenceOf, periodKey } from '../../lib/cadence';
 import { HabitIcon } from '../../lib/habitIcons';
 import { HabitCard, type LogEntry } from '../habits/HabitCard';
-import { HabitPulse } from '../habits/HabitPulse';
 import { CadenceSection } from '../habits/CadenceSection';
 import { EntryForm, type EntrySubmission } from '../habits/EntryForm';
 import { lastEntryFor } from '../habits/entries';
+import { adherenceDays } from '../../lib/adherence';
 
 /**
  * The Habits dashboard: every habit as a card you log by hand. Habits are never
@@ -40,6 +40,7 @@ export function Dashboard() {
   const active = habits.filter((h) => !h.archived);
   const restDays = new Set(restDayRows.map((r) => r.date));
   const vacationDays = new Set(vacationRows.map((r) => r.date));
+  const dailySummary = adherenceDays(habits, sessions, 1, restDays, vacationDays)[0];
   const streakFor = (h: Habit) => habitStreak(h, sessions, restDays, vacationDays);
 
   const [showDone, setShowDone] = useState(false);
@@ -110,10 +111,13 @@ export function Dashboard() {
     <div className="space-y-6">
       <header className="hero flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-[16rem] flex-1">
-          <h1 className="text-3xl font-bold md:text-4xl">Habits</h1>
-          {/* Same block the Week board opens with, so today's fraction and the
-              week behind it can never read differently on the two tabs. */}
-          <div className="mt-3 max-w-md"><HabitPulse /></div>
+          <h1 className="page-title">Habits</h1>
+          <p className="mt-2 text-sm text-slate-400">Track your daily routines and weekly commitments.</p>
+          <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <span className="font-semibold">{dailySummary.rest ? 'Rest day — no daily targets' : dailySummary.total > 0 ? `${dailySummary.done} of ${dailySummary.total} daily habits complete` : 'No daily targets today'}</span>
+            <span className="text-slate-500">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+          </div>
+          {dailySummary.total > 0 && <div className="mt-2 h-1 max-w-sm overflow-hidden rounded-full bg-ink-700" role="progressbar" aria-label="Daily habits completed" aria-valuenow={dailySummary.done} aria-valuemin={0} aria-valuemax={dailySummary.total}><div className="h-full bg-accent" style={{ width: `${dailySummary.done / dailySummary.total * 100}%` }} /></div>}
         </div>
         <Link to="/habits/new" className="btn-accent shrink-0"><Plus size={16} /> New habit</Link>
       </header>
@@ -125,10 +129,10 @@ export function Dashboard() {
         if (list.length === 0) return null;
         return (
           <section key={group.id}>
-            <h3 className="label mb-2 flex items-center gap-2">
+            <h3 className="mb-3 text-sm font-semibold flex items-center gap-2">
               <HabitIcon name={group.emoji} size={16} /> {group.name}
             </h3>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="habit-list">
               {list.map(card)}
             </div>
           </section>
@@ -137,8 +141,8 @@ export function Dashboard() {
 
       {ungrouped.length > 0 && (
         <section>
-          <h3 className="label mb-2">Other</h3>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <h3 className="mb-3 text-sm font-semibold">Other</h3>
+          <div className="habit-list">
             {ungrouped.map(card)}
           </div>
         </section>
@@ -154,13 +158,14 @@ export function Dashboard() {
       {doneHabits.length > 0 && (
         <section>
           <button
+            aria-expanded={showDone}
             onClick={() => setShowDone((v) => !v)}
             className="label flex items-center gap-1.5 text-slate-400 transition hover:text-slate-200"
           >
             ✓ {doneHabits.length} completed today · {showDone ? 'hide' : 'show'}
           </button>
           {showDone && (
-            <div className="mt-2 grid gap-3 opacity-70 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="habit-list mt-3">
               {doneHabits.map(card)}
             </div>
           )}

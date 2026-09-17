@@ -33,13 +33,14 @@ import { WeekBoard } from './WeekBoard';
 import { todayKey } from '../../lib/date';
 import type { Task } from '../../lib/types';
 
-const { toggleMutate, saveMutate } = vi.hoisted(() => ({
+const { toggleMutate, saveMutate, taskState } = vi.hoisted(() => ({
   toggleMutate: vi.fn(),
+  taskState: { isLoading: false, isError: false },
   saveMutate: vi.fn(),
 }));
 
 vi.mock('../../lib/hooks', () => ({
-  useTasks: () => ({ data: tasks }),
+  useTasks: () => ({ data: tasks, ...taskState }),
   useSessions: () => ({ data: [] }),
   useRestDays: () => ({ data: [] }),
   // The hero's HabitPulse pulls these two as well.
@@ -145,5 +146,68 @@ describe('WeekBoard mouse clicks', () => {
     render(<WeekBoard />);
     mouseClick(screen.getByLabelText('Mark done'), 120);
     expect(toggleMutate).not.toHaveBeenCalled();
+  });
+});
+
+describe('WeekBoard planning controls', () => {
+  // Let dnd-kit's post-drag click-capture listener from the sensor tests expire.
+  beforeEach(async () => { await new Promise((resolve) => setTimeout(resolve, 60)); });
+  it('changes the displayed week and task summary, then returns to this week', () => {
+    render(<WeekBoard />);
+    expect(screen.getByText('1 tasks left')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Next week' }));
+    expect(screen.queryByText('Buy milk')).toBeNull();
+    expect(screen.getByText('0 tasks left')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'This week' }));
+    expect(screen.getByText('Buy milk')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Previous week' }));
+    expect(screen.queryByText('Buy milk')).toBeNull();
+  });
+
+  it('hides completed cards without changing the week totals', () => {
+    tasks.push({ ...tasks[0], id: 'done', title: 'Finished task', done: true });
+    try {
+      render(<WeekBoard />);
+      expect(screen.getByText('Finished task')).toBeDefined();
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Show completed' }));
+      expect(screen.queryByText('Finished task')).toBeNull();
+      expect(screen.getByText('1 of 2 completed')).toBeDefined();
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Show completed' }));
+      expect(screen.getByText('Finished task')).toBeDefined();
+    } finally { tasks.pop(); }
+  });
+});
+
+
+describe('Inbox access and availability', () => {
+  it('keeps completed inbox tasks available to undo and respects visibility', () => {
+    tasks.push({ ...tasks[0], id: 'inbox-done', title: 'Completed inbox task', date: null, done: true });
+    try {
+      render(<WeekBoard />);
+      expect(screen.getByText('Completed inbox task')).toBeDefined();
+      fireEvent.click(screen.getByRole('button', { name: 'Mark not done' }));
+      expect(toggleMutate).toHaveBeenCalledWith({ id: 'inbox-done', done: false });
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Show completed' }));
+      expect(screen.queryByText('Completed inbox task')).toBeNull();
+    } finally { tasks.pop(); }
+  });
+
+  it('switches mobile panels through explicit pressed buttons', () => {
+    render(<WeekBoard />);
+    const inbox = screen.getByRole('button', { name: 'Inbox (0)' });
+    fireEvent.click(inbox);
+    expect(inbox.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Week' }).getAttribute('aria-pressed')).toBe('false');
+    expect(document.querySelector('.planner-layout')?.getAttribute('data-mobile-panel')).toBe('inbox');
+  });
+
+  it('does not offer an empty editable board when the task request fails', () => {
+    taskState.isError = true;
+    try {
+      render(<WeekBoard />);
+      expect(screen.getByRole('alert')).toBeDefined();
+      expect(screen.queryByRole('button', { name: 'Create inbox task' })).toBeNull();
+      expect(screen.queryByText('0 tasks left')).toBeNull();
+    } finally { taskState.isError = false; }
   });
 });

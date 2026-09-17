@@ -12,6 +12,7 @@ function renderApp() {
           <Route path="/week" element={<div>week page</div>} />
           <Route path="/timer" element={<div>timer page</div>} />
           <Route path="/habits" element={<div>habits page</div>} />
+          <Route path="/notes" element={<div>notes page</div>} />
           <Route path="/stats" element={<div>progress page</div>} />
           <Route path="/settings" element={<div>settings page</div>} />
         </Route>
@@ -23,11 +24,11 @@ function renderApp() {
 describe('Layout number shortcuts', () => {
   it('jumps to the tab at that position in the sidebar', () => {
     renderApp();
-    fireEvent.keyDown(window, { key: '4' });
-    expect(screen.getByText('habits page')).toBeDefined();
-    fireEvent.keyDown(window, { key: '3' });
-    expect(screen.getByText('timer page')).toBeDefined();
     fireEvent.keyDown(window, { key: '2' });
+    expect(screen.getByText('habits page')).toBeDefined();
+    fireEvent.keyDown(window, { key: '4' });
+    expect(screen.getByText('timer page')).toBeDefined();
+    fireEvent.keyDown(window, { key: '3' });
     expect(screen.getByText('desktops page')).toBeDefined();
     fireEvent.keyDown(window, { key: '1' });
     expect(screen.getByText('week page')).toBeDefined();
@@ -55,5 +56,32 @@ describe('Layout number shortcuts', () => {
     fireEvent.keyDown(window, { key: '3' });
     expect(screen.getByText('week page')).toBeDefined();
     overlay.remove();
+  });
+});
+
+describe('mobile navigation', () => {
+  it('makes Notes reachable through More and closes after navigation', () => {
+    renderApp();
+    const more = screen.getByRole('button', { name: 'More' });
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(more);
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    const menu = document.getElementById('mobile-more')!;
+    const notes = Array.from(menu.querySelectorAll('a')).find((link) => link.textContent === 'Notes')!;
+    fireEvent.click(notes);
+    expect(screen.getByText('notes page')).toBeDefined();
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('dismisses More with Escape or a click outside', () => {
+    renderApp();
+    const more = screen.getByRole('button', { name: 'More' });
+    fireEvent.click(more);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(more);
+    fireEvent.click(more);
+    fireEvent.pointerDown(document.body);
+    expect(more.getAttribute('aria-expanded')).toBe('false');
   });
 });

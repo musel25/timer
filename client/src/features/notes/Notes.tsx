@@ -70,7 +70,7 @@ export function Notes() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <header className="hero">
-        <h1 className="text-3xl font-bold md:text-4xl">{inArchive ? 'Archive' : 'Notes'}</h1>
+        <h1 className="page-title">{inArchive ? 'Archive' : 'Notes'}</h1>
         <div className="mt-1 text-sm text-slate-300">
           {inArchive
             ? `${scoped.length} note${scoped.length === 1 ? '' : 's'} kept out of the way`

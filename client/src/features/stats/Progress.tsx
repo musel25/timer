@@ -78,7 +78,7 @@ export function Progress() {
     <div className="space-y-6">
       <header className="hero flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold md:text-4xl">Progress</h1>
+          <h1 className="page-title">Progress</h1>
           <p className="mt-1 text-sm text-slate-300">Logged minutes and streaks over time</p>
         </div>
         {/* The streak is the headline metric of a habit tracker. */}

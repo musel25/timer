@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Archive, ArchiveRestore, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DndContext, closestCorners, useDroppable, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, useSortable, rectSortingStrategy, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTasks, useSaveTask, useToggleTask, useReorderTasks, useCalendarEvents } from '../../lib/hooks';
 import { isArchived } from '../../lib/archive';
@@ -31,7 +31,7 @@ function DraggableTask({ task, index, onEdit, dragHappened, onArchive }: { task:
       style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
       {...listeners}
-      className={`flex cursor-grab touch-manipulation items-start gap-1.5 rounded-lg border border-ink-600 bg-ink-800 px-2.5 py-2 text-sm shadow-sm transition active:cursor-grabbing ${
+      className={`task-card flex cursor-grab touch-manipulation items-start gap-1.5 rounded-lg border border-ink-600 bg-ink-800 px-2.5 py-2 text-sm shadow-sm transition active:cursor-grabbing ${
         isDragging ? 'opacity-50' : ''
       }`}
     >
@@ -43,7 +43,7 @@ function DraggableTask({ task, index, onEdit, dragHappened, onArchive }: { task:
       <button
         onClick={() => { if (!dragHappened.current) toggle.mutate({ id: task.id, done: !task.done }); }}
         aria-label={task.done ? 'Mark not done' : 'Mark done'}
-        className={`mt-0.5 h-[17px] w-[17px] shrink-0 rounded border-[1.5px] ${task.done ? 'border-transparent bg-accent' : 'border-ink-500 hover:border-accent'}`}
+        className={`task-check mt-0.5 h-[18px] w-[17px] shrink-0 rounded border-[1.5px] ${task.done ? 'border-transparent bg-accent' : 'border-ink-500 hover:border-accent'}`}
       >
         {task.done && <Check size={13} strokeWidth={3} className="mx-auto text-white" />}
       </button>
@@ -102,42 +102,47 @@ function DropColumn({ id, children, layout = 'space-y-1.5' }: { id: string; chil
   );
 }
 
-function DayColumn({ dayKey, tasks, events, onEdit, dragHappened }: { dayKey: string; tasks: Task[]; events: CalendarEvent[]; onEdit: (t: Task) => void; dragHappened: React.MutableRefObject<boolean> }) {
+function DayColumn({ dayKey, tasks, events, onEdit, dragHappened, showCompleted }: { dayKey: string; tasks: Task[]; events: CalendarEvent[]; onEdit: (t: Task) => void; dragHappened: React.MutableRefObject<boolean>; showCompleted: boolean }) {
   const d = keyToDate(dayKey);
   const isToday = dayKey === todayKey();
   return (
     <div
-      className={`card flex flex-col p-3 ${isToday ? 'ring-1 ring-accent/50' : ''}`}
-      style={isToday ? { backgroundImage: 'linear-gradient(160deg, rgb(var(--accent) / 0.14), transparent 65%)' } : undefined}
+      className={`week-day ${isToday ? 'is-today' : ''}`}
     >
-      <div className={`mb-2 flex items-baseline justify-between px-1 ${isToday ? 'text-accent' : 'text-slate-400'}`}>
-        <span className="text-xs font-bold uppercase tracking-wide">{d.toLocaleDateString(undefined, { weekday: 'short' })}</span>
-        <span className="text-lg font-bold">{d.getDate()}</span>
+      <div className="flex flex-col items-start gap-1">
+        <div className="flex items-baseline gap-2"><span className="text-sm font-semibold">{d.toLocaleDateString(undefined, { weekday: 'short' })}</span><span className={`text-lg tabular-nums ${isToday ? 'font-semibold text-accent' : 'text-slate-400'}`}>{d.getDate()}</span></div>
+        {isToday && <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold text-accent">Today</span>}
+        <span className="text-[11px] text-slate-500">{tasks.filter((t) => !t.done).length} to do</span>
       </div>
+      <div className="day-tasks">
       {events.length > 0 && (
         <div className="mb-1.5 space-y-1 px-1">
           {events.map((e) => <EventChip key={e.id} event={e} />)}
         </div>
       )}
-      <DropColumn id={dayKey}>
-        <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-          {tasks.map((t) => (
+      <DropColumn id={dayKey} layout="day-task-list space-y-1.5">
+        <SortableContext items={tasks.map((t) => t.id)} strategy={rectSortingStrategy}>
+          {tasks.filter((t) => showCompleted || !t.done).map((t) => (
             <DraggableTask key={t.id} task={t} index={numberOf(tasks, t)} onEdit={onEdit} dragHappened={dragHappened} />
           ))}
         </SortableContext>
+        {tasks.length === 0 && <p className="px-1 py-1 text-xs text-slate-500">Nothing planned yet</p>}
       </DropColumn>
       <div className="mt-2"><QuickAdd date={dayKey} placeholder="Add task" compact /></div>
+      </div>
     </div>
   );
 }
 
 export function WeekBoard() {
-  const { data: tasks = [] } = useTasks();
+  const { data: tasks = [], isLoading, isError } = useTasks();
   const save = useSaveTask();
   const reorder = useReorderTasks();
   const [anchor, setAnchor] = useState(todayKey());
   const [editing, setEditing] = useState<Task | null>(null);
   const [showArchive, setShowArchive] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(true);
+  const [mobilePanel, setMobilePanel] = useState<'week' | 'inbox'>('week');
   // Mouse and touch need opposite activation rules. On touch, drag is
   // long-press (tolerance is finger wobble allowed during it); on mouse it is
   // distance — but the distance has to clear the drift of an ordinary click,
@@ -154,13 +159,14 @@ export function WeekBoard() {
   // that follows pointer-up doesn't toggle/edit the dragged task.
   const dragHappened = useRef(false);
 
-  // Always Monday-first here so the 2×4 board reads Mon–Thu / Fri–Sun + Inbox.
+  // Keep the planner Monday-first across every responsive layout.
   const days = weekDays(anchor, 1);
   const { data: events = [] } = useCalendarEvents(days[0], days[6]);
   const evByDay = eventsByDay(events);
   // Archived tasks leave the board entirely — Inbox and day columns alike —
   // until you open the archive. Newest-archived first once you do.
-  const inbox = columnOrder(tasks.filter((t) => t.date === null && !t.done && !isArchived(t)));
+  const inbox = columnOrder(tasks.filter((t) => t.date === null && !isArchived(t)));
+  const inboxOpen = inbox.filter((t) => !t.done).length;
   const archived = tasks
     .filter((t) => isArchived(t))
     .sort((a, b) => (b.archivedAt ?? 0) - (a.archivedAt ?? 0));
@@ -170,6 +176,10 @@ export function WeekBoard() {
   const byDateMap = new Map<string, Task[]>();
   for (const t of tasks) if (t.date && !isArchived(t)) { const arr = byDateMap.get(t.date) ?? []; arr.push(t); byDateMap.set(t.date, arr); }
   const byDate = (key: string) => columnOrder(byDateMap.get(key) ?? []);
+
+  const weekTasks = days.flatMap(byDate);
+  const completed = weekTasks.filter((t) => t.done).length;
+  const dateLabel = (key: string, year = true) => keyToDate(key).toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(year ? { year: 'numeric' as const } : {}) });
 
   // Every column the board can drop onto, keyed the same way the droppables are.
   const columns = new Map<string, Task[]>([[INBOX, inbox], ...days.map((k) => [k, byDate(k)] as const)]);
@@ -206,34 +216,43 @@ export function WeekBoard() {
 
   return (
     <div className="space-y-4">
-      <header className="hero flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-[16rem] flex-1">
-          <h1 className="text-3xl font-bold md:text-4xl">Week</h1>
-          {/* Habits, not tasks — but this is the tab you land on, so it is the
-              only place the week's rhythm is actually seen. */}
-          <div className="mt-3 max-w-md"><HabitPulse /></div>
+      <header className="hero flex flex-wrap items-end justify-between gap-5">
+        <div>
+          <h1 className="page-title">Week planner</h1>
+          <p className="mt-2 text-sm text-slate-400" aria-live="polite">{dateLabel(days[0], keyToDate(days[0]).getFullYear() !== keyToDate(days[6]).getFullYear())} – {dateLabel(days[6])}</p>
         </div>
-        <div className="flex gap-2">
-          <button className="btn-ghost px-3 py-1.5" onClick={() => setAnchor(addDaysKey(anchor, -7))}><ChevronLeft size={16} /></button>
-          <button className="btn-ghost px-3 py-1.5" onClick={() => setAnchor(todayKey())}>This week</button>
-          <button className="btn-ghost px-3 py-1.5" onClick={() => setAnchor(addDaysKey(anchor, 7))}><ChevronRight size={16} /></button>
+        <div className="flex items-center gap-1 rounded-lg border border-ink-600 bg-ink-800 p-1">
+          <button className="btn px-2.5 py-2 hover:bg-ink-700" aria-label="Previous week" onClick={() => setAnchor(addDaysKey(anchor, -7))}><ChevronLeft size={16} /></button>
+          <button className="btn px-3 py-2 hover:bg-ink-700" onClick={() => setAnchor(todayKey())}>This week</button>
+          <button className="btn px-2.5 py-2 hover:bg-ink-700" aria-label="Next week" onClick={() => setAnchor(addDaysKey(anchor, 7))}><ChevronRight size={16} /></button>
         </div>
       </header>
+      {!isLoading && !isError && <div className="flex flex-wrap items-center justify-between gap-3 py-1">
+        <p className="flex items-center gap-2 text-sm text-slate-400"><span className="font-semibold text-slate-100">{weekTasks.length - completed} tasks left</span><span className="text-slate-500">/</span>{completed} of {weekTasks.length} completed</p>
+        <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-400"><input type="checkbox" className="h-4 w-4 accent-[rgb(var(--accent))]" checked={showCompleted} onChange={(e) => setShowCompleted(e.target.checked)} />Show completed</label>
+      </div>}
+      {isLoading && <p role="status" className="text-sm text-slate-400">Loading your week…</p>}
+      {isError && <p role="alert" className="text-sm text-rose-400">Your tasks could not be loaded. Please refresh to try again.</p>}
 
-      <DndContext
+      {!isLoading && !isError && <div className="planner-mobile-switch flex gap-1 rounded-lg border border-ink-600 bg-ink-800 p-1" aria-label="Planner view">
+        <button type="button" aria-pressed={mobilePanel === 'week'} onClick={() => setMobilePanel('week')} className={`btn flex-1 py-2 ${mobilePanel === 'week' ? 'bg-accent-soft text-accent' : 'text-slate-400'}`}>Week</button>
+        <button type="button" aria-pressed={mobilePanel === 'inbox'} onClick={() => setMobilePanel('inbox')} className={`btn flex-1 py-2 ${mobilePanel === 'inbox' ? 'bg-accent-soft text-accent' : 'text-slate-400'}`}>Inbox ({inboxOpen})</button>
+      </div>}
+      {!isLoading && !isError && <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={() => { dragHappened.current = true; }}
         onDragCancel={clearDragSoon}
         onDragEnd={onDragEnd}
       >
-        {/* 2×4 board: Mon–Thu on the first row, Fri/Sat/Sun + Inbox on the second. */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {days.map((key) => <DayColumn key={key} dayKey={key} tasks={byDate(key)} events={evByDay.get(key) ?? []} onEdit={setEditing} dragHappened={dragHappened} />)}
+        {/* A seven-day agenda with a separate undated Inbox. */}
+        <div className="planner-layout" data-mobile-panel={mobilePanel}>
+          <div className="week-days">{days.map((key) => <DayColumn key={key} dayKey={key} tasks={byDate(key)} events={evByDay.get(key) ?? []} onEdit={setEditing} dragHappened={dragHappened} showCompleted={showCompleted} />)}</div>
 
-          <div className="card flex flex-col p-3">
+          <aside className="planner-inbox space-y-5">
+          <div className="card flex flex-col p-4">
             <div className="mb-2 flex items-baseline justify-between gap-2 px-1 text-slate-400">
-              <span className="text-xs font-bold uppercase tracking-wide">
+              <span className="text-sm font-semibold">
                 {inArchive ? 'Archived' : 'Inbox'}
               </span>
               <span className="flex items-baseline gap-2">
@@ -248,7 +267,7 @@ export function WeekBoard() {
                     <Archive size={12} /> {archived.length}
                   </button>
                 )}
-                {!inArchive && inbox.length > 0 && <span className="text-lg font-bold">{inbox.length}</span>}
+                {!inArchive && <span className="text-sm font-medium">{inboxOpen} to do</span>}
               </span>
             </div>
             {inArchive ? (
@@ -267,7 +286,7 @@ export function WeekBoard() {
               <>
                 <DropColumn id={INBOX}>
                   <SortableContext items={inbox.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-                    {inbox.map((t) => (
+                    {inbox.filter((t) => showCompleted || !t.done).map((t) => (
                       <DraggableTask
                         key={t.id}
                         task={t}
@@ -278,14 +297,17 @@ export function WeekBoard() {
                       />
                     ))}
                   </SortableContext>
-                  {inbox.length === 0 && <p className="px-1 py-2 text-sm text-slate-500">Drop undated tasks here.</p>}
+                  {inbox.length === 0 && <p className="px-1 py-2 text-sm text-slate-500">Capture tasks here, then open a task to choose its date.</p>}
                 </DropColumn>
                 <div className="mt-2"><QuickAdd date={null} placeholder="Capture a task…" compact /></div>
               </>
             )}
           </div>
+          <section className="rounded-lg border border-ink-600 p-4"><div className="mb-3 flex items-center justify-between gap-2"><h2 className="text-sm font-semibold">Habits today</h2><a href="/habits" className="text-xs font-medium text-accent hover:underline">View habits</a></div><HabitPulse /></section>
+          <p className="px-1 text-xs leading-relaxed text-slate-500">Open a task to choose its date. On a larger screen, you can also drag it into your week.</p>
+          </aside>
         </div>
-      </DndContext>
+      </DndContext>}
 
       {editing && <TaskEditor task={editing} onClose={() => setEditing(null)} />}
     </div>

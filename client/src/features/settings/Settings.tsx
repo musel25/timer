@@ -60,7 +60,7 @@ export function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <header className="hero">
-        <h1 className="text-3xl font-bold md:text-4xl">Settings</h1>
+        <h1 className="page-title">Settings</h1>
       </header>
 
       <section className="card space-y-2 p-4">

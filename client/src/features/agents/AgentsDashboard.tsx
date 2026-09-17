@@ -38,7 +38,7 @@ export function AgentsDashboard() {
       <header className="hero">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold md:text-4xl">Agents</h1>
+            <h1 className="page-title">Agents</h1>
             <p className="mt-1 text-sm text-slate-300">Your live Claude Code sessions across every project</p>
           </div>
           <div className="flex items-center gap-2">

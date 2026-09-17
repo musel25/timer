@@ -19,7 +19,7 @@ export const THEMES: { name: ThemeName; label: string; icon: 'moon' | 'sun' }[] 
 ];
 
 /** Page-chrome color per theme (browser status bar / address bar tint). */
-const THEME_CHROME: Record<ThemeName, string> = { night: '#0b0f14', day: '#fbfbfd' };
+const THEME_CHROME: Record<ThemeName, string> = { night: '#17191c', day: '#f6f7f9' };
 
 export function applyTheme(theme: ThemeName): void {
   // Anything that isn't an explicit 'day' is treated as night (also migrates

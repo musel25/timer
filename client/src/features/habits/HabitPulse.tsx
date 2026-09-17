@@ -19,9 +19,7 @@ function fill(done: number, total: number): string {
  * The one-line answer to "am I following my habits?": streak, today's daily
  * habits as a bar, and the last week as squares.
  *
- * It lives in the hero of both the Week board (the landing tab, where it is a
- * reminder you did not ask for) and the Habits dashboard (where it heads the
- * work itself), from one component so the two can never disagree.
+ * It supports the Week planner with a compact habit summary.
  *
  * Minutes are on purpose absent. Minutes are the input; whether the day's
  * habits got done is the outcome, and only the outcome belongs in a glance.
@@ -40,27 +38,27 @@ export function HabitPulse() {
   const pct = today.total > 0 ? (today.done / today.total) * 100 : 0;
   // Nothing to be faithful to yet (fresh install, or every habit weekly):
   // an empty bar and a row of grey squares would be a reproach for no reason.
-  if (streak === 0 && days.every((d) => d.total === 0)) return null;
+  if (streak === 0 && days.every((d) => d.total === 0)) return <p className="text-xs leading-relaxed text-slate-400">Your daily habit progress will appear here.</p>;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-      <span className="flex items-center gap-1.5 text-xl font-bold tabular-nums" style={{ color: 'rgb(217 144 30)' }}>
-        <Flame size={20} /> {streak}
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-3">
+      <span className="flex items-center gap-1 text-xs font-medium tabular-nums text-slate-400" title="Current streak">
+        <Flame size={14} /> {streak} day streak
       </span>
 
-      <span className="flex min-w-[8rem] flex-1 items-center gap-2.5">
-        <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-ink-700">
+      <span className="flex w-full items-center gap-2.5">
+        <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink-700">
           <span
             className="block h-full rounded-full bg-accent transition-all"
             style={{ width: `${pct}%` }}
           />
         </span>
         <span className={`text-sm tabular-nums ${today.done === today.total && today.total > 0 ? 'font-semibold text-accent' : 'text-slate-400'}`}>
-          {today.total > 0 ? `${today.done}/${today.total}` : today.rest ? 'rest' : '—'}
+          {today.total > 0 ? `${today.done}/${today.total} done` : today.rest ? 'rest' : '—'}
         </span>
       </span>
 
-      <span className="flex items-center gap-1.5">
+      <span className="flex items-center gap-1.5" aria-label="Habit completion over the last 7 days">
         {days.map((d, i) => (
           <span
             key={d.date}
@@ -71,6 +69,7 @@ export function HabitPulse() {
             style={{ backgroundColor: d.rest ? 'transparent' : fill(d.done, d.total) }}
           />
         ))}
+        <span className="ml-1 text-[10px] text-slate-500">Last 7 days</span>
       </span>
     </div>
   );

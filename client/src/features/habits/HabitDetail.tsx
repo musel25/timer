@@ -62,7 +62,7 @@ export function HabitDetail() {
 
       <header className="hero flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-3xl font-bold md:text-4xl">{habit.name}</h1>
+          <h1 className="page-title">{habit.name}</h1>
           {/* The day a weekly/monthly habit comes round, stated where you look
               it up rather than only on the agenda that nudges you. */}
           {cadenceLabel(habit) && <p className="mt-1 text-sm text-slate-400">{cadenceLabel(habit)}</p>}
