@@ -126,7 +126,8 @@ function DayColumn({ dayKey, tasks, events, onEdit, dragHappened, showCompleted 
             <DraggableTask key={t.id} task={t} index={numberOf(tasks, t)} onEdit={onEdit} dragHappened={dragHappened} />
           ))}
         </SortableContext>
-        {tasks.length === 0 && <p className="px-1 py-1 text-xs text-slate-500">Nothing planned yet</p>}
+        {tasks.length === 0 && <p className="px-1 py-1 text-xs text-slate-500">No tasks planned</p>}
+        {!showCompleted && tasks.length > 0 && tasks.every((task) => task.done) && <p className="px-1 py-1 text-xs text-slate-500">All tasks complete</p>}
       </DropColumn>
       <div className="mt-2"><QuickAdd date={dayKey} placeholder="Add task" compact /></div>
       </div>
@@ -141,7 +142,7 @@ export function WeekBoard() {
   const [anchor, setAnchor] = useState(todayKey());
   const [editing, setEditing] = useState<Task | null>(null);
   const [showArchive, setShowArchive] = useState(false);
-  const [showCompleted, setShowCompleted] = useState(true);
+  const [showCompleted, setShowCompleted] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<'week' | 'inbox'>('week');
   // Mouse and touch need opposite activation rules. On touch, drag is
   // long-press (tolerance is finger wobble allowed during it); on mouse it is
@@ -298,6 +299,7 @@ export function WeekBoard() {
                     ))}
                   </SortableContext>
                   {inbox.length === 0 && <p className="px-1 py-2 text-sm text-slate-500">Capture tasks here, then open a task to choose its date.</p>}
+                  {!showCompleted && inbox.length > 0 && inboxOpen === 0 && <p className="px-1 py-2 text-sm text-slate-500">Inbox clear. Completed tasks are hidden.</p>}
                 </DropColumn>
                 <div className="mt-2"><QuickAdd date={null} placeholder="Capture a task…" compact /></div>
               </>

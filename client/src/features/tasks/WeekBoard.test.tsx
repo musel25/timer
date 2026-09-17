@@ -164,12 +164,10 @@ describe('WeekBoard planning controls', () => {
     expect(screen.queryByText('Buy milk')).toBeNull();
   });
 
-  it('hides completed cards without changing the week totals', () => {
+  it('starts with open tasks and can reveal completed cards without changing totals', () => {
     tasks.push({ ...tasks[0], id: 'done', title: 'Finished task', done: true });
     try {
       render(<WeekBoard />);
-      expect(screen.getByText('Finished task')).toBeDefined();
-      fireEvent.click(screen.getByRole('checkbox', { name: 'Show completed' }));
       expect(screen.queryByText('Finished task')).toBeNull();
       expect(screen.getByText('1 of 2 completed')).toBeDefined();
       fireEvent.click(screen.getByRole('checkbox', { name: 'Show completed' }));
@@ -184,6 +182,8 @@ describe('Inbox access and availability', () => {
     tasks.push({ ...tasks[0], id: 'inbox-done', title: 'Completed inbox task', date: null, done: true });
     try {
       render(<WeekBoard />);
+      expect(screen.queryByText('Completed inbox task')).toBeNull();
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Show completed' }));
       expect(screen.getByText('Completed inbox task')).toBeDefined();
       fireEvent.click(screen.getByRole('button', { name: 'Mark not done' }));
       expect(toggleMutate).toHaveBeenCalledWith({ id: 'inbox-done', done: false });
