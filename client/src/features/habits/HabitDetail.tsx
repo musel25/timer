@@ -1,20 +1,18 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Pencil, Flame, Palmtree, Moon, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useHabits, useSessions, useSettings, useVacationDays, useRestDays, useSetVacationRange, useSetRestRange } from '../../lib/hooks';
+import { ArrowLeft, Pencil, Flame, Palmtree, Moon } from 'lucide-react';
+import { useHabits, useSessions, useSettings, useVacationDays, useRestDays } from '../../lib/hooks';
 import { habitStreak, effectiveGoal } from '../../lib/stats';
-import { dateToKey, keyToDate, todayKey, addDaysKey, monthMatrix, monthLabel } from '../../lib/date';
+import { dateToKey, keyToDate, todayKey, addDaysKey } from '../../lib/date';
 import { HabitGrid } from '../../components/HabitGrid';
 import { categoryColor } from '../../lib/palette';
-import { INITIAL_RANGE, tapDay } from './rangeSelect';
+import { DayMarkerCalendar } from './DayMarkerCalendar';
 import { cadenceLabel, cadenceOf } from '../../lib/cadence';
 import { PeriodHistory } from './PeriodHistory';
 import { EntryHistory } from './EntryHistory';
 
 type Tab = 'overview' | 'month';
-type Mode = 'vacation' | 'rest';
 
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export function HabitDetail() {
   const { id } = useParams();
@@ -23,8 +21,6 @@ export function HabitDetail() {
   const { data: settings } = useSettings();
   const { data: vacationRows = [] } = useVacationDays();
   const { data: restRows = [] } = useRestDays();
-  const setVacationRange = useSetVacationRange();
-  const setRestRange = useSetRestRange();
 
   const [tab, setTab] = useState<Tab>('overview');
 
@@ -91,15 +87,14 @@ export function HabitDetail() {
       {tab === 'overview' || cadenceOf(habit) !== 'daily' ? (
         <OverviewTab habit={habit} sessions={sessions} weekStart={weekStart} streak={streak} avgPerActiveDay={avgPerActiveDay} minutesByDay={minutesByDay} goalMetOn={goalMetOn} vacationDays={vacationDays} restDays={restDays} />
       ) : (
-        <MonthTab
-          weekStart={weekStart}
-          minutesByDay={minutesByDay}
-          habitId={habit.id}
-          vacationDays={vacationDays}
-          restDays={restDays}
-          onVacationRange={(start, end, on) => setVacationRange.mutate({ start, end, on })}
-          onRestRange={(start, end, on) => setRestRange.mutate({ start, end, on })}
-        />
+        <div className="space-y-3">
+          <DayMarkerCalendar minutesByDay={minutesByDay} dotColor={categoryColor(habit.id).rgb} />
+          <p className="text-xs text-slate-500">
+            Rest &amp; vacation days are global — they apply to every habit, and can also be set under
+            {' '}<Link to="/settings" className="text-accent hover:underline">Settings</Link>.
+            What a vacation day asks of <em>this</em> habit is its vacation goal, in the editor.
+          </p>
+        </div>
       )}
     </div>
   );
@@ -181,90 +176,3 @@ function OverviewTab({ habit, sessions, weekStart, streak, avgPerActiveDay, minu
   );
 }
 
-function MonthTab({ weekStart, minutesByDay, habitId, vacationDays, restDays, onVacationRange, onRestRange }: {
-  weekStart: number;
-  minutesByDay: Record<string, number>;
-  habitId: string;
-  vacationDays: Set<string>;
-  restDays: Set<string>;
-  onVacationRange: (start: string, end: string, on: boolean) => void;
-  onRestRange: (start: string, end: string, on: boolean) => void;
-}) {
-  const now = keyToDate(todayKey());
-  const [year, setYear] = useState(now.getFullYear());
-  const [month0, setMonth0] = useState(now.getMonth());
-  const [mode, setMode] = useState<Mode>('vacation');
-  const [range, setRange] = useState(INITIAL_RANGE);
-
-  const weeks = monthMatrix(year, month0, weekStart);
-  const color = categoryColor(habitId);
-  const markedSet = mode === 'vacation' ? vacationDays : restDays;
-  const apply = mode === 'vacation' ? onVacationRange : onRestRange;
-
-  function prevMonth() { const m = month0 - 1; if (m < 0) { setYear(year - 1); setMonth0(11); } else setMonth0(m); setRange(INITIAL_RANGE); }
-  function nextMonth() { const m = month0 + 1; if (m > 11) { setYear(year + 1); setMonth0(0); } else setMonth0(m); setRange(INITIAL_RANGE); }
-
-  function onDay(key: string) {
-    const res = tapDay(range, key, markedSet.has(key));
-    setRange(res.state);
-    if (res.commit) apply(res.commit.start, res.commit.end, true);
-    if (res.clearDay) apply(res.clearDay, res.clearDay, false);
-  }
-
-  const headerCols = Array.from({ length: 7 }, (_, i) => WEEKDAY_LABELS[(weekStart + i) % 7]);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2">
-          <button className={`chip ${mode === 'vacation' ? 'chip-active' : ''}`} onClick={() => { setMode('vacation'); setRange(INITIAL_RANGE); }}><Palmtree size={14} /> Vacation</button>
-          <button className={`chip ${mode === 'rest' ? 'chip-active' : ''}`} onClick={() => { setMode('rest'); setRange(INITIAL_RANGE); }}><Moon size={14} /> Rest</button>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="btn-ghost px-2.5 py-1.5" onClick={prevMonth} aria-label="Previous month"><ChevronLeft size={16} /></button>
-          <span className="min-w-[7.5rem] text-center text-sm font-medium">{monthLabel(year, month0)}</span>
-          <button className="btn-ghost px-2.5 py-1.5" onClick={nextMonth} aria-label="Next month"><ChevronRight size={16} /></button>
-        </div>
-      </div>
-
-      <p className="text-xs text-slate-500">
-        {range.pendingStart ? 'Now tap the end day to mark the range.' : `Tap a start day then an end day to mark ${mode === 'vacation' ? 'vacation' : 'rest'} days. Vacation & rest days are global — they apply to every habit.`}
-      </p>
-
-      <div className="card p-3">
-        <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-          {headerCols.map((w) => <div key={w}>{w}</div>)}
-        </div>
-        <div className="space-y-1">
-          {weeks.map((week, wi) => (
-            <div key={wi} className="grid grid-cols-7 gap-1">
-              {week.map((key) => {
-                const inMonth = keyToDate(key).getMonth() === month0;
-                const isVacation = vacationDays.has(key);
-                const isRest = restDays.has(key);
-                const isPending = range.pendingStart === key;
-                const min = minutesByDay[key] ?? 0;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => onDay(key)}
-                    className={`relative flex aspect-square flex-col items-center justify-center rounded-lg border text-sm transition ${
-                      isPending ? 'border-accent bg-accent-soft' : 'border-transparent hover:bg-ink-700'
-                    } ${inMonth ? 'text-slate-200' : 'text-slate-600'}`}
-                  >
-                    <span>{keyToDate(key).getDate()}</span>
-                    <span className="mt-0.5 flex h-2 items-center gap-0.5">
-                      {min > 0 && <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: `rgb(${color.rgb})` }} />}
-                      {isVacation && <Palmtree size={11} className="text-green-500" />}
-                      {isRest && <Moon size={11} className="text-violet-400" />}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}

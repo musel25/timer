@@ -10,6 +10,7 @@ import {
 } from '../../lib/hooks';
 import { Stepper } from '../../components/Stepper';
 import { audio, setVolume, unlockAudio } from '../../engine/audio';
+import { DayMarkerCalendar } from '../habits/DayMarkerCalendar';
 
 export function SettingsPage() {
   const qc = useQueryClient();
@@ -166,6 +167,18 @@ export function SettingsPage() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Rest and vacation days apply to every habit, so this is their home —
+          the habit Month tab paints the same days, one habit's view of them. */}
+      <section className="space-y-2">
+        <h2 className="label">Rest &amp; vacation</h2>
+        <p className="text-xs text-slate-500">
+          Mark the days off. A <span className="text-violet-400">rest</span> day is invisible to every habit —
+          it asks nothing and never breaks a streak. A <span className="text-green-500">vacation</span> day still
+          counts, but each habit only has to reach its vacation goal (set that to 0 and the habit takes the day off).
+        </p>
+        <DayMarkerCalendar />
       </section>
 
       <CalendarIntegration />
