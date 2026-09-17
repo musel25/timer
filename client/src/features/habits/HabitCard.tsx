@@ -63,6 +63,12 @@ export function HabitCard({
   const goal = rawGoal && rawGoal > 0 ? rawGoal : null;
   const fallbackMin = habit.durations?.length ? habit.durations[0] : 10;
   const defaultMin = habit.defaultDurationMin ?? fallbackMin;
+  // One tap logs what today actually asks for. `goal` is already the effective
+  // goal for this day (weekend/vacation aware). A vacation goal of 0 means the
+  // habit takes the day off, which leaves `goal` null - fall back to the daily
+  // goal so the button still works if you feel like doing it anyway.
+  const dailyGoal = habit.dailyGoalMin && habit.dailyGoalMin > 0 ? habit.dailyGoalMin : null;
+  const logAmount = goal ?? dailyGoal ?? defaultMin;
 
   const [logging, setLogging] = useState(false);
   const [minutes, setMinutes] = useState(defaultMin);
@@ -81,10 +87,10 @@ export function HabitCard({
     setLogging(false);
   }
 
-  // One-tap: log the default amount for today, no composer, no note.
+  // One-tap: log today's goal, no composer, no note.
   function logDefault() {
-    if (!onLog || !(defaultMin > 0)) return;
-    onLog(habit, { minutes: defaultMin, note: null, endedAt: Date.now() });
+    if (!onLog || !(logAmount > 0)) return;
+    onLog(habit, { minutes: logAmount, note: null, endedAt: Date.now() });
     setLogging(false);
   }
 
@@ -119,7 +125,7 @@ export function HabitCard({
         ) : habit.kind === 'abstain' ? (
           <button onClick={() => onToggle?.(habit)} className={markedToday ? 'btn-outline py-2' : 'btn-accent py-2'}>{markedToday ? <Check size={14} /> : <ShieldCheck size={14} />}{markedToday ? 'Stayed off today' : 'Mark stayed off'}</button>
         ) : onLog ? <>
-          <button onClick={logDefault} aria-label={`Log ${defaultMin} minutes`} className="btn-accent whitespace-nowrap px-3 py-2"><Plus size={14} />Log {defaultMin} min</button>
+          <button onClick={logDefault} aria-label={`Log ${logAmount} minutes`} className="btn-accent whitespace-nowrap px-3 py-2"><Plus size={14} />Log {logAmount} min</button>
           <button onClick={() => onOpenEntry ? onOpenEntry(habit) : openLog()} aria-label={onOpenEntry ? 'Open entry form' : 'Custom log'} aria-expanded={onOpenEntry ? undefined : logging} title={onOpenEntry ? 'Open entry form' : 'Log a specific amount'} className="btn-outline px-2.5 py-2.5">{onOpenEntry ? <SquarePen size={15} /> : <MoreHorizontal size={15} />}</button>
         </> : null}
       </div>

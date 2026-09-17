@@ -10,13 +10,29 @@ describe('habit row logging', () => {
     const log = vi.fn();
     render(<HabitCard habit={habit} minutesToday={5} onLog={log} />);
     expect(screen.getByText('5/20m')).toBeDefined();
-    fireEvent.click(screen.getByRole('button', { name: 'Log 10 minutes' }));
-    expect(log).toHaveBeenCalledWith(habit, expect.objectContaining({ minutes: 10, note: null }));
+    fireEvent.click(screen.getByRole('button', { name: 'Log 20 minutes' }));
+    expect(log).toHaveBeenCalledWith(habit, expect.objectContaining({ minutes: 20, note: null }));
     fireEvent.click(screen.getByRole('button', { name: 'Custom log' }));
     fireEvent.change(screen.getByLabelText('Minutes'), { target: { value: '25' } });
     fireEvent.click(screen.getByRole('button', { name: 'Log' }));
     expect(log).toHaveBeenLastCalledWith(habit, expect.objectContaining({ minutes: 25 }));
     expect(screen.queryByLabelText('Minutes')).toBeNull();
+  });
+
+  it('one-tap logs the goal that today actually asks for, not the composer default', () => {
+    const log = vi.fn();
+    // A lighter weekend/vacation goal wins over both the daily goal and defaultDurationMin.
+    render(<HabitCard habit={habit} minutesToday={0} onLog={log} goalMin={5} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Log 5 minutes' }));
+    expect(log).toHaveBeenCalledWith(habit, expect.objectContaining({ minutes: 5 }));
+  });
+
+  it('falls back to the daily goal when today is a day off, so the button never goes dead', () => {
+    const log = vi.fn();
+    // vacationGoalMin of 0 means "takes the day off" - effectiveGoal returns 0.
+    render(<HabitCard habit={habit} minutesToday={0} onLog={log} goalMin={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Log 20 minutes' }));
+    expect(log).toHaveBeenCalledWith(habit, expect.objectContaining({ minutes: 20 }));
   });
 
   it('opens the entry form for a check habit and can undo its completion', () => {
