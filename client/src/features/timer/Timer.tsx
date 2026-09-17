@@ -3,11 +3,16 @@ import { Link } from 'react-router-dom';
 import { Plus, Play } from 'lucide-react';
 import { Stepper } from '../../components/Stepper';
 import { useDeleteTimer, useSaveTimer, useTimers } from '../../lib/hooks';
-import { describePreset, presetSeconds, runSpecFromPreset } from '../../lib/presets';
+import { describeBlock, runSpecFromPreset, type BlockShape } from '../../lib/presets';
 import { timerTypeLabel } from '../../lib/timerMeta';
 import { humanDuration } from '../../lib/time';
 import { useRun } from '../run/RunContext';
 import type { TimerPreset } from '../../lib/types';
+
+/** Quick-start lengths worth one tap. 10 is the default: long enough to be a
+ *  real go, short enough that starting it costs nothing. */
+const QUICK_MINUTES = [5, 10, 15, 25, 45];
+const DEFAULT_QUICK_MINUTES = 10;
 
 /** Unified Timer page: a compact quick-start, then the saved-timers grid (tap to launch). */
 export function Timer() {
@@ -37,7 +42,7 @@ export function Timer() {
             No saved timers yet — create one with <span className="text-slate-300">+ New</span>.
           </p>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             {active.map((t) => (
               <TimerCard
                 key={t.id}
@@ -57,7 +62,7 @@ export function Timer() {
 function QuickStart() {
   const { startRun } = useRun();
   const save = useSaveTimer();
-  const [minutes, setMinutes] = useState(15);
+  const [minutes, setMinutes] = useState(DEFAULT_QUICK_MINUTES);
 
   function start() {
     startRun({
@@ -72,12 +77,44 @@ function QuickStart() {
   }
 
   return (
-    <div className="card flex flex-wrap items-center justify-between gap-3 p-4">
-      <Stepper label="Quick start" value={minutes} onChange={setMinutes} min={1} max={180} suffix="min" />
-      <div className="flex gap-2">
-        <button className="btn-accent" onClick={start}><Play size={16} fill="currentColor" /> Start</button>
-        <button className="btn-outline" onClick={savePreset} disabled={save.isPending}>Save</button>
+    <div className="card space-y-4 p-5">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <Stepper label="Quick start" value={minutes} onChange={setMinutes} min={1} max={180} suffix="min" editable />
+        <div className="flex gap-2">
+          <button className="btn-accent px-5 py-3 text-base" onClick={start}>
+            <Play size={18} fill="currentColor" /> Start
+          </button>
+          <button className="btn-outline px-4 py-3" onClick={savePreset} disabled={save.isPending}>Save</button>
+        </div>
       </div>
+      <div className="flex flex-wrap gap-2">
+        {QUICK_MINUTES.map((m) => (
+          <button
+            key={m}
+            className={m === minutes ? 'chip chip-active' : 'chip'}
+            onClick={() => setMinutes(m)}
+          >
+            {m} min
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** The block drawn to scale: one stripe per phase, so a 25/5 rhythm is visible
+ *  before you read a word of it. */
+function BlockBar({ shape }: { shape: BlockShape }) {
+  const total = shape.segments.reduce((a, s) => a + s.seconds, 0) || 1;
+  return (
+    <div className="flex h-2.5 gap-px overflow-hidden rounded-full bg-ink-700">
+      {shape.segments.map((s, i) => (
+        <div
+          key={i}
+          className="h-full first:rounded-l-full last:rounded-r-full"
+          style={{ width: `${(s.seconds / total) * 100}%`, backgroundColor: s.color }}
+        />
+      ))}
     </div>
   );
 }
@@ -93,6 +130,7 @@ function TimerCard({
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
+  const shape = describeBlock(preset);
   return (
     <div
       role="button"
@@ -101,18 +139,34 @@ function TimerCard({
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onStart(); }
       }}
-      className="card cursor-pointer p-4 transition hover:border-accent/50"
+      className="card flex cursor-pointer flex-col gap-4 p-5 transition hover:border-accent/50"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="truncate font-semibold">{preset.name}</div>
-          <div className="mt-0.5 text-sm text-slate-400">
-            <span className="text-accent">{timerTypeLabel(preset.type)}</span> · {describePreset(preset)} · {humanDuration(presetSeconds(preset))}
-          </div>
-        </div>
-        <span className="btn-accent shrink-0 px-3 py-2 text-sm"><Play size={15} fill="currentColor" /></span>
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="truncate font-semibold">{preset.name}</div>
+        <span className="shrink-0 text-xs text-slate-500">{timerTypeLabel(preset.type)}</span>
       </div>
-      <div className="mt-3 flex gap-3 text-xs text-slate-500" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+
+      {/* The headline is how long the block lasts — the one thing you want to
+          know before starting it. */}
+      <div>
+        <div className="text-4xl font-bold tabular-nums tracking-tight">{humanDuration(shape.totalSeconds)}</div>
+        <div className="text-xs text-slate-500">
+          <span className="uppercase tracking-wide">Total</span>
+          {shape.focusSeconds < shape.totalSeconds - 60 ? ` · ${humanDuration(shape.focusSeconds)} of focus` : ''}
+        </div>
+      </div>
+
+      <BlockBar shape={shape} />
+
+      <div className="flex-1 space-y-0.5 text-sm text-slate-400">
+        {shape.lines.map((line) => <div key={line}>{line}</div>)}
+      </div>
+
+      <button className="btn-accent w-full py-3 text-base" onClick={(e) => { e.stopPropagation(); onStart(); }}>
+        <Play size={18} fill="currentColor" /> Start
+      </button>
+
+      <div className="flex gap-3 text-xs text-slate-500" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
         <Link to={`/timers/${preset.id}`} className="hover:text-slate-300">Edit</Link>
         <button className="hover:text-slate-300" onClick={onDuplicate}>Duplicate</button>
         <button className="hover:text-rose-400" onClick={onDelete}>Delete</button>
