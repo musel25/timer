@@ -9,9 +9,7 @@ import { humanDuration } from '../../lib/time';
 import { useRun } from '../run/RunContext';
 import type { TimerPreset } from '../../lib/types';
 
-/** Quick-start lengths worth one tap. 10 is the default: long enough to be a
- *  real go, short enough that starting it costs nothing. */
-const QUICK_MINUTES = [5, 10, 15, 25, 45];
+/** Long enough to be a real go, short enough that starting it costs nothing. */
 const DEFAULT_QUICK_MINUTES = 10;
 
 /** Unified Timer page: a compact quick-start, then the saved-timers grid (tap to launch). */
@@ -26,7 +24,6 @@ export function Timer() {
     <div className="mx-auto max-w-3xl space-y-6">
       <header className="hero">
         <h1 className="text-3xl font-bold md:text-4xl">Timer</h1>
-        <p className="mt-1 text-sm text-slate-300">Run a saved timer, or start a quick one</p>
       </header>
 
       <QuickStart />
@@ -77,7 +74,7 @@ function QuickStart() {
   }
 
   return (
-    <div className="card space-y-4 p-5">
+    <div className="card p-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <Stepper label="Quick start" value={minutes} onChange={setMinutes} min={1} max={180} suffix="min" editable />
         <div className="flex gap-2">
@@ -86,17 +83,6 @@ function QuickStart() {
           </button>
           <button className="btn-outline px-4 py-3" onClick={savePreset} disabled={save.isPending}>Save</button>
         </div>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {QUICK_MINUTES.map((m) => (
-          <button
-            key={m}
-            className={m === minutes ? 'chip chip-active' : 'chip'}
-            onClick={() => setMinutes(m)}
-          >
-            {m} min
-          </button>
-        ))}
       </div>
     </div>
   );
@@ -146,20 +132,24 @@ function TimerCard({
         <span className="shrink-0 text-xs text-slate-500">{timerTypeLabel(preset.type)}</span>
       </div>
 
-      {/* The headline is how long the block lasts — the one thing you want to
-          know before starting it. */}
+      {/* How many goes, and how long one go is — what you actually decide by.
+          The total is arithmetic on those two, so it sits underneath. */}
       <div>
-        <div className="text-4xl font-bold tabular-nums tracking-tight">{humanDuration(shape.totalSeconds)}</div>
-        <div className="text-xs text-slate-500">
-          <span className="uppercase tracking-wide">Total</span>
-          {shape.focusSeconds < shape.totalSeconds - 60 ? ` · ${humanDuration(shape.focusSeconds)} of focus` : ''}
+        <div className="flex items-baseline gap-2">
+          {shape.sets > 1 && <span className="text-2xl font-semibold tabular-nums text-slate-400">{shape.sets} ×</span>}
+          <span className="text-4xl font-bold tabular-nums tracking-tight">{shape.setLabel}</span>
         </div>
+        {/* Only worth a line when the sets add up to something other than
+            themselves — a single-set timer already shows its whole length. */}
+        {shape.sets > 1 && (
+          <div className="mt-1 text-sm text-slate-400">{humanDuration(shape.totalSeconds)} in all</div>
+        )}
       </div>
 
       <BlockBar shape={shape} />
 
-      <div className="flex-1 space-y-0.5 text-sm text-slate-400">
-        {shape.lines.map((line) => <div key={line}>{line}</div>)}
+      <div className="flex-1 space-y-0.5 text-sm text-slate-500">
+        {shape.detail.map((line) => <div key={line}>{line}</div>)}
       </div>
 
       <button className="btn-accent w-full py-3 text-base" onClick={(e) => { e.stopPropagation(); onStart(); }}>

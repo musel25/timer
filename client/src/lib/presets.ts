@@ -53,12 +53,15 @@ export interface BlockSegment {
   color: string;
 }
 
-/** Everything the saved-timer card shows: how long the block runs, how much of
- *  that is focus, the stripes, and the shape said in words. */
+/** Everything the saved-timer card shows. `sets` and `setLabel` are the
+ *  headline — how many goes, and how long one go is. The total is real but
+ *  secondary: it is arithmetic on those two, not the thing you decide by. */
 export interface BlockShape {
+  sets: number;
+  setLabel: string;
+  detail: string[];
   totalSeconds: number;
   focusSeconds: number;
-  lines: string[];
   segments: BlockSegment[];
 }
 
@@ -83,42 +86,40 @@ function shortSpan(seconds: number): string {
   return seconds % 60 === 0 ? `${minutes(seconds)} min` : `${minutes(seconds)} min ${seconds % 60}s`;
 }
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
-
-/** Say a block's shape in plain words — "4 focus sets of 25 min" answers what
- *  "× 4" left open: a set of *what length*. */
-function blockLines(p: TimerPreset): string[] {
+/** The headline pair — how many sets, and how long one is — plus whatever else
+ *  is worth a line under it. "× 4" alone never said a set of *what length*. */
+function blockShape(p: TimerPreset): Pick<BlockShape, 'sets' | 'setLabel' | 'detail'> {
   if (p.type === 'pomodoro') {
     const c = p.config as PomodoroConfig;
-    const rounds = Math.max(1, c.rounds);
-    const lines = [`${plural(rounds, 'focus set')} of ${c.work} min`];
-    if (rounds > 1) lines.push(`${c.short} min break between`);
+    const sets = Math.max(1, c.rounds);
+    const detail: string[] = [];
+    if (sets > 1) detail.push(`${c.short} min break between`);
     // Only when a long break actually falls inside this block — with 4 rounds
     // every 4, the long one would land after the last set, so it never runs.
     const every = Math.max(1, c.longEvery);
-    if (rounds > every) lines.push(`${c.long} min long break every ${every}`);
-    return lines;
+    if (sets > every) detail.push(`${c.long} min long break every ${every}`);
+    return { sets, setLabel: `${c.work} min`, detail };
   }
   if (p.type === 'simple') {
     const c = p.config as SimpleConfig;
-    return [`One ${shortSpan(c.totalSeconds)} stretch`];
+    return { sets: 1, setLabel: shortSpan(c.totalSeconds), detail: [] };
   }
   const c = p.config as IntervalConfig;
+  const sets = Math.max(1, c.sets);
   const work = c.intervals.find((i) => i.kind === 'work');
   const rest = c.intervals.find((i) => i.kind === 'rest');
-  const lines = [
-    `${plural(Math.max(1, c.sets), 'set')} of ${shortSpan(work?.seconds ?? 0)} work / ${shortSpan(rest?.seconds ?? 0)} rest`,
-  ];
-  if (c.cooldownSeconds > 0) lines.push(`${shortSpan(c.cooldownSeconds)} cooldown at the end`);
-  return lines;
+  const detail: string[] = [];
+  if (rest && rest.seconds > 0 && sets > 1) detail.push(`${shortSpan(rest.seconds)} rest between`);
+  if (c.cooldownSeconds > 0) detail.push(`${shortSpan(c.cooldownSeconds)} cooldown at the end`);
+  return { sets, setLabel: shortSpan(work?.seconds ?? 0), detail };
 }
 
 export function describeBlock(p: TimerPreset): BlockShape {
   const phases = presetPhases(p);
   return {
+    ...blockShape(p),
     totalSeconds: presetSeconds(p),
     focusSeconds: workSeconds(phases),
-    lines: blockLines(p),
     // The prep countdown and the zero-length finish marker are not worth a
     // stripe — a 5s sliver would only be noise next to 25-minute blocks.
     segments: phases

@@ -43,38 +43,46 @@ describe('presetSeconds — pomodoro total', () => {
 });
 
 describe('describeBlock — what the saved-timer card says out loud', () => {
-  it('leads with the whole span, so "how long does this block last" is answered first', () => {
+  it('leads with the set count and the length of one set, not the total', () => {
     const b = describeBlock(pomo({ rounds: 4, work: 25, short: 5 }));
-    // 4 × 25m work + 3 × 5m breaks + the 5s prep
+    expect(b.sets).toBe(4);
+    expect(b.setLabel).toBe('25 min');
+  });
+
+  it('still carries the whole span and the focus time, for the line underneath', () => {
+    const b = describeBlock(pomo({ rounds: 4, work: 25, short: 5 }));
     expect(b.totalSeconds).toBe(4 * 25 * 60 + 3 * 5 * 60 + 5);
     expect(b.focusSeconds).toBe(4 * 25 * 60);
   });
 
-  it('spells the sets out in words — "× 4" alone never said how long a set was', () => {
-    const b = describeBlock(pomo({ rounds: 4, work: 25, short: 5 }));
-    expect(b.lines).toEqual(['4 focus sets of 25 min', '5 min break between']);
+  it('puts the break in the detail line, where it belongs', () => {
+    expect(describeBlock(pomo({ rounds: 4, work: 25, short: 5 })).detail).toEqual(['5 min break between']);
   });
 
   it('drops the break line when there is only one set to break between', () => {
-    expect(describeBlock(pomo({ rounds: 1 })).lines).toEqual(['1 focus set of 25 min']);
+    const b = describeBlock(pomo({ rounds: 1 }));
+    expect(b.sets).toBe(1);
+    expect(b.detail).toEqual([]);
   });
 
   it('names the long break only when one actually falls inside the block', () => {
-    expect(describeBlock(pomo({ rounds: 4, longEvery: 4 })).lines).not.toContain('20 min long break every 4');
-    expect(describeBlock(pomo({ rounds: 6, longEvery: 3, long: 20 })).lines).toContain('20 min long break every 3');
+    expect(describeBlock(pomo({ rounds: 4, longEvery: 4 })).detail).not.toContain('20 min long break every 4');
+    expect(describeBlock(pomo({ rounds: 6, longEvery: 3, long: 20 })).detail).toContain('20 min long break every 3');
   });
 
-  it('describes a plain timer as its own single stretch', () => {
+  it('describes a plain timer as a single set of its own length', () => {
     const simple: TimerPreset = {
       id: 's1', name: '10 min', type: 'simple', sortOrder: 0, archived: false, createdAt: 0, updatedAt: 0,
       config: { totalSeconds: 600, prepSeconds: 0 },
     };
     const b = describeBlock(simple);
     expect(b.totalSeconds).toBe(600);
-    expect(b.lines).toEqual(['One 10 min stretch']);
+    expect(b.sets).toBe(1);
+    expect(b.setLabel).toBe('10 min');
+    expect(b.detail).toEqual([]);
   });
 
-  it('describes an interval preset by its work/rest pair and set count', () => {
+  it('describes an interval preset by its set count, work length and rest', () => {
     const iv: TimerPreset = {
       id: 'i1', name: 'Tabata', type: 'interval', sortOrder: 0, archived: false, createdAt: 0, updatedAt: 0,
       config: {
@@ -87,7 +95,9 @@ describe('describeBlock — what the saved-timer card says out loud', () => {
     };
     const b = describeBlock(iv);
     expect(b.totalSeconds).toBe(10 + 8 * 30 + 30);
-    expect(b.lines).toEqual(['8 sets of 20s work / 10s rest', '30s cooldown at the end']);
+    expect(b.sets).toBe(8);
+    expect(b.setLabel).toBe('20s');
+    expect(b.detail).toEqual(['10s rest between', '30s cooldown at the end']);
   });
 
   it('builds proportional bar segments from the phases that actually run', () => {
