@@ -34,10 +34,9 @@
 .calendar-event { border: 0; border-left: 2px solid rgb(var(--accent) / .5); background: rgb(var(--accent) / .07); border-radius: 0 6px 6px 0; padding: 7px 9px; color: rgb(var(--slate-300)); }
 .planner-inbox { position: sticky; top: 0; }
 .inbox-panel { border-radius: 18px; padding: 20px 17px 14px; box-shadow: var(--panel-shadow); }
-.inbox-heading { padding: 0 2px; }
+.inbox-heading { padding: 0 2px; margin-bottom: 14px; }
 .inbox-symbol { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: rgb(var(--accent) / .10); color: rgb(var(--accent-text)); }
 .inbox-count { display: grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 7px; background: rgb(var(--ink-700)); color: rgb(var(--slate-400)); font-size: 11px; font-weight: 750; }
-.inbox-caption { color: rgb(var(--slate-400)); font-size: 11px; line-height: 1.6; padding: 12px 3px 14px; margin-bottom: 7px; border-bottom: 1px solid rgb(var(--ink-600) / .8); }
 .inbox-panel .task-card { padding-top: 10px; padding-bottom: 10px; }
 .inbox-panel .quick-add { margin-top: 8px; padding: 6px 9px; border: 1px solid rgb(var(--ink-600)); background: rgb(var(--ink-900) / .5); border-radius: 9px; }
 .habit-glance { padding: 21px; background: rgb(var(--accent) / .065); border: 1px solid rgb(var(--accent) / .12); border-radius: 18px; }

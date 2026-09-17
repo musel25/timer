@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Brand } from '../../components/Brand';
 
@@ -16,14 +15,9 @@ export function Login() {
 
   return (
     <div className="login-page">
-      <div className="login-welcome">
-        <Brand />
-        <div className="login-intro"><h1>A little clarity.<br />A better week.</h1><p>Make room for what matters. Plan your days, keep your tasks close, and find your rhythm.</p></div>
-        <div className="login-rhythm" aria-hidden="true"><span /><span /><span /><span /><span /><span /><span /></div>
-        <span className="login-caption">Your week, at your own pace.</span>
-      </div>
       <div className="login-form-panel">
-      <div className="login-form-heading"><h2>Welcome back</h2><p>Sign in to your planning space.</p></div>
+      <Brand />
+      <div className="login-form-heading"><h1>Sign in</h1></div>
       <form
         className="login-form"
         onSubmit={(e) => {
@@ -35,7 +29,7 @@ export function Login() {
         <label className="login-label">Password<input className="input" type="password" placeholder="Your password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
         {m.isError && <p className="text-sm text-rose-400">Invalid email or password.</p>}
         <button className="btn-accent w-full" type="submit" disabled={m.isPending}>
-          {m.isPending ? 'Signing in…' : 'Sign in'}<ArrowRight size={17} aria-hidden="true" />
+          {m.isPending ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
       </div>

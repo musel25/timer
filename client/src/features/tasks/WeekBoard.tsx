@@ -219,8 +219,7 @@ export function WeekBoard() {
     <div className="week-workspace space-y-5">
       <header className="hero planner-heading flex flex-wrap items-end justify-between gap-5">
         <div>
-          <h1 className="page-title">Your week</h1>
-          <p className="mt-2 text-sm text-slate-400">A little structure. More room for what matters.</p>
+          <h1 className="page-title">Week</h1>
         </div>
         <div className="week-navigation flex items-center gap-1 rounded-lg border border-ink-600 bg-ink-800 p-1">
           <button className="btn px-2.5 py-2 hover:bg-ink-700" aria-label="Previous week" onClick={() => setAnchor(addDaysKey(anchor, -7))}><ChevronLeft size={16} /></button>
@@ -272,7 +271,6 @@ export function WeekBoard() {
                 {!inArchive && <span className="inbox-count">{inboxOpen}</span>}
               </span>
             </div>
-            {!inArchive && <p className="inbox-caption">Ideas and tasks, ready for a day.</p>}
             {inArchive ? (
               // Not a drop target: you restore an archived task, you don't drag onto it.
               <div className="min-h-[40px] flex-1 space-y-1.5 p-1">
@@ -307,7 +305,7 @@ export function WeekBoard() {
               </>
             )}
           </div>
-          <section className="habit-glance"><div className="mb-5 flex items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-sm font-bold"><Repeat2 size={16} className="text-accent" />Daily rhythm</h2><a href="/habits" className="text-xs font-semibold text-accent hover:underline">View habits</a></div><HabitPulse /></section>
+          <section className="habit-glance"><div className="mb-5 flex items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-sm font-bold"><Repeat2 size={16} className="text-accent" />Habits today</h2><a href="/habits" className="text-xs font-semibold text-accent hover:underline">View habits</a></div><HabitPulse /></section>
           <p className="px-1 text-xs leading-relaxed text-slate-500">Open a task to choose its date. On a larger screen, you can also drag it into your week.</p>
           </aside>
         </div>

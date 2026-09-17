@@ -114,7 +114,6 @@ export function Dashboard() {
       <header className="hero flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-[16rem] flex-1">
           <h1 className="page-title">Habits</h1>
-          <p className="mt-2 text-sm text-slate-400">Make time for the things you want to keep doing.</p>
         </div>
         <Link to="/habits/new" className="btn-accent shrink-0"><Plus size={16} /> New habit</Link>
       </header>
@@ -126,7 +125,7 @@ export function Dashboard() {
             <span>{dailySummary.total ? <>{Math.round(dailySummary.done / dailySummary.total * 100)}<small>%</small></> : '–'}</span>
           </div>
           <div className="daily-overview-copy">
-            <h2>Today’s rhythm</h2>
+            <h2>Today</h2>
             <p className="daily-completion-label">{dailySummary.rest ? 'Rest day — no daily targets' : dailySummary.total > 0 ? `${dailySummary.done} of ${dailySummary.total} daily habits complete` : 'No daily targets today'}</p>
             <p className="daily-date">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</p>
             {dailySummary.total > 0 && <div className="sr-only" role="progressbar" aria-label="Daily habits completed" aria-valuenow={dailySummary.done} aria-valuemin={0} aria-valuemax={dailySummary.total} />}

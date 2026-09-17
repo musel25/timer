@@ -85,7 +85,7 @@ export function Layout() {
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
-        <NavLink to="/week" className="sidebar-brand" aria-label="Tempo home"><Brand /></NavLink>
+        <NavLink to="/week" className="sidebar-brand" aria-label="Planner home"><Brand /></NavLink>
         {navGroups.map((g) => (
           <div key={g.title} className={`nav-group${g.title === 'Workspace' ? ' nav-group-bottom' : ''}`}>
             <div className="nav-group-label">{g.title}</div>
@@ -112,7 +112,7 @@ export function Layout() {
       </aside>
 
       <main className="app-main">
-        <div className="mobile-brand"><NavLink to="/week" aria-label="Tempo home"><Brand compact /></NavLink><span>Your planning space</span></div>
+        <div className="mobile-brand"><NavLink to="/week" aria-label="Planner home"><Brand compact /></NavLink></div>
         <div className="app-content">
           <Outlet />
         </div>

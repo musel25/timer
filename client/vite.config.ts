@@ -10,9 +10,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Tempo — Weekly planner & habits',
-        short_name: 'Tempo',
-        description: 'Plan your week, keep track of tasks, and build your habits.',
+        name: 'Planner',
+        short_name: 'Planner',
+        description: 'Weekly tasks and habits.',
         theme_color: '#161923',
         background_color: '#161923',
         display: 'standalone',
