@@ -1,0 +1,143 @@
+/* Planning surfaces: strong date rails, quiet task rows, and a softer capture area. */
+.week-workspace, .habits-workspace { padding-bottom: 12px; }
+.planner-heading { align-items: center; }
+.week-navigation { box-shadow: 0 2px 4px rgb(20 24 40 / .025); border-radius: 12px; }
+.week-navigation .btn { padding-top: 7px; padding-bottom: 7px; font-size: 12px; }
+.week-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 3px 2px 5px; }
+.week-range { font-size: 16px; font-weight: 750; letter-spacing: -.035em; }
+.summary-dot { height: 3px; width: 3px; border-radius: 50%; background: rgb(var(--slate-500) / .6); }
+.completed-filter { white-space: nowrap; }
+.planner-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 24px; align-items: start; }
+.week-days { overflow: hidden; border: 1px solid rgb(var(--ink-600)); border-radius: 18px; background: rgb(var(--ink-800)); box-shadow: var(--panel-shadow); }
+.week-day { position: relative; display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 20px; padding: 20px 22px 18px 16px; border-bottom: 1px solid rgb(var(--ink-600) / .7); }
+.week-day:last-child { border-bottom: 0; }
+.week-day.is-today { background: rgb(var(--accent) / .045); }
+.week-day.is-today::before { content: ''; position: absolute; left: 0; top: 20px; bottom: 20px; width: 3px; border-radius: 0 3px 3px 0; background: rgb(var(--accent)); }
+.day-date { display: flex; align-items: center; flex-direction: column; gap: 2px; padding-top: 1px; }
+.day-name { font-size: 11px; font-weight: 650; color: rgb(var(--slate-400)); }
+.day-number { font-size: 28px; line-height: 1.2; font-weight: 650; letter-spacing: -.065em; font-variant-numeric: tabular-nums; }
+.day-today { color: rgb(var(--accent-text)); font-size: 10px; font-weight: 750; margin-top: 3px; }
+.is-today .day-number { display: grid; place-items: center; width: 40px; height: 40px; color: white; background: rgb(var(--accent)); border-radius: 12px; font-size: 24px; }
+.day-count { font-size: 10px; color: rgb(var(--slate-500)); margin-top: 3px; }
+.day-tasks { min-width: 0; }
+.day-task-list { min-height: 30px; padding: 0; }
+.task-card { border-color: transparent; background: transparent; box-shadow: none; min-height: 36px; padding: 8px 4px; gap: 9px; font-size: 13px; line-height: 1.55; }
+.task-card:hover { background: rgb(var(--ink-700) / .7); }
+.task-card > span:first-child { display: none; }
+.task-check { position: relative; width: 16px; height: 16px; margin: 2px 0 0; border-radius: 5px; border-width: 1.5px; }
+.task-check::before { content: ''; position: absolute; inset: -10px -6px; }
+.quick-add { min-height: 31px; border-color: transparent; padding: 0 4px; gap: 8px; border-radius: 7px; }
+.quick-add input { font-size: 12px; }
+.quick-add:hover, .quick-add:focus-within { background: rgb(var(--ink-900) / .6); border-color: rgb(var(--ink-600)); }
+.quick-add button { order: -1; height: 24px; width: 17px; }
+.quick-add button:disabled { opacity: .6; }
+.calendar-event { border: 0; border-left: 2px solid rgb(var(--accent) / .5); background: rgb(var(--accent) / .07); border-radius: 0 6px 6px 0; padding: 7px 9px; color: rgb(var(--slate-300)); }
+.planner-inbox { position: sticky; top: 0; }
+.inbox-panel { border-radius: 18px; padding: 20px 17px 14px; box-shadow: var(--panel-shadow); }
+.inbox-heading { padding: 0 2px; }
+.inbox-symbol { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: rgb(var(--accent) / .10); color: rgb(var(--accent-text)); }
+.inbox-count { display: grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 7px; background: rgb(var(--ink-700)); color: rgb(var(--slate-400)); font-size: 11px; font-weight: 750; }
+.inbox-caption { color: rgb(var(--slate-400)); font-size: 11px; line-height: 1.6; padding: 12px 3px 14px; margin-bottom: 7px; border-bottom: 1px solid rgb(var(--ink-600) / .8); }
+.inbox-panel .task-card { padding-top: 10px; padding-bottom: 10px; }
+.inbox-panel .quick-add { margin-top: 8px; padding: 6px 9px; border: 1px solid rgb(var(--ink-600)); background: rgb(var(--ink-900) / .5); border-radius: 9px; }
+.habit-glance { padding: 21px; background: rgb(var(--accent) / .065); border: 1px solid rgb(var(--accent) / .12); border-radius: 18px; }
+.planner-mobile-switch { display: none; }
+
+/* Habit identity has color; supporting metrics and controls stay quiet. */
+.daily-overview { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 27px 30px; border-radius: 20px; background: rgb(var(--accent) / .065); border: 1px solid rgb(var(--accent) / .13); }
+.daily-overview-main { display: flex; align-items: center; gap: 22px; }
+.completion-ring { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
+.completion-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.completion-ring circle { fill: none; stroke-width: 5; }
+.completion-track { stroke: rgb(var(--accent) / .12); }
+.completion-fill { stroke: rgb(var(--accent-text)); stroke-linecap: round; }
+.completion-ring > span { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-size: 24px; font-weight: 750; letter-spacing: -.06em; }
+.completion-ring small { font-size: 12px; font-weight: 600; color: rgb(var(--slate-400)); margin-left: 2px; }
+.daily-overview-copy h2 { font-size: 19px; font-weight: 750; letter-spacing: -.04em; }
+.daily-completion-label { margin-top: 5px; color: rgb(var(--slate-300)); font-size: 12px; font-weight: 600; }
+.daily-date { margin-top: 7px; color: rgb(var(--slate-500)); font-size: 11px; }
+.rhythm-history { border-left: 1px solid rgb(var(--accent) / .12); padding-left: 32px; }
+.rhythm-history > p { font-size: 11px; color: rgb(var(--slate-400)); margin-bottom: 10px; }
+.rhythm-days { display: flex; gap: 12px; }
+.rhythm-day { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 10px; color: rgb(var(--slate-400)); }
+.rhythm-day.is-current { color: rgb(var(--accent-text)); font-weight: 800; }
+.rhythm-day-dot { display: grid; place-items: center; height: 28px; width: 28px; border-radius: 50%; border: 1px solid rgb(var(--accent) / .14); }
+.rhythm-day-dot > span { width: 4px; height: 4px; background: rgb(var(--accent) / .25); border-radius: 50%; }
+.rhythm-day.is-current .rhythm-day-dot { box-shadow: 0 0 0 3px rgb(var(--accent) / .08); border-color: rgb(var(--accent) / .6); }
+.rhythm-day-dot.is-complete { background: rgb(var(--accent)); border-color: transparent; color: white; }
+.rhythm-day-dot.has-progress { background: rgb(var(--accent) / .22); }
+.daily-section-title { font-size: 16px; font-weight: 750; padding-top: 10px; letter-spacing: -.025em; }
+.habit-group { overflow: hidden; border: 1px solid rgb(var(--ink-600)); border-radius: 18px; background: rgb(var(--ink-800)); box-shadow: var(--panel-shadow); }
+.habit-group-title { display: flex; align-items: center; gap: 9px; padding: 16px 23px; border-bottom: 1px solid rgb(var(--ink-600) / .65); font-size: 12px; font-weight: 700; color: rgb(var(--slate-400)); }
+.habit-group-title > span:last-child { margin-left: auto; display: grid; place-items: center; border-radius: 6px; height: 21px; min-width: 21px; background: rgb(var(--ink-700)); font-size: 10px; }
+.habit-list { border: 1px solid rgb(var(--ink-600)); border-radius: 18px; background: rgb(var(--ink-800)); overflow: hidden; }
+.habit-group .habit-list { border: none; border-radius: 0; }
+.habit-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 170px) 195px; align-items: center; gap: 28px; padding: 23px; min-height: 94px; border-bottom: 1px solid rgb(var(--ink-600) / .65); }
+.habit-row:last-child { border-bottom: 0; }
+.habit-identity { font-size: 14px; }
+.habit-symbol { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 13px; background: rgb(128 102 213 / .12); color: #a18bdd; }
+[data-theme='day'] .habit-symbol { color: #7e60bd; }
+.habit-row:nth-child(3n+2) .habit-symbol { background: rgb(68 144 160 / .12); color: #68afc0; }
+[data-theme='day'] .habit-row:nth-child(3n+2) .habit-symbol { color: #35818d; }
+.habit-row:nth-child(3n+3) .habit-symbol { background: rgb(197 138 82 / .12); color: #d4a26f; }
+[data-theme='day'] .habit-row:nth-child(3n+3) .habit-symbol { color: #a56f32; }
+.habit-log-btn { background: rgb(var(--accent) / .09); border: 1px solid rgb(var(--accent) / .13); color: rgb(var(--accent-text)); font-size: 12px; font-weight: 750; }
+.habit-log-btn:hover { background: rgb(var(--accent) / .16); }
+.habit-actions > .btn-outline { border-color: transparent; color: rgb(var(--slate-400)); }
+.habit-composer { grid-column: 1 / -1; flex-wrap: wrap; }
+
+@media (min-width: 1400px) {
+  .day-task-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 3px 18px; }
+  .day-task-list > * { margin-top: 0 !important; }
+}
+@media (max-width: 1150px) {
+  .planner-layout { grid-template-columns: minmax(0, 1fr) 240px; gap: 18px; }
+  .week-day { grid-template-columns: 56px minmax(0, 1fr); padding: 17px 16px 14px 10px; gap: 12px; }
+  .habit-row { grid-template-columns: minmax(0, 1fr) 115px 175px; gap: 16px; padding: 20px; }
+  .daily-overview { padding: 22px; gap: 20px; }
+  .daily-overview-main { gap: 15px; }
+  .rhythm-history { padding-left: 20px; }
+  .rhythm-days { gap: 7px; }
+}
+@media (max-width: 1000px) {
+  .habit-row { grid-template-columns: minmax(0, 1fr) auto; gap: 16px; }
+  .habit-identity { grid-column: 1 / -1; }
+  .habit-progress { min-width: 0; max-width: 210px; }
+  .habit-actions { grid-column: 2; }
+  .daily-overview { flex-wrap: wrap; }
+  .rhythm-history { border-left: 0; padding-left: 0; }
+}
+@media (max-width: 700px) {
+  .habits-workspace > .hero > div { min-width: 0; flex-basis: 100%; }
+  .habits-workspace > .hero h1 { padding-right: 120px; }
+  .habits-workspace > .hero > a { position: absolute; top: 0; right: 0; font-size: 12px; padding: 8px 12px; }
+  .habits-workspace > .hero p { margin-top: 15px; }
+  .planner-heading { gap: 20px; }
+  .week-toolbar { flex-wrap: wrap; gap: 13px; }
+  .week-range { font-size: 15px; }
+  .planner-layout { display: flex; flex-direction: column; gap: 20px; }
+  .week-days, .planner-inbox { width: 100%; }
+  .planner-inbox { position: static; }
+  .week-day { grid-template-columns: 46px minmax(0, 1fr); padding: 17px 14px 16px 10px; gap: 12px; }
+  .day-number { font-size: 26px; }
+  .task-card { padding: 8px 3px; font-size: 13px; }
+  .planner-mobile-switch { display: flex; border: 0; border-radius: 11px; background: rgb(var(--ink-700)); padding: 4px; }
+  .planner-mobile-switch .btn { border-radius: 8px; font-size: 12px; }
+  .planner-mobile-switch .btn[aria-pressed='true'] { background: rgb(var(--ink-800)); color: rgb(var(--slate-100)); box-shadow: 0 1px 4px rgb(0 0 0 / .07); }
+  [data-mobile-panel='week'] > .planner-inbox, [data-mobile-panel='inbox'] > .week-days { display: none; }
+  .daily-overview { padding: 22px 18px; border-radius: 16px; gap: 22px; }
+  .daily-overview-main { gap: 13px; }
+  .completion-ring { width: 65px; height: 65px; }
+  .completion-ring > span { font-size: 21px; }
+  .daily-overview-copy h2 { font-size: 17px; }
+  .daily-completion-label { font-size: 11px; }
+  .rhythm-history { width: 100%; padding-top: 17px; border-top: 1px solid rgb(var(--accent) / .12); }
+  .rhythm-days { justify-content: space-between; gap: 5px; }
+  .rhythm-day-dot { width: 30px; height: 30px; }
+  .habit-group-title { padding: 14px 18px; }
+  .habit-row { padding: 18px; gap: 18px 12px; }
+  .habit-symbol { width: 40px; height: 40px; border-radius: 12px; }
+  .habit-identity { gap: 12px; }
+  .habit-actions { gap: 3px; }
+  .habit-actions .btn { font-size: 11px; padding-left: 10px; padding-right: 10px; }
+}

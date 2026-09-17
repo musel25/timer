@@ -1,12 +1,12 @@
 import type { AccentName, ThemeName } from './types';
 
 export const ACCENTS: { name: AccentName; label: string; rgb: string }[] = [
-  { name: 'teal', label: 'Teal', rgb: 'rgb(20 184 166)' },
-  { name: 'blue', label: 'Cobalt', rgb: 'rgb(58 109 240)' },
-  { name: 'green', label: 'Green', rgb: 'rgb(22 160 107)' },
-  { name: 'violet', label: 'Violet', rgb: 'rgb(124 92 246)' },
-  { name: 'rose', label: 'Rose', rgb: 'rgb(225 45 85)' },
-  { name: 'amber', label: 'Amber', rgb: 'rgb(200 131 26)' },
+  { name: 'teal', label: 'Teal', rgb: 'rgb(12 124 113)' },
+  { name: 'blue', label: 'Cobalt', rgb: 'rgb(69 97 204)' },
+  { name: 'green', label: 'Green', rgb: 'rgb(22 126 85)' },
+  { name: 'violet', label: 'Violet', rgb: 'rgb(102 84 217)' },
+  { name: 'rose', label: 'Rose', rgb: 'rgb(191 53 90)' },
+  { name: 'amber', label: 'Amber', rgb: 'rgb(150 100 17)' },
 ];
 
 export function applyAccent(accent: AccentName): void {
@@ -19,7 +19,7 @@ export const THEMES: { name: ThemeName; label: string; icon: 'moon' | 'sun' }[] 
 ];
 
 /** Page-chrome color per theme (browser status bar / address bar tint). */
-const THEME_CHROME: Record<ThemeName, string> = { night: '#17191c', day: '#f6f7f9' };
+const THEME_CHROME: Record<ThemeName, string> = { night: '#161923', day: '#f5f6fa' };
 
 export function applyTheme(theme: ThemeName): void {
   // Anything that isn't an explicit 'day' is treated as night (also migrates

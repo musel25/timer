@@ -103,7 +103,7 @@ export function HabitCard({
   const progress = (
     <div className="habit-progress space-y-2 text-xs text-slate-400">
       {habit.kind === 'time' && (goal
-        ? <GoalBar done={minutesToday} goal={goal} rgb="var(--accent)" />
+        ? <GoalBar done={minutesToday} goal={goal} rgb="var(--accent-text)" />
         : <span>{Math.round(minutesToday)} min logged today</span>)}
       {habit.kind !== 'time' && <span>{markedToday ? 'Completed today' : 'Not yet completed'}</span>}
       {streak > 0 && <div className="flex items-center gap-1"><Flame size={12} />{streak} {streakUnit}{streak === 1 ? '' : 's'} in a row</div>}
@@ -113,7 +113,7 @@ export function HabitCard({
   return (
     <div className="habit-row">
       <div className="habit-identity flex min-w-0 items-center gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ink-700 text-slate-300"><HabitIcon name={habit.emoji} size={19} /></span>
+        <span className="habit-symbol"><HabitIcon name={habit.emoji || 'sprout'} size={21} /></span>
         <div className="min-w-0 flex-1">{title}{habit.note && <div className="mt-1 truncate text-xs text-slate-400">{habit.note}</div>}</div>
         {editTo && <Link to={editTo} className="rounded p-1 text-slate-500 hover:text-slate-200" aria-label={`Edit ${habit.name}`} title="Edit habit"><Pencil size={14} /></Link>}
         {onHide && <button aria-label="Hide from today" onClick={() => onHide(habit)} className="rounded p-1 text-slate-500"><EyeOff size={15} /></button>}
@@ -125,7 +125,7 @@ export function HabitCard({
         ) : habit.kind === 'abstain' ? (
           <button onClick={() => onToggle?.(habit)} className={markedToday ? 'btn-outline py-2' : 'btn-accent py-2'}>{markedToday ? <Check size={14} /> : <ShieldCheck size={14} />}{markedToday ? 'Stayed off today' : 'Mark stayed off'}</button>
         ) : onLog ? <>
-          <button onClick={logDefault} aria-label={`Log ${logAmount} minutes`} className="btn-accent whitespace-nowrap px-3 py-2"><Plus size={14} />Log {logAmount} min</button>
+          <button onClick={logDefault} aria-label={`Log ${logAmount} minutes`} className="habit-log-btn btn whitespace-nowrap px-3 py-2"><Plus size={14} />Log {logAmount} min</button>
           <button onClick={() => onOpenEntry ? onOpenEntry(habit) : openLog()} aria-label={onOpenEntry ? 'Open entry form' : 'Custom log'} aria-expanded={onOpenEntry ? undefined : logging} title={onOpenEntry ? 'Open entry form' : 'Log a specific amount'} className="btn-outline px-2.5 py-2.5">{onOpenEntry ? <SquarePen size={15} /> : <MoreHorizontal size={15} />}</button>
         </> : null}
       </div>

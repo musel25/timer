@@ -7,6 +7,7 @@ import { isTypingTarget } from '../lib/dom';
 import { useAgentsOptional } from './agents/AgentsContext';
 import { askingCount } from './agents/sessionView';
 import { CC_DASH_ENABLED } from './agents/enabled';
+import { Brand } from '../components/Brand';
 
 const groups: { title: string; tabs: { to: string; label: string; icon: LucideIcon; end?: boolean }[] }[] = [
   {
@@ -82,34 +83,27 @@ export function Layout() {
   }, [navigate]);
 
   return (
-    <div className="flex h-full w-full">
-      <aside className="sticky top-0 hidden h-screen w-[200px] shrink-0 flex-col gap-1 border-r border-ink-600/70 bg-ink-800 px-3 py-5 md:flex">
-        <div className="mb-8 flex items-center gap-3 px-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-white"><Timer size={18} /></span>
-          <div><div className="text-base font-semibold">Timer</div><div className="mt-0.5 text-[11px] text-slate-400">Planning workspace</div></div>
-        </div>
+    <div className="app-shell">
+      <aside className="app-sidebar">
+        <NavLink to="/week" className="sidebar-brand" aria-label="Tempo home"><Brand /></NavLink>
         {navGroups.map((g) => (
-          <div key={g.title} className={g.title === 'Workspace' ? 'mt-auto border-t border-ink-600 pt-4' : 'mb-5'}>
-            <div className="px-3 pb-1 text-xs font-medium text-slate-500">{g.title}</div>
+          <div key={g.title} className={`nav-group${g.title === 'Workspace' ? ' nav-group-bottom' : ''}`}>
+            <div className="nav-group-label">{g.title}</div>
             {g.tabs.map((t) => (
               <NavLink
                 key={t.to}
                 to={t.to}
                 end={t.end}
                 className={({ isActive }) =>
-                  `group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition ${
-                    isActive
-                      ? 'bg-accent-soft text-accent'
-                      : 'text-slate-300 hover:bg-ink-700/70'
-                  }`
+                  `group sidebar-link${isActive ? ' is-active' : ''}`
                 }
               >
-                <t.icon size={18} className="shrink-0" />
+                <t.icon size={19} strokeWidth={1.7} className="shrink-0" />
                 {t.label}
                 {t.to === '/agents' && waiting > 0 ? (
                   <span className="ml-auto rounded-full px-1.5 text-[11px] font-bold text-white" style={{ backgroundColor: 'rgb(217 144 30)' }}>{waiting}</span>
                 ) : shortcutKeyOf(t.to) && (
-                  <span className="ml-auto text-[11px] font-semibold text-slate-500 opacity-0 transition-opacity group-hover:opacity-100">{shortcutKeyOf(t.to)}</span>
+                  <span className="nav-shortcut">{shortcutKeyOf(t.to)}</span>
                 )}
               </NavLink>
             ))}
@@ -117,13 +111,14 @@ export function Layout() {
         ))}
       </aside>
 
-      <main className="flex-1 overflow-y-auto px-4 pb-28 pt-[max(0.75rem,env(safe-area-inset-top))] md:px-7 md:pb-12 md:pt-8">
-        <div className="mx-auto max-w-[1800px]">
+      <main className="app-main">
+        <div className="mobile-brand"><NavLink to="/week" aria-label="Tempo home"><Brand compact /></NavLink><span>Your planning space</span></div>
+        <div className="app-content">
           <Outlet />
         </div>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-ink-600 bg-ink-800/95 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
+      <nav className="mobile-navigation" aria-label="Mobile navigation">
         <div className="grid grid-cols-5">
           {mobileTabs.map((t) => (
             <NavLink
@@ -132,16 +127,16 @@ export function Layout() {
               onClick={() => setMoreOpen(false)}
               end={t.end}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 py-2.5 text-[11px] ${isActive ? 'text-accent' : 'text-slate-400'}`
+                `mobile-nav-link${isActive ? ' is-active' : ''}`
               }
             >
-              <t.icon size={20} />
+              <t.icon size={21} strokeWidth={1.7} />
               {t.label}
             </NavLink>
           ))}
           <div ref={moreRef} className="relative">
-            <button ref={moreButton} onClick={() => setMoreOpen(!moreOpen)} aria-expanded={moreOpen} aria-controls="mobile-more" className="flex w-full flex-col items-center gap-0.5 py-2.5 text-[11px] text-slate-400"><MoreHorizontal size={20} />More</button>
-            {moreOpen && <div id="mobile-more" className="absolute bottom-full right-2 mb-3 w-48 rounded-lg border border-ink-600 bg-ink-800 p-2 shadow-lg">
+            <button ref={moreButton} onClick={() => setMoreOpen(!moreOpen)} aria-expanded={moreOpen} aria-controls="mobile-more" className="mobile-nav-link w-full"><MoreHorizontal size={21} strokeWidth={1.7} />More</button>
+            {moreOpen && <div id="mobile-more" className="mobile-more-menu">
               {moreTabs.map((t) => <NavLink key={t.to} to={t.to} onClick={() => setMoreOpen(false)} className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-3 text-sm ${isActive ? 'bg-accent-soft text-accent' : 'text-slate-200 hover:bg-ink-700'}`}><t.icon size={18} />{t.label}</NavLink>)}
             </div>}
           </div>

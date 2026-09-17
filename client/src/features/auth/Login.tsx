@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Timer } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { api } from '../../lib/api';
+import { Brand } from '../../components/Brand';
 
 export function Login() {
   const qc = useQueryClient();
@@ -14,26 +15,30 @@ export function Login() {
   });
 
   return (
-    <div className="mx-auto flex h-full max-w-sm flex-col items-center justify-center px-6">
-      <div className="mb-8 w-full">
-        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent text-white"><Timer size={24} /></div>
-        <h1 className="mt-5 text-2xl font-semibold">Timer</h1>
-        <p className="text-sm text-slate-400">Your week, tasks and habits. In one place.</p>
+    <div className="login-page">
+      <div className="login-welcome">
+        <Brand />
+        <div className="login-intro"><h1>A little clarity.<br />A better week.</h1><p>Make room for what matters. Plan your days, keep your tasks close, and find your rhythm.</p></div>
+        <div className="login-rhythm" aria-hidden="true"><span /><span /><span /><span /><span /><span /><span /></div>
+        <span className="login-caption">Your week, at your own pace.</span>
       </div>
+      <div className="login-form-panel">
+      <div className="login-form-heading"><h2>Welcome back</h2><p>Sign in to your planning space.</p></div>
       <form
-        className="card w-full space-y-4 p-5"
+        className="login-form"
         onSubmit={(e) => {
           e.preventDefault();
           m.mutate();
         }}
       >
-        <label className="block text-xs font-medium text-slate-400">Username<input className="input mt-1.5" type="text" placeholder="Username" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
-        <label className="block text-xs font-medium text-slate-400">Password<input className="input mt-1.5" type="password" placeholder="Password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
+        <label className="login-label">Username<input className="input" type="text" placeholder="Your username" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
+        <label className="login-label">Password<input className="input" type="password" placeholder="Your password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
         {m.isError && <p className="text-sm text-rose-400">Invalid email or password.</p>}
         <button className="btn-accent w-full" type="submit" disabled={m.isPending}>
-          {m.isPending ? 'Signing in…' : 'Sign in'}
+          {m.isPending ? 'Signing in…' : 'Sign in'}<ArrowRight size={17} aria-hidden="true" />
         </button>
       </form>
+      </div>
     </div>
   );
 }

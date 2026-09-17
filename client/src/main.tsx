@@ -6,6 +6,7 @@ import { initOfflineQueue } from './lib/offlineQueue';
 import { RunProvider } from './features/run/RunContext';
 import { App } from './App';
 import './index.css';
+import './workspace.css';
 
 initOfflineQueue(queryClient);
 

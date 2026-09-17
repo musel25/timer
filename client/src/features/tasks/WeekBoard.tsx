@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Archive, ArchiveRestore, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Archive, ArchiveRestore, Check, ChevronLeft, ChevronRight, Inbox, Repeat2 } from 'lucide-react';
 import { DndContext, closestCorners, useDroppable, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -109,10 +109,10 @@ function DayColumn({ dayKey, tasks, events, onEdit, dragHappened, showCompleted 
     <div
       className={`week-day ${isToday ? 'is-today' : ''}`}
     >
-      <div className="flex flex-col items-start gap-1">
-        <div className="flex items-baseline gap-2"><span className="text-sm font-semibold">{d.toLocaleDateString(undefined, { weekday: 'short' })}</span><span className={`text-lg tabular-nums ${isToday ? 'font-semibold text-accent' : 'text-slate-400'}`}>{d.getDate()}</span></div>
-        {isToday && <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold text-accent">Today</span>}
-        <span className="text-[11px] text-slate-500">{tasks.filter((t) => !t.done).length} to do</span>
+      <div className="day-date">
+        <span className="day-name">{d.toLocaleDateString(undefined, { weekday: 'short' })}</span>
+        <span className="day-number">{String(d.getDate()).padStart(2, '0')}</span>
+        {isToday ? <span className="day-today">Today</span> : <span className="day-count">{tasks.filter((t) => !t.done).length} to do</span>}
       </div>
       <div className="day-tasks">
       {events.length > 0 && (
@@ -216,21 +216,24 @@ export function WeekBoard() {
   }
 
   return (
-    <div className="space-y-4">
-      <header className="hero flex flex-wrap items-end justify-between gap-5">
+    <div className="week-workspace space-y-5">
+      <header className="hero planner-heading flex flex-wrap items-end justify-between gap-5">
         <div>
-          <h1 className="page-title">Week planner</h1>
-          <p className="mt-2 text-sm text-slate-400" aria-live="polite">{dateLabel(days[0], keyToDate(days[0]).getFullYear() !== keyToDate(days[6]).getFullYear())} – {dateLabel(days[6])}</p>
+          <h1 className="page-title">Your week</h1>
+          <p className="mt-2 text-sm text-slate-400">A little structure. More room for what matters.</p>
         </div>
-        <div className="flex items-center gap-1 rounded-lg border border-ink-600 bg-ink-800 p-1">
+        <div className="week-navigation flex items-center gap-1 rounded-lg border border-ink-600 bg-ink-800 p-1">
           <button className="btn px-2.5 py-2 hover:bg-ink-700" aria-label="Previous week" onClick={() => setAnchor(addDaysKey(anchor, -7))}><ChevronLeft size={16} /></button>
           <button className="btn px-3 py-2 hover:bg-ink-700" onClick={() => setAnchor(todayKey())}>This week</button>
           <button className="btn px-2.5 py-2 hover:bg-ink-700" aria-label="Next week" onClick={() => setAnchor(addDaysKey(anchor, 7))}><ChevronRight size={16} /></button>
         </div>
       </header>
-      {!isLoading && !isError && <div className="flex flex-wrap items-center justify-between gap-3 py-1">
-        <p className="flex items-center gap-2 text-sm text-slate-400"><span className="font-semibold text-slate-100">{weekTasks.length - completed} tasks left</span><span className="text-slate-500">/</span>{completed} of {weekTasks.length} completed</p>
-        <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-400"><input type="checkbox" className="h-4 w-4 accent-[rgb(var(--accent))]" checked={showCompleted} onChange={(e) => setShowCompleted(e.target.checked)} />Show completed</label>
+      {!isLoading && !isError && <div className="week-toolbar">
+        <div>
+          <h2 className="week-range" aria-live="polite">{dateLabel(days[0], keyToDate(days[0]).getFullYear() !== keyToDate(days[6]).getFullYear())} – {dateLabel(days[6])}</h2>
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400"><span>{weekTasks.length - completed} tasks left</span><span aria-hidden="true" className="summary-dot" /><span>{completed} of {weekTasks.length} completed</span></p>
+        </div>
+        <label className="completed-filter flex cursor-pointer items-center gap-2 text-xs text-slate-400"><input type="checkbox" className="h-3.5 w-3.5 accent-[rgb(var(--accent))]" checked={showCompleted} onChange={(e) => setShowCompleted(e.target.checked)} />Show completed</label>
       </div>}
       {isLoading && <p role="status" className="text-sm text-slate-400">Loading your week…</p>}
       {isError && <p role="alert" className="text-sm text-rose-400">Your tasks could not be loaded. Please refresh to try again.</p>}
@@ -251,11 +254,9 @@ export function WeekBoard() {
           <div className="week-days">{days.map((key) => <DayColumn key={key} dayKey={key} tasks={byDate(key)} events={evByDay.get(key) ?? []} onEdit={setEditing} dragHappened={dragHappened} showCompleted={showCompleted} />)}</div>
 
           <aside className="planner-inbox space-y-5">
-          <div className="card flex flex-col p-4">
-            <div className="mb-2 flex items-baseline justify-between gap-2 px-1 text-slate-400">
-              <span className="text-sm font-semibold">
-                {inArchive ? 'Archived' : 'Inbox'}
-              </span>
+          <div className="inbox-panel card flex flex-col">
+            <div className="inbox-heading flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2.5 text-sm font-bold"><span className="inbox-symbol"><Inbox size={17} /></span>{inArchive ? 'Archived' : 'Inbox'}</h2>
               <span className="flex items-baseline gap-2">
                 {/* Only appears once something is archived, so it stays invisible
                     until it's earned. */}
@@ -268,9 +269,10 @@ export function WeekBoard() {
                     <Archive size={12} /> {archived.length}
                   </button>
                 )}
-                {!inArchive && <span className="text-sm font-medium">{inboxOpen} to do</span>}
+                {!inArchive && <span className="inbox-count">{inboxOpen}</span>}
               </span>
             </div>
+            {!inArchive && <p className="inbox-caption">Ideas and tasks, ready for a day.</p>}
             {inArchive ? (
               // Not a drop target: you restore an archived task, you don't drag onto it.
               <div className="min-h-[40px] flex-1 space-y-1.5 p-1">
@@ -305,7 +307,7 @@ export function WeekBoard() {
               </>
             )}
           </div>
-          <section className="rounded-lg border border-ink-600 p-4"><div className="mb-3 flex items-center justify-between gap-2"><h2 className="text-sm font-semibold">Habits today</h2><a href="/habits" className="text-xs font-medium text-accent hover:underline">View habits</a></div><HabitPulse /></section>
+          <section className="habit-glance"><div className="mb-5 flex items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-sm font-bold"><Repeat2 size={16} className="text-accent" />Daily rhythm</h2><a href="/habits" className="text-xs font-semibold text-accent hover:underline">View habits</a></div><HabitPulse /></section>
           <p className="px-1 text-xs leading-relaxed text-slate-500">Open a task to choose its date. On a larger screen, you can also drag it into your week.</p>
           </aside>
         </div>

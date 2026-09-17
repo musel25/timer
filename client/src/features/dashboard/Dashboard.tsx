@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, Check } from 'lucide-react';
 import { useHabits, useGroups, useSessions, useLogSession, useDeleteSession, useRestDays, useVacationDays, useSettings } from '../../lib/hooks';
 import type { EntryData, Habit } from '../../lib/types';
 import { habitStreak, todaySummary, todaysHabitSession, effectiveGoal, isHabitDoneToday } from '../../lib/stats';
@@ -12,6 +12,7 @@ import { CadenceSection } from '../habits/CadenceSection';
 import { EntryForm, type EntrySubmission } from '../habits/EntryForm';
 import { lastEntryFor } from '../habits/entries';
 import { adherenceDays } from '../../lib/adherence';
+import { keyToDate } from '../../lib/date';
 
 /**
  * The Habits dashboard: every habit as a card you log by hand. Habits are never
@@ -40,7 +41,8 @@ export function Dashboard() {
   const active = habits.filter((h) => !h.archived);
   const restDays = new Set(restDayRows.map((r) => r.date));
   const vacationDays = new Set(vacationRows.map((r) => r.date));
-  const dailySummary = adherenceDays(habits, sessions, 1, restDays, vacationDays)[0];
+  const recentDays = adherenceDays(habits, sessions, 7, restDays, vacationDays);
+  const dailySummary = recentDays[recentDays.length - 1];
   const streakFor = (h: Habit) => habitStreak(h, sessions, restDays, vacationDays);
 
   const [showDone, setShowDone] = useState(false);
@@ -108,29 +110,50 @@ export function Dashboard() {
   const ungrouped = daily.filter((h) => (!h.groupId || !groups.some((g) => g.id === h.groupId)) && !doneToday(h)).sort(byTime);
 
   return (
-    <div className="space-y-6">
+    <div className="habits-workspace space-y-6">
       <header className="hero flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-[16rem] flex-1">
           <h1 className="page-title">Habits</h1>
-          <p className="mt-2 text-sm text-slate-400">Track your daily routines and weekly commitments.</p>
-          <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-            <span className="font-semibold">{dailySummary.rest ? 'Rest day — no daily targets' : dailySummary.total > 0 ? `${dailySummary.done} of ${dailySummary.total} daily habits complete` : 'No daily targets today'}</span>
-            <span className="text-slate-500">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span>
-          </div>
-          {dailySummary.total > 0 && <div className="mt-2 h-1 max-w-sm overflow-hidden rounded-full bg-ink-700" role="progressbar" aria-label="Daily habits completed" aria-valuenow={dailySummary.done} aria-valuemin={0} aria-valuemax={dailySummary.total}><div className="h-full bg-accent" style={{ width: `${dailySummary.done / dailySummary.total * 100}%` }} /></div>}
+          <p className="mt-2 text-sm text-slate-400">Make time for the things you want to keep doing.</p>
         </div>
         <Link to="/habits/new" className="btn-accent shrink-0"><Plus size={16} /> New habit</Link>
       </header>
 
-      {daily.length > 0 && <h2 className="label border-b border-ink-600/60 pb-1">Daily</h2>}
+      <section className="daily-overview" aria-label="Daily habit progress">
+        <div className="daily-overview-main">
+          <div className="completion-ring" aria-hidden="true">
+            <svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="33" className="completion-track" /><circle cx="40" cy="40" r="33" className="completion-fill" strokeDasharray={`${dailySummary.total ? dailySummary.done / dailySummary.total * 207.35 : 0} 207.35`} /></svg>
+            <span>{dailySummary.total ? <>{Math.round(dailySummary.done / dailySummary.total * 100)}<small>%</small></> : '–'}</span>
+          </div>
+          <div className="daily-overview-copy">
+            <h2>Today’s rhythm</h2>
+            <p className="daily-completion-label">{dailySummary.rest ? 'Rest day — no daily targets' : dailySummary.total > 0 ? `${dailySummary.done} of ${dailySummary.total} daily habits complete` : 'No daily targets today'}</p>
+            <p className="daily-date">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</p>
+            {dailySummary.total > 0 && <div className="sr-only" role="progressbar" aria-label="Daily habits completed" aria-valuenow={dailySummary.done} aria-valuemin={0} aria-valuemax={dailySummary.total} />}
+          </div>
+        </div>
+        <div className="rhythm-history" aria-label="Habit completion over the last 7 days">
+          <p>Last 7 days</p>
+          <div className="rhythm-days">{recentDays.map((day, index) => {
+            const complete = day.total > 0 && day.done >= day.total;
+            const description = day.rest ? `${day.date}: rest day` : `${day.date}: ${day.done} of ${day.total} complete`;
+            return <div key={day.date} className={`rhythm-day ${index === recentDays.length - 1 ? 'is-current' : ''}`} role="img" aria-label={description} title={description}>
+              <span>{keyToDate(day.date).toLocaleDateString(undefined, { weekday: 'narrow' })}</span>
+              <span className={`rhythm-day-dot ${complete ? 'is-complete' : day.done > 0 ? 'has-progress' : ''}`}>{complete ? <Check size={14} strokeWidth={2.5} /> : day.rest ? '–' : <span />}</span>
+            </div>;
+          })}</div>
+        </div>
+      </section>
+
+      {daily.length > 0 && <h2 className="daily-section-title">Daily habits</h2>}
 
       {ordered.map((group) => {
         const list = daily.filter((h) => h.groupId === group.id && !doneToday(h)).sort(byTime);
         if (list.length === 0) return null;
         return (
-          <section key={group.id}>
-            <h3 className="mb-3 text-sm font-semibold flex items-center gap-2">
-              <HabitIcon name={group.emoji} size={16} /> {group.name}
+          <section key={group.id} className="habit-group">
+            <h3 className="habit-group-title flex items-center gap-2">
+              <HabitIcon name={group.emoji} size={16} /> {group.name}<span>{list.length}</span>
             </h3>
             <div className="habit-list">
               {list.map(card)}
@@ -140,8 +163,8 @@ export function Dashboard() {
       })}
 
       {ungrouped.length > 0 && (
-        <section>
-          <h3 className="mb-3 text-sm font-semibold">Other</h3>
+        <section className="habit-group">
+          <h3 className="habit-group-title">Other<span>{ungrouped.length}</span></h3>
           <div className="habit-list">
             {ungrouped.map(card)}
           </div>
