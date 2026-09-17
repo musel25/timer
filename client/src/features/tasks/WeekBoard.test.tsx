@@ -42,6 +42,9 @@ vi.mock('../../lib/hooks', () => ({
   useTasks: () => ({ data: tasks }),
   useSessions: () => ({ data: [] }),
   useRestDays: () => ({ data: [] }),
+  // The hero's HabitPulse pulls these two as well.
+  useHabits: () => ({ data: [] }),
+  useVacationDays: () => ({ data: [] }),
   useCalendarEvents: () => ({ data: [] }),
   useSaveTask: () => ({ mutate: saveMutate, mutateAsync: saveMutate }),
   useReorderTasks: () => ({ mutate: vi.fn() }),
