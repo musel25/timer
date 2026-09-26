@@ -8,6 +8,7 @@ import { useAgentsOptional } from './agents/AgentsContext';
 import { askingCount } from './agents/sessionView';
 import { CC_DASH_ENABLED } from './agents/enabled';
 import { Brand } from '../components/Brand';
+import { RouteContent } from './RouteContent';
 
 const groups: { title: string; tabs: { to: string; label: string; icon: LucideIcon; end?: boolean }[] }[] = [
   {
@@ -114,7 +115,7 @@ export function Layout() {
       <main className="app-main">
         <div className="mobile-brand"><NavLink to="/week" aria-label="Planner home"><Brand compact /></NavLink></div>
         <div className="app-content">
-          <Outlet />
+          <RouteContent><Outlet /></RouteContent>
         </div>
       </main>
 

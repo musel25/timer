@@ -1,7 +1,5 @@
 import path from 'node:path';
-import { existsSync, readFileSync } from 'node:fs';
 import { serve } from '@hono/node-server';
-import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { logger } from 'hono/logger';
 import { migrate } from './db';
@@ -9,6 +7,7 @@ import { bootstrap } from './seed';
 import { api } from './api';
 import { startCalendarSync } from './gcalSync';
 import { startAgents } from './agents';
+import { createStaticApp } from './static';
 
 migrate();
 bootstrap();
@@ -34,16 +33,7 @@ app.route('/api', api);
 // Static SPA. In production CLIENT_DIR points at the built client; in dev the
 // Vite server serves the UI and proxies /api here, so this is unused.
 const clientDir = process.env.CLIENT_DIR || path.resolve(process.cwd(), '../client/dist');
-const root = path.isAbsolute(clientDir) ? path.relative(process.cwd(), clientDir) || '.' : clientDir;
-const indexHtml = path.join(clientDir, 'index.html');
-
-app.use('*', serveStatic({ root }));
-app.get('*', (c) => {
-  if (existsSync(indexHtml)) {
-    return c.html(readFileSync(indexHtml, 'utf8'));
-  }
-  return c.text('Not found', 404);
-});
+app.route('/', createStaticApp(clientDir));
 
 const port = Number(process.env.PORT || 8080);
 // HOST lets the local always-on service bind to 127.0.0.1 only; prod leaves it unset

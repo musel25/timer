@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Timer as TimerIcon } from 'lucide-react';
 import { useMe, useSettings } from './lib/hooks';
@@ -6,19 +6,24 @@ import { applyAccent, applyTheme } from './lib/theme';
 import { setVolume } from './engine/audio';
 import { Login } from './features/auth/Login';
 import { Layout } from './features/Layout';
-import { Dashboard } from './features/dashboard/Dashboard';
+
 import { WeekBoard } from './features/tasks/WeekBoard';
-import { Timer } from './features/timer/Timer';
-import { TimerEditor } from './features/timers/TimerEditor';
-import { HabitEditor } from './features/habits/HabitEditor';
-import { HabitDetail } from './features/habits/HabitDetail';
-import { Progress } from './features/stats/Progress';
-import { Notes } from './features/notes/Notes';
-import { DesktopsBoard } from './features/desktops/DesktopsBoard';
-import { SettingsPage } from './features/settings/Settings';
+
 import { AgentsProvider } from './features/agents/AgentsContext';
-import { AgentsDashboard } from './features/agents/AgentsDashboard';
+
 import { CC_DASH_ENABLED } from './features/agents/enabled';
+
+// The landing planner stays eager; other tools load when opened.
+const Dashboard = lazy(() => import('./features/dashboard/Dashboard').then((m) => ({ default: m.Dashboard })));
+const Timer = lazy(() => import('./features/timer/Timer').then((m) => ({ default: m.Timer })));
+const TimerEditor = lazy(() => import('./features/timers/TimerEditor').then((m) => ({ default: m.TimerEditor })));
+const HabitEditor = lazy(() => import('./features/habits/HabitEditor').then((m) => ({ default: m.HabitEditor })));
+const HabitDetail = lazy(() => import('./features/habits/HabitDetail').then((m) => ({ default: m.HabitDetail })));
+const Progress = lazy(() => import('./features/stats/Progress').then((m) => ({ default: m.Progress })));
+const Notes = lazy(() => import('./features/notes/Notes').then((m) => ({ default: m.Notes })));
+const DesktopsBoard = lazy(() => import('./features/desktops/DesktopsBoard').then((m) => ({ default: m.DesktopsBoard })));
+const SettingsPage = lazy(() => import('./features/settings/Settings').then((m) => ({ default: m.SettingsPage })));
+const AgentsDashboard = lazy(() => import('./features/agents/AgentsDashboard').then((m) => ({ default: m.AgentsDashboard })));
 
 function Splash() {
   return (
