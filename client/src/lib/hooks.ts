@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { api } from './api';
 import { buildManualSession } from './sessionLog';
 import { periodKey } from './cadence';
@@ -17,6 +17,22 @@ export const useSettings = () => useQuery({ queryKey: ['settings'], queryFn: () 
 export const useSessions = () =>
   useQuery({ queryKey: ['sessions'], queryFn: () => api.get<Session[]>('/sessions') });
 
+/** Apply a confirmed write without downloading the entire list again. Cancel
+ * older reads first so they cannot overwrite the saved row. An absent cache
+ * still needs a full read; never seed it with an incomplete one-row list. */
+async function updateList<T>(qc: QueryClient, key: string, update: (rows: T[]) => T[]) {
+  const needsReconcile = qc.getQueryState([key])?.isInvalidated;
+  await qc.cancelQueries({ queryKey: [key] });
+  if (qc.getQueryData([key]) === undefined) {
+    void qc.invalidateQueries({ queryKey: [key] });
+    return;
+  }
+  qc.setQueryData<T[]>([key], (rows) => rows === undefined ? undefined : update(rows));
+  // Other writes (attachments, deletion, timer logs) still rely on a full read.
+  // Restart their canceled reconciliation, but do not make this save wait for it.
+  if (needsReconcile) void qc.invalidateQueries({ queryKey: [key] });
+}
+
 /**
  * Log a habit by hand (no timer): POST a completed session, refresh today's
  * stats. `note` records what was done; `endedAt` back-dates the log (defaults to
@@ -27,16 +43,19 @@ export const useSessions = () =>
 export function useLogSession() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ habitId, minutes, note, endedAt, cadence = 'daily', entry }: {
+    mutationFn: async ({ habitId, minutes, note, endedAt, cadence = 'daily', entry }: {
       habitId: string; minutes: number; note?: string | null; endedAt?: number;
       cadence?: Cadence; entry?: EntryData | null;
     }) => {
       const at = endedAt ?? Date.now();
-      return api.post('/sessions', buildManualSession(habitId, minutes, at, note ?? null, {
+      const session = buildManualSession(habitId, minutes, at, note ?? null, {
         periodKey: periodKey(cadence, at), entry: entry ?? null,
-      }));
+      });
+      const result = await api.post<{ ids: string[] }>('/sessions', session);
+      return { ...session, id: result.ids[0], category: 'habit', createdAt: Date.now() } as Session;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['sessions'] }),
+    onSuccess: (session) => updateList<Session>(qc, 'sessions', (rows) =>
+      [session, ...rows.filter((row) => row.id !== session.id)].sort((a, b) => b.startedAt - a.startedAt)),
   });
 }
 
@@ -45,7 +64,7 @@ export function useDeleteSession() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.del(`/sessions/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['sessions'] }),
+    onSuccess: (_data, id) => updateList<Session>(qc, 'sessions', (rows) => rows.filter((row) => row.id !== id)),
   });
 }
 
@@ -171,7 +190,14 @@ export function useSaveTask() {
   return useMutation({
     mutationFn: (t: Partial<Task> & { id?: string }) =>
       t.id ? api.patch<Task>(`/tasks/${t.id}`, t) : api.post<Task>('/tasks', t),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+    onSuccess: (saved) => updateList<Task>(qc, 'tasks', (rows) => {
+      const exists = rows.some((row) => row.id === saved.id);
+      // PATCH returns the task row without GET's derived attachment count.
+      return (exists
+        ? rows.map((row) => row.id === saved.id ? { ...row, ...saved } : row)
+        : [...rows, { ...saved, hiddenOn: saved.hiddenOn ?? null, attachmentCount: saved.attachmentCount ?? 0 }])
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt - b.createdAt);
+    }),
   });
 }
 

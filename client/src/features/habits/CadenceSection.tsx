@@ -27,6 +27,7 @@ export function CadenceSection({
   onUndo,
   weekStart = 1,
   now = Date.now(),
+  saving = false,
 }: {
   title: string;
   habits: Habit[];
@@ -35,6 +36,7 @@ export function CadenceSection({
   onUndo?: (h: Habit) => void;
   weekStart?: number;
   now?: number;
+  saving?: boolean;
 }) {
   if (habits.length === 0) return null;
   const rows = cadenceRows(habits, sessions, weekStart, now);
@@ -56,6 +58,7 @@ export function CadenceSection({
               style={r.isToday ? { backgroundColor: tint(color.rgb, 0.07) } : undefined}
             >
             <button
+              disabled={saving}
               onClick={() => onOpen(r.habit)}
               title={r.satisfied ? `${r.habit.name} — done, tap to log again` : `Log ${r.habit.name}`}
               className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left transition hover:bg-ink-700/40"
@@ -97,6 +100,7 @@ export function CadenceSection({
             </button>
             {r.done > 0 && onUndo && (
               <button
+                disabled={saving}
                 onClick={() => onUndo(r.habit)}
                 aria-label={`Undo ${r.habit.name}`}
                 title="Undo this period's log"

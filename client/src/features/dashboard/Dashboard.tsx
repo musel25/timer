@@ -36,6 +36,8 @@ export function Dashboard() {
   const { data: settings } = useSettings();
   const logSession = useLogSession();
   const deleteSession = useDeleteSession();
+  const saving = logSession.isPending || deleteSession.isPending;
+  const saveError = logSession.isError || deleteSession.isError;
 
   const today = todaySummary(sessions);
   const active = habits.filter((h) => !h.archived);
@@ -57,14 +59,20 @@ export function Dashboard() {
   const doneToday = (h: Habit) => isHabitDoneToday(h, today, effectiveGoal(h, startOfToday(), vacationDays), sessions);
   const doneHabits = daily.filter(doneToday).sort(byTime);
 
-  const log = (habit: Habit, entry: LogEntry) =>
+  const clearErrors = () => { logSession.reset(); deleteSession.reset(); };
+  const openEntry = (habit: Habit) => { clearErrors(); setEntryFor(habit); };
+
+  const log = (habit: Habit, entry: LogEntry) => {
+    clearErrors();
     logSession.mutate({
       habitId: habit.id, minutes: entry.minutes, note: entry.note,
       endedAt: entry.endedAt, cadence: cadenceOf(habit),
     });
+  };
 
   /** Un-mark: delete the completion that satisfied this period. */
   const undo = (habit: Habit) => {
+    clearErrors();
     const cadence = cadenceOf(habit);
     const key = periodKey(cadence, Date.now());
     const existing = cadence === 'daily'
@@ -74,17 +82,18 @@ export function Dashboard() {
   };
 
   const toggleAbstain = (habit: Habit) => {
+    clearErrors();
     const existing = todaysHabitSession(sessions, habit.id);
     if (existing) deleteSession.mutate(existing.id);
     else logSession.mutate({ habitId: habit.id, minutes: 0 });
   };
 
   const submitEntry = (habit: Habit, s: EntrySubmission) => {
+    clearErrors();
     logSession.mutate({
       habitId: habit.id, minutes: s.minutes, note: s.note,
       cadence: cadenceOf(habit), entry: s.entry,
-    });
-    setEntryFor(null);
+    }, { onSuccess: () => setEntryFor(null) });
   };
 
   const hasForm = (h: Habit) => Boolean(h.template) || h.kind === 'check';
@@ -94,6 +103,7 @@ export function Dashboard() {
     <HabitCard
       key={h.id}
       habit={h}
+      saving={saving}
       minutesToday={today.minutesByHabit[h.id] ?? 0}
       onLog={log}
       editTo={`/habits/${h.id}/edit`}
@@ -102,7 +112,7 @@ export function Dashboard() {
       streak={streakFor(h)}
       goalMin={effectiveGoal(h, startOfToday(), vacationDays)}
       onToggle={h.kind === 'abstain' ? toggleAbstain : undo}
-      onOpenEntry={hasForm(h) ? setEntryFor : undefined}
+      onOpenEntry={hasForm(h) ? openEntry : undefined}
     />
   );
 
@@ -117,6 +127,9 @@ export function Dashboard() {
         </div>
         <Link to="/habits/new" className="btn-accent shrink-0"><Plus size={16} /> New habit</Link>
       </header>
+
+      {saving && <p role="status" className="text-sm text-slate-400">Saving…</p>}
+      {saveError && <p role="alert" className="text-sm text-rose-400">Could not save your habit. Please try again.</p>}
 
       <section className="daily-overview" aria-label="Daily habit progress">
         <div className="daily-overview-main">
@@ -174,8 +187,8 @@ export function Dashboard() {
         <p className="py-8 text-center text-slate-500">No habits yet — add your first one above.</p>
       )}
 
-      <CadenceSection title="This week" habits={weekly} sessions={sessions} onOpen={setEntryFor} onUndo={undo} weekStart={settings?.weekStart ?? 1} />
-      <CadenceSection title="This month" habits={monthly} sessions={sessions} onOpen={setEntryFor} onUndo={undo} />
+      <CadenceSection saving={saving} title="This week" habits={weekly} sessions={sessions} onOpen={openEntry} onUndo={undo} weekStart={settings?.weekStart ?? 1} />
+      <CadenceSection saving={saving} title="This month" habits={monthly} sessions={sessions} onOpen={openEntry} onUndo={undo} />
 
       {doneHabits.length > 0 && (
         <section>
@@ -198,12 +211,15 @@ export function Dashboard() {
         <div
           data-modal
           className="fixed inset-0 z-40 flex items-end justify-center bg-black/30 p-0 sm:items-center sm:p-4"
-          onClick={() => setEntryFor(null)}
+          onClick={() => { if (!saving) setEntryFor(null); }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             className="card max-h-[90vh] w-full max-w-md overflow-y-auto rounded-b-none rounded-t-2xl p-4 sm:rounded-2xl"
           >
+            {saving && <p className="mb-3 text-sm text-slate-400">Saving…</p>}
+            {saveError && <p role="alert" className="mb-3 text-sm text-rose-400">Could not save. Your entry is still here; please try again.</p>}
+            <fieldset disabled={saving}>
             <EntryForm
               habit={entryFor}
               defaultMinutes={entryFor.defaultDurationMin ?? entryFor.durations?.[0] ?? 10}
@@ -211,6 +227,7 @@ export function Dashboard() {
               onDone={(s) => submitEntry(entryFor, s)}
               onCancel={() => setEntryFor(null)}
             />
+            </fieldset>
           </div>
         </div>
       )}

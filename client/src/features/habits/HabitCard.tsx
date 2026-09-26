@@ -44,6 +44,7 @@ export function HabitCard({
   onToggle,
   onOpenEntry,
   streakUnit = 'day',
+  saving = false,
 }: {
   habit: Habit;
   minutesToday: number;
@@ -57,6 +58,7 @@ export function HabitCard({
   onToggle?: (h: Habit) => void;
   onOpenEntry?: (h: Habit) => void;
   streakUnit?: 'day' | 'week' | 'month';
+  saving?: boolean;
 }) {
 
   const rawGoal = goalMin !== undefined ? goalMin : habit.dailyGoalMin;
@@ -121,18 +123,18 @@ export function HabitCard({
       {progress}
       <div className="habit-actions flex items-center justify-end gap-1.5">
         {habit.kind === 'check' ? (
-          <button onClick={() => markedToday ? onToggle?.(habit) : onOpenEntry?.(habit)} className={markedToday ? 'btn-outline py-2' : 'btn-accent py-2'}>{markedToday ? <Undo2 size={14} /> : <SquarePen size={14} />}{markedToday ? 'Undo' : 'Log entry'}</button>
+          <button disabled={saving} onClick={() => markedToday ? onToggle?.(habit) : onOpenEntry?.(habit)} className={markedToday ? 'btn-outline py-2' : 'btn-accent py-2'}>{markedToday ? <Undo2 size={14} /> : <SquarePen size={14} />}{markedToday ? 'Undo' : 'Log entry'}</button>
         ) : habit.kind === 'abstain' ? (
-          <button onClick={() => onToggle?.(habit)} className={markedToday ? 'btn-outline py-2' : 'btn-accent py-2'}>{markedToday ? <Check size={14} /> : <ShieldCheck size={14} />}{markedToday ? 'Stayed off today' : 'Mark stayed off'}</button>
+          <button disabled={saving} onClick={() => onToggle?.(habit)} className={markedToday ? 'btn-outline py-2' : 'btn-accent py-2'}>{markedToday ? <Check size={14} /> : <ShieldCheck size={14} />}{markedToday ? 'Stayed off today' : 'Mark stayed off'}</button>
         ) : onLog ? <>
-          <button onClick={logDefault} aria-label={`Log ${logAmount} minutes`} className="habit-log-btn btn whitespace-nowrap px-3 py-2"><Plus size={14} />Log {logAmount} min</button>
-          <button onClick={() => onOpenEntry ? onOpenEntry(habit) : openLog()} aria-label={onOpenEntry ? 'Open entry form' : 'Custom log'} aria-expanded={onOpenEntry ? undefined : logging} title={onOpenEntry ? 'Open entry form' : 'Log a specific amount'} className="btn-outline px-2.5 py-2.5">{onOpenEntry ? <SquarePen size={15} /> : <MoreHorizontal size={15} />}</button>
+          <button disabled={saving} onClick={logDefault} aria-label={`Log ${logAmount} minutes`} className="habit-log-btn btn whitespace-nowrap px-3 py-2"><Plus size={14} />Log {logAmount} min</button>
+          <button disabled={saving} onClick={() => onOpenEntry ? onOpenEntry(habit) : openLog()} aria-label={onOpenEntry ? 'Open entry form' : 'Custom log'} aria-expanded={onOpenEntry ? undefined : logging} title={onOpenEntry ? 'Open entry form' : 'Log a specific amount'} className="btn-outline px-2.5 py-2.5">{onOpenEntry ? <SquarePen size={15} /> : <MoreHorizontal size={15} />}</button>
         </> : null}
       </div>
       {habit.kind === 'time' && onLog && !onOpenEntry && logging && <div className="habit-composer flex items-center gap-2 rounded-lg bg-ink-700 p-3">
         <label className="text-xs text-slate-400" htmlFor={`minutes-${habit.id}`}>Minutes</label>
         <input id={`minutes-${habit.id}`} type="number" min={1} inputMode="numeric" autoFocus value={minutes} onChange={(e) => setMinutes(Number(e.target.value))} onKeyDown={(e) => e.key === 'Enter' && commit()} className="input w-20 py-1.5 text-center text-sm" />
-        <button onClick={commit} disabled={!(minutes > 0)} className="btn-accent ml-auto py-2"><Check size={13} />Log</button>
+        <button onClick={commit} disabled={saving || !(minutes > 0)} className="btn-accent ml-auto py-2"><Check size={13} />Log</button>
         <button onClick={() => setLogging(false)} className="btn-ghost py-2">Cancel</button>
       </div>}
     </div>
