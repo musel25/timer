@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Play } from 'lucide-react';
-import { Stepper } from '../../components/Stepper';
+import { MINUTE_PRESETS, Stepper } from '../../components/Stepper';
 import { useDeleteTimer, useSaveTimer, useTimers } from '../../lib/hooks';
 import { describeBlock, runSpecFromPreset, type BlockShape } from '../../lib/presets';
 import { timerTypeLabel } from '../../lib/timerMeta';
@@ -76,7 +76,7 @@ function QuickStart() {
   return (
     <div className="card p-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Stepper label="Quick start" value={minutes} onChange={setMinutes} min={1} max={180} suffix="min" editable />
+        <Stepper label="Quick start" value={minutes} onChange={setMinutes} min={1} max={180} suffix="min" presets={MINUTE_PRESETS} />
         <div className="flex gap-2">
           <button className="btn-accent px-5 py-3 text-base" onClick={start}>
             <Play size={18} fill="currentColor" /> Start

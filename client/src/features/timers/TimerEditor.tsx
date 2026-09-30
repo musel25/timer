@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, X } from 'lucide-react';
-import { Stepper } from '../../components/Stepper';
+import { MINUTE_PRESETS, Stepper } from '../../components/Stepper';
 import { useDeleteTimer, useSaveTimer, useTimers } from '../../lib/hooks';
 import { PHASE_COLORS } from '../../engine/buildPhases';
 import { timerTypeLabel } from '../../lib/timerMeta';
@@ -101,7 +101,7 @@ export function TimerEditor() {
         {type === 'pomodoro' ? (
           <>
             <Stepper label="Prep countdown" value={pomo.prepSeconds ?? DEFAULT_POMODORO_PREP} onChange={(v) => updatePomo({ prepSeconds: v })} min={0} max={60} suffix="s" />
-            <Stepper label="Focus block" value={pomo.work} onChange={(v) => updatePomo({ work: v })} min={1} max={120} suffix="min" />
+            <Stepper label="Focus block" value={pomo.work} onChange={(v) => updatePomo({ work: v })} min={1} max={120} suffix="min" presets={MINUTE_PRESETS} />
             <Stepper label="Short break" value={pomo.short} onChange={(v) => updatePomo({ short: v })} min={1} max={60} suffix="min" />
             <Stepper label="Long break" value={pomo.long} onChange={(v) => updatePomo({ long: v })} min={1} max={120} suffix="min" />
             <Stepper label="Long break every" value={pomo.longEvery} onChange={(v) => updatePomo({ longEvery: v })} min={1} max={12} suffix="blocks" />
@@ -111,7 +111,7 @@ export function TimerEditor() {
           <>
             <Stepper label="Prep countdown" value={prep} onChange={setPrep} min={0} max={60} suffix="s" />
             {type === 'simple' ? (
-              <Stepper label="Duration" value={minutes} onChange={setMinutes} min={1} max={180} suffix="min" />
+              <Stepper label="Duration" value={minutes} onChange={setMinutes} min={1} max={180} suffix="min" presets={MINUTE_PRESETS} />
             ) : (
               <>
                 <Stepper label="Sets" value={sets} onChange={setSets} min={1} max={50} />

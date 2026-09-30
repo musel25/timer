@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
-import { Stepper } from '../../components/Stepper';
+import { MINUTE_PRESETS, Stepper } from '../../components/Stepper';
 import { cadenceLabel, ordinal } from '../../lib/cadence';
 import { useDeleteHabit, useGroups, useHabits, useSaveGroup, useSaveHabit } from '../../lib/hooks';
 import { HabitIcon, HABIT_ICONS, HABIT_ICON_NAMES, DEFAULT_HABIT_ICON } from '../../lib/habitIcons';
@@ -217,7 +217,7 @@ export function HabitEditor() {
             </p>
           </div>
           <div className="border-t border-ink-600/60 pt-3">
-            <Stepper label="Times per period" value={targetCount} onChange={setTargetCount} min={1} max={7} step={1} editable />
+            <Stepper label="Times per period" value={targetCount} onChange={setTargetCount} min={1} max={7} step={1} />
             <p className="mt-2 text-xs text-slate-400">
               {targetCount > 1
                 ? `${targetCount}× per ${cadence === 'weekly' ? 'week' : 'month'} to keep the streak.`
@@ -266,18 +266,18 @@ export function HabitEditor() {
 
       {kind === 'time' && (
       <div className="card p-4">
-        <Stepper label="Daily goal" value={goal} onChange={setGoal} min={0} max={120} step={1} suffix="min" editable />
+        <Stepper label="Daily goal" value={goal} onChange={setGoal} min={0} max={600} suffix="min" presets={MINUTE_PRESETS} />
         {goal > 0 ? (
           <p className="mt-2 text-xs text-slate-400">{goal} min/day · Log checks it off at the goal, or enter a specific amount</p>
         ) : (
           <p className="mt-2 text-xs text-slate-400">No daily goal</p>
         )}
         <div className="mt-4 border-t border-ink-600/60 pt-3">
-          <Stepper label="Weekend goal" value={weekendGoal} onChange={setWeekendGoal} min={0} max={120} step={1} suffix="min" editable />
+          <Stepper label="Weekend goal" value={weekendGoal} onChange={setWeekendGoal} min={0} max={600} suffix="min" presets={MINUTE_PRESETS} />
           <p className="mt-2 text-xs text-slate-400">{weekendGoal > 0 ? `${weekendGoal} min on Sat/Sun` : 'Weekends use the daily goal'}</p>
         </div>
         <div className="mt-4 border-t border-ink-600/60 pt-3">
-          <Stepper label="Vacation goal" value={vacationGoal} onChange={setVacationGoal} min={0} max={120} step={1} suffix="min" editable />
+          <Stepper label="Vacation goal" value={vacationGoal} onChange={setVacationGoal} min={0} max={600} suffix="min" presets={MINUTE_PRESETS} />
           <p className="mt-2 text-xs text-slate-400">
             {vacationGoal > 0
               ? `${vacationGoal} min on vacation days`
