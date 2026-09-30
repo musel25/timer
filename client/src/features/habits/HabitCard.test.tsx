@@ -19,6 +19,16 @@ describe('habit row logging', () => {
     expect(screen.queryByLabelText('Minutes')).toBeNull();
   });
 
+  it('the custom composer offers a check at the goal or a specific amount', () => {
+    const log = vi.fn();
+    render(<HabitCard habit={habit} minutesToday={0} onLog={log} goalMin={15} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Custom log' }));
+    expect((screen.getByLabelText('Minutes') as HTMLInputElement).value).toBe('15');
+    fireEvent.click(screen.getByRole('button', { name: 'Done, log 15 minutes' }));
+    expect(log).toHaveBeenCalledWith(habit, expect.objectContaining({ minutes: 15 }));
+    expect(screen.queryByLabelText('Minutes')).toBeNull();
+  });
+
   it('one-tap logs the goal that today actually asks for, not the composer default', () => {
     const log = vi.fn();
     // A lighter weekend/vacation goal wins over both the daily goal and defaultDurationMin.

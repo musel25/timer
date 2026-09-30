@@ -7,7 +7,7 @@ import { habitStreak, todaySummary, todaysHabitSession, effectiveGoal, isHabitDo
 import { startOfToday } from '../../lib/time';
 import { cadenceOf, periodKey } from '../../lib/cadence';
 import { HabitIcon } from '../../lib/habitIcons';
-import { HabitCard, type LogEntry } from '../habits/HabitCard';
+import { HabitCard, goalLogAmount, type LogEntry } from '../habits/HabitCard';
 import { CadenceSection } from '../habits/CadenceSection';
 import { EntryForm, type EntrySubmission } from '../habits/EntryForm';
 import { lastEntryFor } from '../habits/entries';
@@ -222,7 +222,7 @@ export function Dashboard() {
             <fieldset disabled={saving}>
             <EntryForm
               habit={entryFor}
-              defaultMinutes={entryFor.defaultDurationMin ?? entryFor.durations?.[0] ?? 10}
+              defaultMinutes={goalLogAmount(entryFor, effectiveGoal(entryFor, startOfToday(), vacationDays))}
               seed={lastEntryFor(sessions, entryFor.id) ?? ({} as EntryData)}
               onDone={(s) => submitEntry(entryFor, s)}
               onCancel={() => setEntryFor(null)}

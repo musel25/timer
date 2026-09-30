@@ -8,8 +8,6 @@ import { HabitIcon, HABIT_ICONS, HABIT_ICON_NAMES, DEFAULT_HABIT_ICON } from '..
 import type { Cadence, EntryTemplate, Habit, HabitKind } from '../../lib/types';
 import { TEMPLATE_IDS, templateTitle } from './templates';
 
-const DURATION_CHOICES = [3, 5, 10, 15, 20, 25, 30, 45, 60]; // minutes
-const DEFAULT_DURATIONS = [25];
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 /** Which occurrence of the weekday a monthly habit falls on; 5 = the last. */
 const WEEKS: { value: number; label: string }[] = [
@@ -51,8 +49,6 @@ export function HabitEditor() {
   const [goal, setGoal] = useState(20); // daily goal in minutes (0 = none)
   const [weekendGoal, setWeekendGoal] = useState(0); // 0 = same as daily goal
   const [vacationGoal, setVacationGoal] = useState(0); // 0 = the habit takes vacation days off
-  const [durations, setDurations] = useState<number[]>(DEFAULT_DURATIONS);
-  const [defaultMin, setDefaultMin] = useState(10);
 
   useEffect(() => {
     if (!existing) return;
@@ -71,22 +67,7 @@ export function HabitEditor() {
     setGoal(existing.dailyGoalMin ?? 0);
     setWeekendGoal(existing.weekendGoalMin ?? 0);
     setVacationGoal(existing.vacationGoalMin ?? 0);
-    const dur = existing.durations?.length ? existing.durations : [10];
-    setDurations(dur);
-    setDefaultMin(existing.defaultDurationMin && dur.includes(existing.defaultDurationMin) ? existing.defaultDurationMin : dur[0]);
   }, [existing?.id]);
-
-  function toggleDuration(min: number) {
-    setDurations((cur) => {
-      if (cur.includes(min)) {
-        if (cur.length === 1) return cur; // keep at least one
-        const next = cur.filter((m) => m !== min);
-        if (defaultMin === min) setDefaultMin(next[0]);
-        return next;
-      }
-      return [...cur, min].sort((a, b) => a - b);
-    });
-  }
 
   async function newGroup() {
     const name = window.prompt('New group name (e.g. Morning)');
@@ -113,8 +94,10 @@ export function HabitEditor() {
       anchorWeek: cadence === 'monthly' ? anchorWeek : null,
       targetCount: cadence === 'daily' ? 1 : Math.max(1, targetCount),
       template,
-      durations,
-      defaultDurationMin: kind === 'time' ? defaultMin : null,
+      // Logging a time habit always means "today's goal" (or a typed amount);
+      // there is no separate button length to pick any more.
+      durations: kind === 'time' && goal > 0 ? [goal] : existing?.durations?.length ? existing.durations : [10],
+      defaultDurationMin: kind === 'time' ? (goal > 0 ? goal : existing?.defaultDurationMin ?? 10) : null,
       dailyGoalMin: kind === 'time' && goal > 0 ? goal : null,
       weekendGoalMin: kind === 'time' && weekendGoal > 0 ? weekendGoal : null,
       vacationGoalMin: kind === 'time' ? vacationGoal : null,
@@ -282,50 +265,10 @@ export function HabitEditor() {
       </div>
 
       {kind === 'time' && (
-      <div className="card space-y-3 p-4">
-        <div>
-          <label className="label">Log button</label>
-          <p className="mb-2 mt-1 text-xs text-slate-400">
-            {durations.length === 1
-              ? `The habit card logs ${durations[0]} min in one tap. Pick more lengths only if you want a choice.`
-              : 'The habit card shows one button per length. One is usually enough.'}
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {DURATION_CHOICES.map((min) => (
-              <button
-                key={min}
-                onClick={() => toggleDuration(min)}
-                className={`chip px-3 py-1.5 ${durations.includes(min) ? 'chip-active' : ''}`}
-              >
-                {min}m
-              </button>
-            ))}
-          </div>
-        </div>
-        {durations.length > 1 && (
-          <div>
-            <label className="label">Default</label>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {durations.map((min) => (
-                <button
-                  key={min}
-                  onClick={() => setDefaultMin(min)}
-                  className={`chip px-3 py-1.5 ${defaultMin === min ? 'chip-active' : ''}`}
-                >
-                  {min}m
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-      )}
-
-      {kind === 'time' && (
       <div className="card p-4">
         <Stepper label="Daily goal" value={goal} onChange={setGoal} min={0} max={120} step={1} suffix="min" editable />
         {goal > 0 ? (
-          <p className="mt-2 text-xs text-slate-400">{goal} min/day</p>
+          <p className="mt-2 text-xs text-slate-400">{goal} min/day · Log checks it off at the goal, or enter a specific amount</p>
         ) : (
           <p className="mt-2 text-xs text-slate-400">No daily goal</p>
         )}

@@ -32,7 +32,8 @@ const initialValues = (t: Template | null, defaultMin: number, seed: EntryData):
  *
  * `seed` prefills carry-over answers (the book you are still reading). `onDone`
  * receives the minutes to record and the structured answers; `defaultMinutes`
- * is the habit's usual amount, and a 'check' habit records zero minutes.
+ * is today's goal - the minutes box starts on it, and a "Done" chip resets it
+ * there after typing a specific amount. A 'check' habit records zero minutes.
  */
 export function EntryForm({
   habit,
@@ -79,6 +80,19 @@ export function EntryForm({
     onDone({ minutes: recorded, note: null, entry });
   }
 
+  // Check it off at today's goal, or type a specific amount into the box.
+  const goalChip = (current: number, setTo: (n: number) => void) => defaultMinutes > 0 && (
+    <button
+      type="button" onClick={() => setTo(defaultMinutes)} aria-pressed={current === defaultMinutes}
+      className="chip ml-auto gap-1 px-2.5 py-1 text-xs"
+      style={current === defaultMinutes
+        ? { borderColor: solid(color.rgb), backgroundImage: gradient(color.rgb, 0.9, 0.6), color: '#fff' }
+        : { borderColor: tint(color.rgb, 0.35), color: solid(color.rgb) }}
+    >
+      <Check size={12} /> Done · {defaultMinutes} min
+    </button>
+  );
+
   const field = (f: Field) => {
     const v = values[f.id] ?? '';
     if (f.type === 'minutes') {
@@ -90,6 +104,7 @@ export function EntryForm({
             aria-label={f.label} className="input w-20 py-1.5 text-center text-sm"
           />
           <span className="text-xs text-slate-400">min</span>
+          {goalChip(Number(v), (n) => set(f.id, n))}
         </div>
       );
     }
@@ -220,6 +235,7 @@ export function EntryForm({
                 aria-label="Minutes" className="input w-20 py-1.5 text-center text-sm"
               />
               <span className="text-xs text-slate-400">min</span>
+              {goalChip(minutes, setMinutes)}
             </div>
           )}
           <label className="block">

@@ -15,6 +15,19 @@ export interface LogEntry {
 }
 
 /**
+ * The minutes a time habit's "done" logs: the goal today actually asks for
+ * (weekend/vacation aware). A vacation goal of 0 means the habit takes the day
+ * off, which leaves no goal - fall back to the daily goal so logging still works
+ * if you feel like doing it anyway. `goalMin` undefined means "use the daily goal".
+ */
+export function goalLogAmount(habit: Habit, goalMin?: number | null): number {
+  const today = goalMin !== undefined ? goalMin : habit.dailyGoalMin;
+  if (today && today > 0) return today;
+  if (habit.dailyGoalMin && habit.dailyGoalMin > 0) return habit.dailyGoalMin;
+  return habit.defaultDurationMin ?? habit.durations?.[0] ?? 10;
+}
+
+/**
  * A habit with its daily progress and logging actions. Habits are never timed — they are *logged by hand*.
  * A time habit ('time' kind) opens a small composer (minutes + optional note +
  * today/yesterday) and shows today's progress toward the daily goal. An
@@ -63,22 +76,16 @@ export function HabitCard({
 
   const rawGoal = goalMin !== undefined ? goalMin : habit.dailyGoalMin;
   const goal = rawGoal && rawGoal > 0 ? rawGoal : null;
-  const fallbackMin = habit.durations?.length ? habit.durations[0] : 10;
-  const defaultMin = habit.defaultDurationMin ?? fallbackMin;
-  // One tap logs what today actually asks for. `goal` is already the effective
-  // goal for this day (weekend/vacation aware). A vacation goal of 0 means the
-  // habit takes the day off, which leaves `goal` null - fall back to the daily
-  // goal so the button still works if you feel like doing it anyway.
-  const dailyGoal = habit.dailyGoalMin && habit.dailyGoalMin > 0 ? habit.dailyGoalMin : null;
-  const logAmount = goal ?? dailyGoal ?? defaultMin;
+  // One tap (and the composer's check) logs what today actually asks for.
+  const logAmount = goalLogAmount(habit, goalMin);
 
   const [logging, setLogging] = useState(false);
-  const [minutes, setMinutes] = useState(defaultMin);
+  const [minutes, setMinutes] = useState(logAmount);
 
   function openLog() {
     setLogging((v) => {
       const next = !v;
-      if (next) setMinutes(defaultMin); // fresh number box each open
+      if (next) setMinutes(logAmount); // fresh number box each open
       return next;
     });
   }
@@ -89,7 +96,7 @@ export function HabitCard({
     setLogging(false);
   }
 
-  // One-tap: log today's goal, no composer, no note.
+  // One tap (or the composer's check): log today's goal, no note.
   function logDefault() {
     if (!onLog || !(logAmount > 0)) return;
     onLog(habit, { minutes: logAmount, note: null, endedAt: Date.now() });
@@ -131,11 +138,13 @@ export function HabitCard({
           <button disabled={saving} onClick={() => onOpenEntry ? onOpenEntry(habit) : openLog()} aria-label={onOpenEntry ? 'Open entry form' : 'Custom log'} aria-expanded={onOpenEntry ? undefined : logging} title={onOpenEntry ? 'Open entry form' : 'Log a specific amount'} className="btn-outline px-2.5 py-2.5">{onOpenEntry ? <SquarePen size={15} /> : <MoreHorizontal size={15} />}</button>
         </> : null}
       </div>
-      {habit.kind === 'time' && onLog && !onOpenEntry && logging && <div className="habit-composer flex items-center gap-2 rounded-lg bg-ink-700 p-3">
-        <label className="text-xs text-slate-400" htmlFor={`minutes-${habit.id}`}>Minutes</label>
-        <input id={`minutes-${habit.id}`} type="number" min={1} inputMode="numeric" autoFocus value={minutes} onChange={(e) => setMinutes(Number(e.target.value))} onKeyDown={(e) => e.key === 'Enter' && commit()} className="input w-20 py-1.5 text-center text-sm" />
-        <button onClick={commit} disabled={saving || !(minutes > 0)} className="btn-accent ml-auto py-2"><Check size={13} />Log</button>
-        <button onClick={() => setLogging(false)} className="btn-ghost py-2">Cancel</button>
+      {habit.kind === 'time' && onLog && !onOpenEntry && logging && <div className="habit-composer flex flex-wrap items-center gap-2 rounded-lg bg-ink-700 p-3">
+        <button onClick={logDefault} disabled={saving} aria-label={`Done, log ${logAmount} minutes`} className="btn-accent py-2"><Check size={13} />Done · {logAmount} min</button>
+        <span className="text-xs text-slate-500">or</span>
+        <input id={`minutes-${habit.id}`} aria-label="Minutes" type="number" min={1} inputMode="numeric" autoFocus value={minutes} onChange={(e) => setMinutes(Number(e.target.value))} onKeyDown={(e) => e.key === 'Enter' && commit()} className="input w-20 py-1.5 text-center text-sm" />
+        <span className="text-xs text-slate-400">min</span>
+        <button onClick={commit} disabled={saving || !(minutes > 0)} className="btn-outline py-2">Log</button>
+        <button onClick={() => setLogging(false)} className="btn-ghost ml-auto py-2">Cancel</button>
       </div>}
     </div>
   );
