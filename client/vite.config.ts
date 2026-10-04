@@ -27,7 +27,8 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/],
+        // Grind Recall is a separate static app served by nginx on this origin.
+        navigateFallbackDenylist: [/^\/api/, /^\/grind(?:\/|$|\?)/],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/api'),
