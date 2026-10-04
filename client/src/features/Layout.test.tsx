@@ -85,3 +85,14 @@ describe('mobile navigation', () => {
     expect(more.getAttribute('aria-expanded')).toBe('false');
   });
 });
+
+describe('Grind Recall navigation', () => {
+  it('links to the separate app from sidebar and mobile More menu', () => {
+    renderApp();
+    expect(screen.getByRole('link', { name: 'Grind Recall' }).getAttribute('href')).toBe('/grind/');
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
+    const links = screen.getAllByRole('link', { name: 'Grind Recall' });
+    expect(links).toHaveLength(2);
+    for (const link of links) expect(link.getAttribute('href')).toBe('/grind/');
+  });
+});

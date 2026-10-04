@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  CalendarDays, Timer, Repeat, BarChart3, StickyNote, Settings, Bot, Monitor, MoreHorizontal, type LucideIcon,
+  CalendarDays, Code2, Timer, Repeat, BarChart3, StickyNote, Settings, Bot, Monitor, MoreHorizontal, type LucideIcon,
 } from 'lucide-react';
 import { isTypingTarget } from '../lib/dom';
 import { useAgentsOptional } from './agents/AgentsContext';
@@ -108,6 +108,7 @@ export function Layout() {
                 )}
               </NavLink>
             ))}
+            {g.title === 'Tools' && <a href="/grind/" className="group sidebar-link"><Code2 size={19} strokeWidth={1.7} className="shrink-0" />Grind Recall</a>}
           </div>
         ))}
       </aside>
@@ -139,6 +140,7 @@ export function Layout() {
             <button ref={moreButton} onClick={() => setMoreOpen(!moreOpen)} aria-expanded={moreOpen} aria-controls="mobile-more" className="mobile-nav-link w-full"><MoreHorizontal size={21} strokeWidth={1.7} />More</button>
             {moreOpen && <div id="mobile-more" className="mobile-more-menu">
               {moreTabs.map((t) => <NavLink key={t.to} to={t.to} onClick={() => setMoreOpen(false)} className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-3 text-sm ${isActive ? 'bg-accent-soft text-accent' : 'text-slate-200 hover:bg-ink-700'}`}><t.icon size={18} />{t.label}</NavLink>)}
+              <a href="/grind/" onClick={() => setMoreOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm text-slate-200 hover:bg-ink-700"><Code2 size={18} />Grind Recall</a>
             </div>}
           </div>
         </div>
