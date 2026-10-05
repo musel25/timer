@@ -82,6 +82,22 @@ export function ActiveRun({
     onFinish: (elapsed, completed) => logRun(completed, elapsed),
   });
 
+  // The worker-driven engine also changes phases while another browser tab is open.
+  // Keep the phase color while paused; long breaks count as rest too.
+  useEffect(() => {
+    const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!icon) return;
+    const original = icon.getAttribute('href') ?? '/icon.svg';
+    const active = engine.status === 'running' || engine.status === 'paused';
+    const kind = engine.phase.kind;
+    icon.setAttribute('href', active && kind === 'work'
+      ? '/icon-work.svg'
+      : active && (kind === 'rest' || kind === 'cooldown')
+        ? '/icon-rest.svg'
+        : original);
+    return () => { icon.setAttribute('href', original); };
+  }, [engine.status, engine.phase.kind]);
+
   // Persist a snapshot each displayed second so a foreground run resumes after reload.
   useEffect(() => {
     if (engine.status === 'running' || engine.status === 'paused') {
