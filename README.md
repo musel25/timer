@@ -84,3 +84,17 @@ server/   Hono API + Drizzle/SQLite + auth + seeding
 deploy/   nginx vhost
 Dockerfile, compose.yaml, DEPLOY.md
 ```
+
+### Grind Recall accounts
+
+Grind's separate frontend at `/grind/` uses `/api/grind/` for login, registration,
+account identity and per-user progress snapshots. Existing Planner sessions work.
+`grind_states` stores one JSON snapshot per user in the persistent SQLite volume;
+version checks reject stale writes and mutation IDs make retries idempotent.
+The Planner service worker excludes these API responses from caching. The
+frontend also uses unique request URLs to protect clients still on an older worker.
+
+Deploy this repository with `./deploy.sh` before deploying the `grind-recall`
+frontend. The migration only adds a table; it does not change Planner data or
+import browser progress. Each user explicitly chooses whether to import their
+original Grind browser data. Test the API with `cd server && npm test`.

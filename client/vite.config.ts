@@ -31,7 +31,7 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api/, /^\/grind(?:\/|$|\?)/],
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api'),
+            urlPattern: ({ url }) => url.pathname.startsWith('/api') && !url.pathname.startsWith('/api/grind/'),
             handler: 'NetworkFirst',
             options: { cacheName: 'api', networkTimeoutSeconds: 5 },
           },

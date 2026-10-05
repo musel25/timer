@@ -1,3 +1,4 @@
+import { grind } from './grind';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, asc, desc, eq, gte, isNull, lte, ne, sql } from 'drizzle-orm';
@@ -14,6 +15,7 @@ import { datesInclusive } from './range';
 type Env = { Variables: { userId: string } };
 
 export const api = new Hono<Env>();
+api.route('/grind', grind);
 
 /* ---------- helpers ---------- */
 const uid = (c: any) => c.get('userId') as string;

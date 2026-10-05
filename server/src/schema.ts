@@ -201,3 +201,11 @@ export const taskAttachments = sqliteTable('task_attachments', {
   height: integer('height'),
   createdAt: integer('created_at').notNull(),
 });
+
+export const grindStates = sqliteTable('grind_states', {
+  userId: text('user_id').primaryKey().references(() => users.id),
+  data: text('data', { mode: 'json' }).notNull(),
+  version: integer('version').notNull(),
+  mutationId: text('mutation_id').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});

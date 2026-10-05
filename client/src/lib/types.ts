@@ -272,3 +272,12 @@ export interface Desktop {
   createdAt: number;
   updatedAt: number;
 }
+
+/** Grind's versioned per-account snapshot, served separately from Planner data. */
+export type GrindSnapshot = {
+  accountId: string;
+  state: Record<string, unknown> | null;
+  version: number;
+  mutationId: string | null;
+  updatedAt: number | null;
+};

@@ -32,6 +32,14 @@ export function migrate(): void {
     );
     CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id);
 
+    CREATE TABLE IF NOT EXISTS grind_states (
+      user_id TEXT PRIMARY KEY REFERENCES users(id),
+      data TEXT NOT NULL,
+      version INTEGER NOT NULL,
+      mutation_id TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS user_settings (
       user_id TEXT PRIMARY KEY,
       data TEXT NOT NULL
