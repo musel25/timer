@@ -15,7 +15,7 @@ function run(options = {}) {
   const log = join(dir, 'commands.log');
   const stub = join(dir, 'stub.mjs');
   writeFileSync(stub, `#!/usr/bin/env node
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { spawnSync } from 'node:child_process';
 const name = basename(process.argv[1]);
@@ -24,10 +24,11 @@ const cmd = args.join(' ');
 const o = JSON.parse(process.env.DEPLOY_TEST_OPTIONS);
 appendFileSync(process.env.DEPLOY_TEST_LOG, name + ' ' + cmd + '\\n');
 if (name === 'git') {
-  if (args[0] === 'rev-parse') console.log('${revision}');
-  if (args[0] === 'status' && o.dirty) console.log(' M server/src/api.ts');
-  if (args[0] === 'branch' && !o.unpushed) console.log('  origin/fix/review-hardening');
+  if (args[0] === 'rev-parse') console.log(o.headMoves && existsSync(process.env.DEPLOY_TEST_LOG + '.verified') ? 'c'.repeat(40) : '${revision}');
+  if (args[0] === 'status' && (o.dirty || (o.changeDuringVerify && existsSync(process.env.DEPLOY_TEST_LOG + '.verified')))) console.log(' M server/src/api.ts');
+  if (args[0] === 'branch' && !o.unpushed && !(o.upstreamOnly && args.includes('--list'))) console.log(o.upstreamOnly ? '  upstream/other' : '  origin/fix/review-hardening');
 }
+if (name === 'npm') writeFileSync(process.env.DEPLOY_TEST_LOG + '.verified', 'yes');
 if (name === 'curl') {
   if (o.edgeFailure) process.exit(22);
   // Support the original script while proving its broken health check.
@@ -42,7 +43,7 @@ if (name === 'docker') {
 }
 `, { mode: 0o755 });
   for (const name of ['git', 'npm', 'docker', 'curl', 'sleep', 'flock']) symlinkSync(stub, join(dir, 'bin', name));
-  writeFileSync(join(dir, 'bin', 'ssh'), '#!/usr/bin/env bash\nwhile [[ "$1" == -o ]]; do shift 2; done\nshift\nexec "$@"\n', { mode: 0o755 });
+  writeFileSync(join(dir, 'bin', 'ssh'), '#!/usr/bin/env bash\nprintf \"ssh\\n\" >> \"$DEPLOY_TEST_LOG\"\nwhile [[ "$1" == -o ]]; do shift 2; done\nshift\nexec "$@"\n', { mode: 0o755 });
   const result = spawnSync('bash', [deploy], {
     cwd: dir,
     env: { ...process.env, HOME: dir, PATH: `${join(dir, 'bin')}:${process.env.PATH}`, DEPLOY_TEST_LOG: log, DEPLOY_TEST_OPTIONS: JSON.stringify(options) },
@@ -90,4 +91,10 @@ for (const condition of ['dirty', 'unpushed']) test(`${condition} changes cannot
   const result = run({ [condition]: true });
   assert.notEqual(result.status, 0);
   assert.doesNotMatch(result.commands, /docker /);
+});
+
+for (const condition of ['upstreamOnly', 'changeDuringVerify', 'headMoves']) test(`${condition} cannot bypass local deployment verification`, () => {
+  const result = run({ [condition]: true });
+  assert.notEqual(result.status, 0);
+  assert.doesNotMatch(result.commands, /^ssh$/m);
 });

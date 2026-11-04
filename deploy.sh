@@ -9,11 +9,15 @@ if [[ -n $(git status --porcelain) ]]; then
   exit 1
 fi
 git fetch origin
-if [[ -z $(git branch -r --contains "$revision") ]]; then
+if [[ -z $(git branch -r --contains "$revision" --list 'origin/*') ]]; then
   echo 'DEPLOY REFUSED: push this commit before deployment.' >&2
   exit 1
 fi
 npm run verify
+if [[ $(git rev-parse --verify 'HEAD^{commit}') != "$revision" || -n $(git status --porcelain) ]]; then
+  echo 'DEPLOY REFUSED: the checkout changed during verification.' >&2
+  exit 1
+fi
 
 ssh -o BatchMode=yes -o ConnectTimeout=15 my-vps bash -s -- "$revision" <<'REMOTE'
 set -euo pipefail
@@ -22,12 +26,12 @@ cd ~/timer
 # Only one build/swap may own the rollback tag at a time.
 exec 9> /tmp/timer-deploy.lock
 flock -n 9 || { echo 'DEPLOY REFUSED: another deployment is running.' >&2; exit 1; }
-if [[ -n $(git status --porcelain --untracked-files=no) ]]; then
+if [[ -n $(git status --porcelain) ]]; then
   echo 'DEPLOY REFUSED: the server checkout has local changes.' >&2
   exit 1
 fi
 git fetch origin
-if [[ -z $(git branch -r --contains "$revision") ]]; then
+if [[ -z $(git branch -r --contains "$revision" --list 'origin/*') ]]; then
   echo 'DEPLOY REFUSED: requested commit is not on origin.' >&2
   exit 1
 fi
