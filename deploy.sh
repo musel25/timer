@@ -1,55 +1,86 @@
 #!/usr/bin/env bash
-# Deploy timer to production (timer.musel.dev on the Oracle VPS).
-#
-# Ships whatever is on origin/master. Order matters:
-#   1. tag the running image as timer:prev  → there is always a rollback target
-#   2. build the new image                  → the live container keeps serving
-#   3. swap and wait for the healthcheck    → auto-rollback to timer:prev on failure
-#   4. verify the edge answers 200 over HTTPS
-#
-# The 2026-08-06 outage happened because none of this existed: `compose up -d
-# --build` replaced the only image in place, the new one crash-looped (exit 133,
-# seconds AFTER logging "listening" — a boot that looks fine and isn't), and
-# there was nothing to roll back to.
+# Verify this checkout, deploy its exact pushed commit, and roll back on failure.
 set -euo pipefail
+cd "$(dirname "$0")"
 
-HOST=my-vps
-
-ssh "$HOST" bash -s <<'REMOTE'
-set -euo pipefail
-cd ~/timer
-git pull --ff-only
-
-# 1. Keep the currently-running image reachable before anything can clobber it.
-if docker image inspect timer:latest >/dev/null 2>&1; then
-  docker tag timer:latest timer:prev
+revision=$(git rev-parse --verify 'HEAD^{commit}')
+if [[ -n $(git status --porcelain) ]]; then
+  echo 'DEPLOY REFUSED: commit all changes before deployment.' >&2
+  exit 1
 fi
+git fetch origin
+if [[ -z $(git branch -r --contains "$revision") ]]; then
+  echo 'DEPLOY REFUSED: push this commit before deployment.' >&2
+  exit 1
+fi
+npm run verify
 
-# 2. Build without touching the running container.
-docker compose build
+ssh -o BatchMode=yes -o ConnectTimeout=15 my-vps bash -s -- "$revision" <<'REMOTE'
+set -euo pipefail
+revision=$1
+cd ~/timer
+# Only one build/swap may own the rollback tag at a time.
+exec 9> /tmp/timer-deploy.lock
+flock -n 9 || { echo 'DEPLOY REFUSED: another deployment is running.' >&2; exit 1; }
+if [[ -n $(git status --porcelain --untracked-files=no) ]]; then
+  echo 'DEPLOY REFUSED: the server checkout has local changes.' >&2
+  exit 1
+fi
+git fetch origin
+if [[ -z $(git branch -r --contains "$revision") ]]; then
+  echo 'DEPLOY REFUSED: requested commit is not on origin.' >&2
+  exit 1
+fi
+git checkout --detach "$revision"
 
-# 3. Swap, then trust only the healthcheck (30s interval, 15s start period —
-#    give it a couple of full probes before judging).
+previous=$(docker inspect --format '{{.Image}}' timer 2>/dev/null || true)
+if [[ -n "$previous" ]]; then
+  docker tag "$previous" timer:prev
+fi
+swapped=0
+rollback() {
+  local result=$?
+  trap - ERR
+  if (( swapped )) && [[ -n "$previous" ]]; then
+    echo 'DEPLOY FAILED: restoring the previous running image.' >&2
+    docker tag "$previous" timer:latest
+    if docker compose up -d --no-build; then
+      for ((i=0; i<24; i++)); do
+        status=$(docker inspect --format '{{.State.Health.Status}}' timer 2>/dev/null || true)
+        if [[ "$status" == healthy ]]; then
+          echo 'Previous container is healthy.' >&2
+          exit "$result"
+        fi
+        sleep 5
+      done
+    fi
+    echo 'ROLLBACK FAILED: inspect the timer container immediately.' >&2
+  elif (( swapped )); then
+    echo 'DEPLOY FAILED: no previous image exists for rollback.' >&2
+  fi
+  exit "$result"
+}
+trap rollback ERR
+
+# Build while the previous container keeps serving.
+docker compose build --build-arg "APP_REVISION=$revision"
+swapped=1
 docker compose up -d
-for i in $(seq 1 24); do
-  sleep 5
-  status=$(docker compose ps --format '{{.Status}}')
+healthy=0
+for ((i=0; i<24; i++)); do
+  status=$(docker inspect --format '{{.State.Health.Status}}' timer 2>/dev/null || true)
   case "$status" in
-    *healthy*) echo "container: $status"; exit 0 ;;
-    *Restarting*|*Exited*)
-      echo "DEPLOY FAILED ($status) — rolling back to timer:prev" >&2
-      docker tag timer:prev timer:latest
-      docker compose up -d --no-build
-      exit 1 ;;
+    healthy) healthy=1; break ;;
+    unhealthy) break ;;
   esac
+  sleep 5
 done
-echo "DEPLOY FAILED: healthcheck never went green — rolling back" >&2
-docker tag timer:prev timer:latest
-docker compose up -d --no-build
-exit 1
+if (( ! healthy )); then
+  echo "DEPLOY FAILED: container health is ${status:-unknown}." >&2
+  false
+fi
+# Edge reachability and revision are both part of the rollback boundary.
+edge=$(curl --fail --silent --show-error --max-time 15 https://timer.musel.dev/api/health)
+docker exec timer node -e 'const h=JSON.parse(process.argv[1]); if(h.ok!==true || h.revision!==process.argv[2]) process.exit(1)' "$edge" "$revision"
+echo "Live revision: $revision"
 REMOTE
-
-# 4. The container being healthy isn't the same as the site being up.
-code=$(curl -s -o /dev/null -w '%{http_code}' https://timer.musel.dev/api/health)
-echo "edge: https://timer.musel.dev/api/health → $code"
-[ "$code" = 200 ]

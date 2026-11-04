@@ -1,3 +1,5 @@
+import type { taskAttachments, tasks } from './schema';
+type AttachmentRow = Omit<typeof taskAttachments.$inferSelect, 'data'>;
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -89,11 +91,11 @@ describe('attachment HTTP routes', () => {
     db.insert(tasks).values({ id: 'task-a', userId: 'alice', title: 'A', sortOrder: 1, createdAt: Date.now() }).run();
     const res = await api.request('/tasks/task-a/attachments', json(cookie, { dataUrl: PNG_1x1, width: 1, height: 1 }));
     expect(res.status).toBe(201);
-    const meta = await res.json();
+    const meta = await res.json().then((value) => value as AttachmentRow);
     expect(meta.taskId).toBe('task-a');
     expect(meta.mime).toBe('image/png');
     expect(meta.id).toBeTruthy();
-    expect(meta.data).toBeUndefined();
+    expect('data' in meta).toBe(false);
   });
 
   it('rejects a disallowed mime', async () => {
@@ -115,9 +117,9 @@ describe('attachment HTTP routes', () => {
   it('serves bytes with the right content-type and lists metadata', async () => {
     const cookie = makeUser('dave');
     db.insert(tasks).values({ id: 'task-d', userId: 'dave', title: 'D', sortOrder: 1, createdAt: Date.now() }).run();
-    const up = await (await api.request('/tasks/task-d/attachments', json(cookie, { dataUrl: PNG_1x1 }))).json();
+    const up = await (await api.request('/tasks/task-d/attachments', json(cookie, { dataUrl: PNG_1x1 }))).json().then((value) => value as AttachmentRow);
 
-    const list = await (await api.request('/tasks/task-d/attachments', { headers: { cookie } })).json();
+    const list = await (await api.request('/tasks/task-d/attachments', { headers: { cookie } })).json().then((value) => value as AttachmentRow[]);
     expect(list).toHaveLength(1);
     expect(list[0].id).toBe(up.id);
 
@@ -131,7 +133,7 @@ describe('attachment HTTP routes', () => {
     const owner = makeUser('eve');
     const other = makeUser('mallory');
     db.insert(tasks).values({ id: 'task-e', userId: 'eve', title: 'E', sortOrder: 1, createdAt: Date.now() }).run();
-    const up = await (await api.request('/tasks/task-e/attachments', json(owner, { dataUrl: PNG_1x1 }))).json();
+    const up = await (await api.request('/tasks/task-e/attachments', json(owner, { dataUrl: PNG_1x1 }))).json().then((value) => value as AttachmentRow);
 
     expect((await api.request(`/attachments/${up.id}`, { headers: { cookie: other } })).status).toBe(404);
     expect((await api.request(`/attachments/${up.id}`, { method: 'DELETE', headers: { cookie: other } })).status).toBe(404);
@@ -175,12 +177,12 @@ describe('task list count + cascade delete', () => {
   it('GET /tasks includes attachmentCount and DELETE cascades', async () => {
     const cookie = makeUser('frank');
     db.insert(tasks).values({ id: 'task-f', userId: 'frank', title: 'F', sortOrder: 1, createdAt: Date.now() }).run();
-    const a1 = await (await api.request('/tasks/task-f/attachments', post(cookie, { dataUrl: PNG }))).json();
+    const a1 = await (await api.request('/tasks/task-f/attachments', post(cookie, { dataUrl: PNG }))).json().then((value) => value as AttachmentRow);
     expect((await api.request('/tasks/task-f/attachments', post(cookie, { dataUrl: PNG }))).status).toBe(201);
 
-    const list = await (await api.request('/tasks', { headers: { cookie } })).json();
-    const row = list.find((t: any) => t.id === 'task-f');
-    expect(row.attachmentCount).toBe(2);
+    const list = await (await api.request('/tasks', { headers: { cookie } })).json().then((value) => value as ({ attachmentCount: number } & { id: string })[]);
+    const row = list.find((t) => t.id === 'task-f');
+    expect(row?.attachmentCount).toBe(2);
 
     expect((await api.request('/tasks/task-f', { method: 'DELETE', headers: { cookie } })).status).toBe(200);
     expect((await api.request(`/attachments/${a1.id}`, { headers: { cookie } })).status).toBe(404);
@@ -223,7 +225,7 @@ describe('export / import attachments', () => {
     await api.request('/tasks/task-g/attachments', post(gina, { dataUrl: PNG, width: 1, height: 1 }));
 
     // Step 2: Export and verify dump contains the attachment.
-    const dump = await (await api.request('/export', { headers: { cookie: gina } })).json();
+    const dump = await (await api.request('/export', { headers: { cookie: gina } })).json().then((value) => value as { attachments: (AttachmentRow & { dataBase64: string })[]; tasks: (typeof tasks.$inferSelect)[] });
     expect(dump.attachments).toHaveLength(1);
     expect(dump.attachments[0].dataBase64).toBeTruthy();
     expect(dump.attachments[0].mime).toBe('image/png');
@@ -236,7 +238,7 @@ describe('export / import attachments', () => {
     expect((await api.request('/import', post(gina, importBody))).status).toBe(200);
 
     // Step 5: Verify the attachment is restored.
-    const list = await (await api.request('/tasks/task-g/attachments', { headers: { cookie: gina } })).json();
+    const list = await (await api.request('/tasks/task-g/attachments', { headers: { cookie: gina } })).json().then((value) => value as AttachmentRow[]);
     expect(list).toHaveLength(1);
     const img = await api.request(`/attachments/${list[0].id}`, { headers: { cookie: gina } });
     expect(img.status).toBe(200);
@@ -244,7 +246,7 @@ describe('export / import attachments', () => {
 
     // Step 6: Import same payload again — must remain idempotent (no duplicates).
     expect((await api.request('/import', post(gina, importBody))).status).toBe(200);
-    const list2 = await (await api.request('/tasks/task-g/attachments', { headers: { cookie: gina } })).json();
+    const list2 = await (await api.request('/tasks/task-g/attachments', { headers: { cookie: gina } })).json().then((value) => value as AttachmentRow[]);
     expect(list2).toHaveLength(1);
   });
 });

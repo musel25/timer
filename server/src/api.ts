@@ -24,7 +24,7 @@ async function body(c: any) {
 }
 
 /* ---------- health ---------- */
-api.get('/health', (c) => c.json({ ok: true }));
+api.get('/health', (c) => c.json({ ok: true, revision: process.env.APP_REVISION || 'development' }));
 
 /* ---------- auth ---------- */
 api.post('/auth/login', async (c) => {

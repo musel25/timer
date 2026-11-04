@@ -1,3 +1,5 @@
+import type { notes } from './schema';
+type NoteRow = typeof notes.$inferSelect;
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -76,29 +78,29 @@ describe('notes table + CRUD scoping', () => {
     const cookie = await makeUser('dana');
     const created = await (await api.request('/notes', send('POST', cookie, {
       text: 'maybe drop this #someday', tags: ['someday'], pinned: true,
-    }))).json();
+    }))).json().then((value) => value as NoteRow);
     expect(created.archivedAt).toBeNull();
 
     const at = Date.now();
     const archived = await (await api.request(
       `/notes/${created.id}`, send('PATCH', cookie, { archivedAt: at, pinned: false }),
-    )).json();
+    )).json().then((value) => value as NoteRow);
     expect(archived.archivedAt).toBe(at);
     expect(archived.pinned).toBe(false);
 
     // Archived notes still come back — the client decides what to show.
-    const all = await (await api.request('/notes', { headers: { cookie } })).json();
+    const all = await (await api.request('/notes', { headers: { cookie } })).json().then((value) => value as NoteRow[]);
     expect(all.map((n: { id: string }) => n.id)).toContain(created.id);
   });
 
   it('unarchives a note by nulling archivedAt', async () => {
     const cookie = await makeUser('erin');
-    const created = await (await api.request('/notes', send('POST', cookie, { text: 'back to inbox' }))).json();
+    const created = await (await api.request('/notes', send('POST', cookie, { text: 'back to inbox' }))).json().then((value) => value as NoteRow);
     await api.request(`/notes/${created.id}`, send('PATCH', cookie, { archivedAt: Date.now() }));
 
     const restored = await (await api.request(
       `/notes/${created.id}`, send('PATCH', cookie, { archivedAt: null }),
-    )).json();
+    )).json().then((value) => value as NoteRow);
     expect(restored.archivedAt).toBeNull();
   });
 

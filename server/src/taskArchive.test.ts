@@ -1,3 +1,5 @@
+import type { tasks } from './schema';
+type TaskRow = typeof tasks.$inferSelect;
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -44,28 +46,28 @@ describe('archiving a task', () => {
     const cookie = await makeUser('dana');
     const created = await (await api.request('/tasks', send('POST', cookie, {
       title: 'maybe learn rust', date: null,
-    }))).json();
+    }))).json().then((value) => value as TaskRow);
     expect(created.archivedAt).toBeNull();
 
     const at = Date.now();
     const archived = await (await api.request(
       `/tasks/${created.id}`, send('PATCH', cookie, { archivedAt: at }),
-    )).json();
+    )).json().then((value) => value as TaskRow);
     expect(archived.archivedAt).toBe(at);
 
     // The board decides what to show; the API keeps returning everything.
-    const all = await (await api.request('/tasks', { headers: { cookie } })).json();
+    const all = await (await api.request('/tasks', { headers: { cookie } })).json().then((value) => value as TaskRow[]);
     expect(all.map((t: { id: string }) => t.id)).toContain(created.id);
   });
 
   it('restores a task by nulling archivedAt', async () => {
     const cookie = await makeUser('erin');
-    const created = await (await api.request('/tasks', send('POST', cookie, { title: 'back' }))).json();
+    const created = await (await api.request('/tasks', send('POST', cookie, { title: 'back' }))).json().then((value) => value as TaskRow);
     await api.request(`/tasks/${created.id}`, send('PATCH', cookie, { archivedAt: Date.now() }));
 
     const restored = await (await api.request(
       `/tasks/${created.id}`, send('PATCH', cookie, { archivedAt: null }),
-    )).json();
+    )).json().then((value) => value as TaskRow);
     expect(restored.archivedAt).toBeNull();
   });
 });
