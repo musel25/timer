@@ -1,0 +1,50 @@
+import { QueryClient } from '@tanstack/react-query';
+import { afterEach, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createElement } from 'react';
+import { Login } from '../features/auth/Login';
+import { initOfflineQueue, offlineAccountId } from './offlineQueue';
+afterEach(() => { vi.unstubAllGlobals(); localStorage.clear(); });
+it('clears private queries before a login changes the account cookie', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client.setQueryData(['notes'], [{ text: 'private A' }]);
+  initOfflineQueue(client, 'A');
+  let atRequest: { notes: unknown; account: string | null } | undefined;
+  const fetcher = vi.fn().mockImplementation(() => {
+    atRequest = { notes: client.getQueryData(['notes']), account: offlineAccountId() };
+    return Promise.resolve(new Response('{}'));
+  });
+  vi.stubGlobal('fetch', fetcher);
+  render(createElement(QueryClientProvider, { client }, createElement(Login)));
+  fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'B' } });
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+  await waitFor(() => expect(fetcher).toHaveBeenCalled());
+  expect(atRequest).toEqual({ notes: undefined, account: null });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in' })).toBeDefined());
+  client.clear();
+});
+it('clears private queries before logout and tells other tabs to discover the account again', async () => {
+  const { SettingsPage } = await import('../features/settings/Settings');
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+  client.setQueryData(['me'], { user: { id: 'A', email: 'A@example.com' } });
+  client.setQueryData(['notes'], [{ text: 'private A' }]);
+  client.setQueryData(['settings'], {});
+  client.setQueryData(['groups'], []);
+  client.setQueryData(['rest-days'], []);
+  client.setQueryData(['vacation-days'], []);
+  initOfflineQueue(client, 'A');
+  let atLogout: { notes: unknown; account: string | null } | undefined;
+  const fetcher = vi.fn().mockImplementation((url: string) => {
+    if (url === '/api/auth/logout') atLogout = { notes: client.getQueryData(['notes']), account: offlineAccountId() };
+    return Promise.resolve(new Response(JSON.stringify(url.includes('/auth/me') ? { user: null } : [])));
+  });
+  vi.stubGlobal('fetch', fetcher);
+  const view = render(createElement(QueryClientProvider, { client }, createElement(SettingsPage)));
+  fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+  await waitFor(() => expect(atLogout).toEqual({ notes: undefined, account: null }));
+  await waitFor(() => expect(localStorage.getItem('timer_auth_change')).toBeTruthy());
+  view.unmount();
+  client.clear();
+});

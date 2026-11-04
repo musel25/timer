@@ -29,13 +29,7 @@ export default defineConfig({
         navigateFallback: '/index.html',
         // Grind Recall is a separate static app served by nginx on this origin.
         navigateFallbackDenylist: [/^\/api/, /^\/grind(?:\/|$|\?)/],
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api') && !url.pathname.startsWith('/api/grind/'),
-            handler: 'NetworkFirst',
-            options: { cacheName: 'api', networkTimeoutSeconds: 5 },
-          },
-        ],
+        importScripts: ['/purge-api-cache.js'],
       },
     }),
   ],
