@@ -3,11 +3,11 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { TaskEditor } from './TaskEditor';
 import type { Task } from '../../lib/types';
 
-const { save } = vi.hoisted(() => ({ save: vi.fn() }));
+const { save, attachmentData } = vi.hoisted(() => ({ save: vi.fn(), attachmentData: { current: [] as { id: string }[] } }));
 vi.mock('../../lib/hooks', () => ({
   useSaveTask: () => ({ mutateAsync: save }),
   useDeleteTask: () => ({ mutateAsync: vi.fn() }),
-  useTaskAttachments: () => ({ data: [] }),
+  useTaskAttachments: () => ({ data: attachmentData.current }),
   useUploadAttachment: () => ({ mutateAsync: vi.fn() }),
   useDeleteAttachment: () => ({ mutate: vi.fn() }),
 }));
@@ -17,7 +17,7 @@ const task: Task = {
 };
 
 describe('Task editor keyboard and recovery', () => {
-  beforeEach(() => { save.mockReset(); });
+  beforeEach(() => { save.mockReset(); attachmentData.current = []; });
 
   it('closes on Escape and returns focus to the task that opened it', () => {
     const trigger = document.createElement('button');
@@ -56,4 +56,12 @@ describe('Task editor keyboard and recovery', () => {
     expect(input.value).toBe('Keep this draft');
     expect(close).not.toHaveBeenCalled();
   });
+});
+
+it('bypasses the old shared worker cache for attachment images and links', () => {
+  attachmentData.current = [{ id: 'image-A' }];
+  render(<TaskEditor task={task} onClose={() => {}} />);
+  const image = screen.getByAltText('attachment') as HTMLImageElement;
+  expect(new URL(image.src).searchParams.get('_timer_request')).toBeTruthy();
+  expect(new URL((image.closest('a') as HTMLAnchorElement).href).searchParams.get('_timer_request')).toBeTruthy();
 });

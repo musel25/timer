@@ -161,7 +161,7 @@ export const notes = sqliteTable('notes', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
   text: text('text').notNull(),
-  tags: text('tags', { mode: 'json' }).notNull().$type<string[]>(),
+  tags: text('tags', { mode: 'json' }).notNull().$type<string[]>().default([]),
   pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
   /** When the note was moved out of the inbox; null while it's still in it. */
   archivedAt: integer('archived_at'),
@@ -179,9 +179,9 @@ export const desktops = sqliteTable('desktops', {
   /** Project tag; colors the chip via categoryColor(lane). */
   lane: text('lane'),
   description: text('description'),
-  tasks: text('tasks', { mode: 'json' }).notNull().$type<{ id: string; text: string; done: boolean }[]>(),
+  tasks: text('tasks', { mode: 'json' }).notNull().$type<{ id: string; text: string; done: boolean }[]>().default([]),
   /** Append-only journal, newest first. */
-  comments: text('comments', { mode: 'json' }).notNull().$type<{ id: string; text: string; at: number }[]>(),
+  comments: text('comments', { mode: 'json' }).notNull().$type<{ id: string; text: string; at: number }[]>().default([]),
   /** At most one per user — the desktop you are working on (the pinned card). */
   focused: integer('focused', { mode: 'boolean' }).notNull().default(false),
   sortOrder: integer('sort_order').notNull(),

@@ -50,14 +50,14 @@ it('saves per account, rejects stale writes and makes retrying an acknowledged w
   };
   const saved = await api.request('/grind/state', send('sid=alice', data));
   expect(saved.status).toBe(200);
-  expect((await saved.json()).version).toBe(1);
+  expect((await saved.json().then((value) => value as { version: number })).version).toBe(1);
   expect(
-    (await (await api.request('/grind/state', send('sid=alice', data))).json())
+    (await (await api.request('/grind/state', send('sid=alice', data))).json().then((value) => value as { version: number }))
       .version,
   ).toBe(1);
   const bob = await (
     await api.request('/grind/state', { headers: { cookie: 'sid=bob' } })
-  ).json();
+  ).json().then((value) => value as { state: unknown });
   expect(bob.state).toBeNull();
   expect(
     (await api.request('/grind/state', send('sid=bob', data))).status,
@@ -74,7 +74,7 @@ it('saves per account, rejects stale writes and makes retrying an acknowledged w
     headers: { cookie: 'sid=alice' },
   });
   expect(read.headers.get('cache-control')).toContain('no-store');
-  expect((await read.json()).state).toEqual(state);
+  expect((await read.json().then((value) => value as { state: unknown })).state).toEqual(state);
 });
 it('rejects cross-origin writes and malformed progress', async () => {
   const req = send('sid=alice', {
@@ -105,6 +105,6 @@ it('creates a separate account and prevents duplicate registration', async () =>
   const res = await api.request('/grind/register', req);
   expect(res.status).toBe(201);
   expect(res.headers.get('set-cookie')).toContain('HttpOnly');
-  expect((await res.json()).user.email).toBe('new@example.com');
+  expect((await res.json().then((value) => value as { user: { email: string } })).user.email).toBe('new@example.com');
   expect((await api.request('/grind/register', req)).status).toBe(409);
 });

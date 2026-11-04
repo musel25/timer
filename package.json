@@ -8,10 +8,16 @@
     "dev:server": "npm --prefix server run dev",
     "dev:client": "npm --prefix client run dev",
     "build": "npm --prefix server run build && npm --prefix client run build",
-    "install:all": "npm --prefix server install && npm --prefix client install",
-    "test": "npm --prefix server test && npm --prefix client test"
+    "install:all": "npm ci && npm --prefix server ci && npm --prefix client ci",
+    "test": "npm --prefix server test && npm --prefix client test",
+    "typecheck": "npm --prefix server run typecheck && npm --prefix client run typecheck",
+    "test:deploy": "node --test scripts/deploy.test.mjs",
+    "verify": "npm run typecheck && npm test && npm run test:deploy && npm run build"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

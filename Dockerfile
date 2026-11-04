@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 #
-# Node 22, not 24, on purpose. There are no lockfiles, so every rebuild resolves
-# fresh minors — and better-sqlite3 ^11 does not support Node 24: its
+# Node 22, not 24, on purpose. Lockfiles keep dependency versions stable.
+# better-sqlite3 ^11 does not support Node 24: its
 # Statement destructor trips `RemoveEnvironmentCleanupHook: (env) != nullptr`
 # and the process dies with 133 seconds after it starts listening. Node 22 is
 # also what `server/package.json` targets (esbuild --target=node22) and what the
@@ -34,8 +34,11 @@ RUN cd client && npm run build
 
 # ── runtime ──────────────────────────────────────────────────────────────────
 FROM node:22-bookworm-slim AS runtime
+ARG APP_REVISION=development
+LABEL org.opencontainers.image.revision=$APP_REVISION
 WORKDIR /app
-ENV NODE_ENV=production \
+ENV APP_REVISION=$APP_REVISION \
+    NODE_ENV=production \
     PORT=8080 \
     TIMER_DB=/data/timer.db \
     CLIENT_DIR=/app/public

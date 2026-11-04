@@ -1,0 +1,116 @@
+import { QueryClient } from '@tanstack/react-query';
+import { beforeEach, afterEach, expect, it, vi } from 'vitest';
+import type { Session } from './types';
+const session = (id: string): Session => ({ id, habitId: null, timerId: null, label: 'Run', type: 'simple', plannedSeconds: 60, actualSeconds: 60, completed: true, startedAt: 1, endedAt: 61, note: null, createdAt: 61 });
+const key = (owner: string, id: string) => `timer_pending_sessions:owned:${encodeURIComponent(owner)}:${encodeURIComponent(id)}`;
+const queued = (owner: string) => Object.keys(localStorage).filter((name) => name.startsWith(`timer_pending_sessions:owned:${encodeURIComponent(owner)}:`)).map((name) => JSON.parse(localStorage.getItem(name)!));
+const ok = () => new Response(JSON.stringify({ ids: ['one'] }), { status: 200 });
+function deferred() {
+  let resolve!: (response: Response) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<Response>((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+let client: QueryClient;
+beforeEach(() => { vi.resetModules(); localStorage.clear(); client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); });
+afterEach(() => { client.clear(); vi.unstubAllGlobals(); });
+it('serializes overlapping uploads and retains a newly queued session when its upload fails', async () => {
+  const first = deferred();
+  const fetcher = vi.fn().mockReturnValueOnce(first.promise).mockRejectedValue(new Error('offline'));
+  vi.stubGlobal('fetch', fetcher);
+  const q = await import('./offlineQueue');
+  q.initOfflineQueue(client, 'A');
+  const one = q.logSession(session('one'));
+  const two = q.logSession(session('two'));
+  const overlap = q.flush();
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  first.resolve(ok());
+  await Promise.all([one, two, overlap]);
+  expect(queued('A')).toEqual([session('two')]);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
+it('does not upload before account discovery or adopt the unowned legacy queue', async () => {
+  localStorage.setItem('timer_pending_sessions', JSON.stringify([session('legacy')]));
+  localStorage.setItem(key('A', 'owned'), JSON.stringify(session('owned')));
+  const fetcher = vi.fn().mockResolvedValue(ok());
+  vi.stubGlobal('fetch', fetcher);
+  const q = await import('./offlineQueue');
+  q.initOfflineQueue(client);
+  await q.flush();
+  expect(fetcher).not.toHaveBeenCalled();
+  q.initOfflineQueue(client, 'B');
+  await q.flush();
+  expect(fetcher).not.toHaveBeenCalled();
+  expect(JSON.parse(localStorage.getItem('timer_pending_sessions')!)).toEqual([session('legacy')]);
+  q.initOfflineQueue(client, 'A');
+  await q.flush();
+  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual([session('owned')]);
+  expect(fetcher.mock.calls[0][1].headers['X-Timer-Account-Id']).toBe('A');
+});
+it('keeps both queues when the account changes during a failed request', async () => {
+  localStorage.setItem(key('A', 'one'), JSON.stringify(session('one')));
+  localStorage.setItem(key('B', 'two'), JSON.stringify(session('two')));
+  const first = deferred();
+  const fetcher = vi.fn().mockReturnValueOnce(first.promise).mockRejectedValue(new Error('offline'));
+  vi.stubGlobal('fetch', fetcher);
+  const q = await import('./offlineQueue');
+  q.initOfflineQueue(client, 'A');
+  const upload = q.flush();
+  q.initOfflineQueue(client, 'B');
+  expect((fetcher.mock.calls[0][1].signal as AbortSignal).aborted).toBe(true);
+  first.reject(new Error('offline'));
+  await upload;
+  await q.flush();
+  expect(queued('A')).toEqual([session('one')]);
+  expect(queued('B')).toEqual([session('two')]);
+});
+it('does not clear a new account cache after the old account upload returns', async () => {
+  const first = deferred();
+  vi.stubGlobal('fetch', vi.fn().mockReturnValue(first.promise));
+  const q = await import('./offlineQueue');
+  q.initOfflineQueue(client, 'A');
+  const upload = q.logSession(session('one'));
+  q.initOfflineQueue(client, 'B');
+  client.setQueryData(['sessions'], [session('B-only')]);
+  first.resolve(ok());
+  await upload;
+  expect(client.getQueryData(['sessions'])).toEqual([session('B-only')]);
+  expect(client.getQueryState(['sessions'])?.isInvalidated).toBe(false);
+  expect(queued('A')).toEqual([session('one')]);
+});
+it('retains a run under its original account when it finishes after sign out', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(ok()));
+  const q = await import('./offlineQueue');
+  q.initOfflineQueue(client, 'B');
+  await q.logSession(session('A-run'), 'A');
+  expect(queued('A')).toEqual([session('A-run')]);
+  expect(q.pendingCount()).toBe(0);
+  expect(client.getQueryData(['sessions'])).toBeUndefined();
+});
+it('does not erase another tab append during upload acknowledgment', async () => {
+  const tabOne = await import('./offlineQueue');
+  vi.resetModules();
+  const tabTwo = await import('./offlineQueue');
+  const upload = deferred();
+  vi.stubGlobal('fetch', vi.fn().mockReturnValueOnce(upload.promise).mockRejectedValue(new Error('offline')));
+  tabOne.initOfflineQueue(client, 'A');
+  const logging = tabOne.logSession(session('one'));
+  let interleaved = false;
+  const appendFromOtherTab = () => { if (interleaved) return; interleaved = true; void tabTwo.logSession(session('other-tab'), 'A'); };
+  const originalGet = Storage.prototype.getItem;
+  const originalRemove = Storage.prototype.removeItem;
+  const read = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(function (this: Storage, name) {
+    const snapshot = originalGet.call(this, name);
+    if (name === 'timer_pending_sessions:A') appendFromOtherTab();
+    return snapshot;
+  });
+  const remove = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(function (this: Storage, name) {
+    appendFromOtherTab(); originalRemove.call(this, name);
+  });
+  upload.resolve(ok());
+  await logging;
+  read.mockRestore(); remove.mockRestore();
+  expect(interleaved).toBe(true);
+  expect(tabOne.pendingCount()).toBe(1);
+  expect(queued('A')).toEqual([session('other-tab')]);
+});

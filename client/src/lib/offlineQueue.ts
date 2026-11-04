@@ -1,49 +1,99 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { api } from './api';
+import { api, setRequestAccount } from './api';
 import type { Session } from './types';
 
-const KEY = 'timer_pending_sessions';
+const LEGACY_KEY = 'timer_pending_sessions';
 let qc: QueryClient | null = null;
+let accountId: string | null = null;
+let generation = 0;
+let running: Promise<void> | null = null;
+let controller: AbortController | null = null;
+let listening = false;
+const prefix = (owner: string | null) => owner === null
+  ? `${LEGACY_KEY}:unowned:` : `${LEGACY_KEY}:owned:${encodeURIComponent(owner)}:`;
+const sessionKey = (owner: string | null, id: string) => `${prefix(owner)}${encodeURIComponent(id)}`;
 
-function read(): Session[] {
-  try {
-    return JSON.parse(localStorage.getItem(KEY) ?? '[]');
-  } catch {
-    return [];
+function read(owner: string | null): Session[] {
+  const keys: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith(prefix(owner))) keys.push(key);
   }
-}
-function write(list: Session[]): void {
-  localStorage.setItem(KEY, JSON.stringify(list));
+  return keys.flatMap((key) => {
+    try {
+      const value = JSON.parse(localStorage.getItem(key) ?? 'null') as Session | null;
+      return value && typeof value.id === 'string' ? [value] : [];
+    } catch { return []; }
+  });
 }
 
-export function initOfflineQueue(client: QueryClient): void {
+/** No account means discovery is incomplete or the user has signed out. */
+export function initOfflineQueue(client: QueryClient, owner: string | null = null): void {
   qc = client;
-  window.addEventListener('online', () => void flush());
+  if (!listening) {
+    window.addEventListener('online', () => void flush());
+    listening = true;
+  }
+  if (accountId !== owner) {
+    accountId = owner;
+    setRequestAccount(owner);
+    generation++;
+    controller?.abort();
+  }
   void flush();
 }
 
-/** Record a finished run. Works offline: queued locally, flushed when possible. */
-export async function logSession(s: Session): Promise<void> {
-  const q = read();
-  q.push(s);
-  write(q);
-  // Optimistic: show it immediately in any loaded sessions list.
-  qc?.setQueryData<Session[]>(['sessions'], (old = []) => [s, ...old]);
-  await flush();
+export function offlineAccountId(): string | null {
+  return accountId;
 }
 
-export async function flush(): Promise<void> {
-  const q = read();
-  if (q.length === 0) return;
-  try {
-    await api.post('/sessions', q);
-    write([]);
-    qc?.invalidateQueries({ queryKey: ['sessions'] });
-  } catch {
-    // Offline or server down — keep the queue for the next attempt.
+/** Keep the run's original owner even if it ends after an account change. */
+export async function logSession(s: Session, owner: string | null = accountId): Promise<void> {
+  localStorage.setItem(sessionKey(owner, s.id), JSON.stringify(s));
+  if (owner !== null && owner === accountId) {
+    qc?.setQueryData<Session[]>(['sessions'], (old = []) => [s, ...old]);
+    await flush();
   }
 }
 
+export function flush(): Promise<void> {
+  if (running) return running;
+  if (accountId === null || read(accountId).length === 0) return Promise.resolve();
+  const owner = accountId;
+  const started = generation;
+  controller = new AbortController();
+  const signal = controller.signal;
+  running = (async () => {
+    while (accountId === owner && generation === started) {
+      const batch = read(owner);
+      if (!batch.length) return;
+      try {
+        const result = await api.post<{ ids: string[] }>('/sessions', batch, {
+          signal, headers: { 'X-Timer-Account-Id': owner },
+        });
+        // An aborted upload can still reach the server. Keep it for idempotent
+        // retry, and never invalidate the next account's cache.
+        if (generation !== started || signal.aborted) return;
+        const acknowledged = new Set(result.ids);
+        if (!batch.some((s) => acknowledged.has(s.id))) return;
+        // Each immutable session has its own key. Another tab can append
+        // between these deletes without its session being overwritten.
+        for (const s of batch) {
+          if (acknowledged.has(s.id)) localStorage.removeItem(sessionKey(owner, s.id));
+        }
+        void qc?.invalidateQueries({ queryKey: ['sessions'] });
+      } catch {
+        return; // Keep all unacknowledged rows for the next attempt.
+      }
+    }
+  })().finally(() => {
+    running = null;
+    controller = null;
+    if (generation !== started) void flush();
+  });
+  return running;
+}
+
 export function pendingCount(): number {
-  return read().length;
+  return accountId === null ? 0 : read(accountId).length;
 }

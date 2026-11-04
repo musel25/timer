@@ -21,12 +21,16 @@ import { MiniPlayer } from './MiniPlayer';
  */
 export function ActiveRun({
   spec,
+  ownerId,
+  visible,
   onClose,
   onAgain,
   startedAtEpoch,
   resumeElapsed = 0,
 }: {
   spec: RunSpec;
+  ownerId: string | null;
+  visible: boolean;
   onClose: () => void;
   onAgain: (s: RunSpec) => void;
   /** Original wall-clock start (for a resumed run); defaults to now. */
@@ -68,13 +72,13 @@ export function ActiveRun({
       note: null,
       category: 'habit',
       createdAt: Date.now(),
-    });
+    }, ownerId);
     saveRun('foreground', null);
   }
 
   const engine = useTimerEngine(phases, {
     beeps: !muted && (settings?.beeps ?? true),
-    voice: !muted && (settings?.voice ?? false),
+    voice: visible && !muted && (settings?.voice ?? false),
     resumeElapsedSeconds: resumeElapsed,
     onPhaseComplete: (p) => {
       if (focusMode && p.kind === 'work') workDoneRef.current += p.seconds;
@@ -102,6 +106,7 @@ export function ActiveRun({
   useEffect(() => {
     if (engine.status === 'running' || engine.status === 'paused') {
       saveRun('foreground', {
+        ownerId,
         spec,
         startedAtEpoch: startedAt.current,
         status: engine.status,
@@ -109,7 +114,7 @@ export function ActiveRun({
         snapshotEpoch: Date.now(),
       });
     }
-  }, [engine.status, engine.elapsed, spec]);
+  }, [engine.status, engine.elapsed, spec, ownerId]);
 
   // Auto-start + keep the screen awake for the life of the run.
   useEffect(() => {
@@ -139,7 +144,7 @@ export function ActiveRun({
     const onKey = (e: KeyboardEvent) => {
       // This listener outlives the run screen (mini-player + any tab), so it
       // must never steal keys from a focused input elsewhere in the app.
-      if (isTypingTarget(e.target)) return;
+      if (!visible || isTypingTarget(e.target)) return;
       if (e.key === ' ') { e.preventDefault(); engine.toggle(); }
       else if (e.key === 'ArrowRight') engine.skipNext();
       else if (e.key === 'ArrowLeft') engine.skipPrev();

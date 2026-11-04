@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { api } from './api';
+import { api, requestAccountGeneration } from './api';
 import { buildManualSession } from './sessionLog';
 import { periodKey } from './cadence';
 import { applyReorder } from './order';
@@ -21,8 +21,10 @@ export const useSessions = () =>
  * older reads first so they cannot overwrite the saved row. An absent cache
  * still needs a full read; never seed it with an incomplete one-row list. */
 async function updateList<T>(qc: QueryClient, key: string, update: (rows: T[]) => T[]) {
+  const generation = requestAccountGeneration();
   const needsReconcile = qc.getQueryState([key])?.isInvalidated;
   await qc.cancelQueries({ queryKey: [key] });
+  if (generation !== requestAccountGeneration()) return;
   if (qc.getQueryData([key]) === undefined) {
     void qc.invalidateQueries({ queryKey: [key] });
     return;
@@ -209,15 +211,19 @@ export function useReorderTasks() {
     mutationFn: ({ date, ids }: { date: string | null; ids: string[] }) =>
       api.post<{ ok: true }>('/tasks/reorder', { date, ids }),
     onMutate: async ({ date, ids }) => {
+      const generation = requestAccountGeneration();
       await qc.cancelQueries({ queryKey: ['tasks'] });
+      if (generation !== requestAccountGeneration()) throw new DOMException('Account changed', 'AbortError');
       const prev = qc.getQueryData<Task[]>(['tasks']);
       qc.setQueryData<Task[]>(['tasks'], (old) => applyReorder(old ?? [], date, ids));
-      return { prev };
+      return { prev, generation };
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(['tasks'], ctx.prev);
+      if (ctx?.generation === requestAccountGeneration() && ctx.prev) qc.setQueryData(['tasks'], ctx.prev);
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+    onSettled: (_data, _error, _variables, ctx) => {
+      if (ctx?.generation === requestAccountGeneration()) return qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
   });
 }
 
@@ -316,15 +322,19 @@ export function useToggleTask() {
   return useMutation({
     mutationFn: ({ id, done }: { id: string; done: boolean }) => api.patch<Task>(`/tasks/${id}`, { done }),
     onMutate: async ({ id, done }) => {
+      const generation = requestAccountGeneration();
       await qc.cancelQueries({ queryKey: ['tasks'] });
+      if (generation !== requestAccountGeneration()) throw new DOMException('Account changed', 'AbortError');
       const prev = qc.getQueryData<Task[]>(['tasks']);
       qc.setQueryData<Task[]>(['tasks'], (old) =>
         (old ?? []).map((t) => (t.id === id ? { ...t, done, completedAt: done ? Date.now() : null } : t)));
-      return { prev };
+      return { prev, generation };
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(['tasks'], ctx.prev);
+      if (ctx?.generation === requestAccountGeneration() && ctx.prev) qc.setQueryData(['tasks'], ctx.prev);
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+    onSettled: (_data, _error, _variables, ctx) => {
+      if (ctx?.generation === requestAccountGeneration()) return qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
   });
 }

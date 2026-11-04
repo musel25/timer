@@ -1,6 +1,9 @@
-import { lazy, useEffect } from 'react';
+import { lazy, useEffect, useLayoutEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Timer as TimerIcon } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { cancelAccountRequests } from './lib/api';
+import { initOfflineQueue, offlineAccountId } from './lib/offlineQueue';
 import { useMe, useSettings } from './lib/hooks';
 import { applyAccent, applyTheme } from './lib/theme';
 import { setVolume } from './engine/audio';
@@ -78,7 +81,19 @@ function AuthedApp() {
 
 export function App() {
   const { data: me, isLoading } = useMe();
-  if (isLoading) return <Splash />;
+  const qc = useQueryClient();
+  const owner = me?.user?.id ?? null;
+  const [readyOwner, setReadyOwner] = useState<string | null>(null);
+  useLayoutEffect(() => {
+    if (offlineAccountId() !== owner) {
+      cancelAccountRequests();
+      void qc.cancelQueries({ predicate: (query) => query.queryKey[0] !== 'me' });
+      qc.removeQueries({ predicate: (query) => query.queryKey[0] !== 'me' });
+    }
+    initOfflineQueue(qc, owner);
+    setReadyOwner(owner);
+  }, [owner, qc]);
+  if (isLoading || readyOwner !== owner) return <Splash />;
   if (!me?.user) {
     return (
       <Routes>
@@ -87,5 +102,5 @@ export function App() {
       </Routes>
     );
   }
-  return <AuthedApp />;
+  return <AuthedApp key={owner} />;
 }

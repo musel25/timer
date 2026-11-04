@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { apiGetUrl } from '../../lib/api';
 import { X } from 'lucide-react';
 import type { Task } from '../../lib/types';
 import { useSaveTask, useDeleteTask, useTaskAttachments, useUploadAttachment, useDeleteAttachment } from '../../lib/hooks';
@@ -44,6 +45,7 @@ export function TaskEditor({ task, onClose }: { task: Task; onClose: () => void 
   }, []);
 
   const { data: attachments } = useTaskAttachments(task.id);
+  const attachmentUrls = useMemo(() => new Map((attachments ?? []).map((a) => [a.id, apiGetUrl(`/attachments/${a.id}`)])), [attachments]);
   const upload = useUploadAttachment();
   const removeAttachment = useDeleteAttachment();
 
@@ -112,9 +114,9 @@ export function TaskEditor({ task, onClose }: { task: Task; onClose: () => void 
           <div className="flex flex-wrap gap-2">
             {attachments.map((a) => (
               <div key={a.id} className="group relative">
-                <a href={`/api/attachments/${a.id}`} target="_blank" rel="noreferrer">
+                <a href={attachmentUrls.get(a.id)} target="_blank" rel="noreferrer">
                   <img
-                    src={`/api/attachments/${a.id}`}
+                    src={attachmentUrls.get(a.id)}
                     alt="attachment"
                     className="h-20 w-20 rounded-lg object-cover ring-1 ring-ink-600"
                   />

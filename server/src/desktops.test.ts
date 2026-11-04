@@ -1,3 +1,5 @@
+import type { desktops } from './schema';
+type DesktopRow = Omit<typeof desktops.$inferSelect, 'tasks'> & { tasks: { id: string; text: string; done: boolean; subtasks?: { id: string; text: string; done: boolean }[] }[] };
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -60,7 +62,7 @@ describe('desktops table + CRUD', () => {
     const cookie = await makeUser('ada');
     const res = await api.request('/desktops', send('POST', cookie, { title: 'Thesis' }));
     expect(res.status).toBe(201);
-    const d = await res.json();
+    const d = await res.json().then((value) => value as DesktopRow);
     expect(d.title).toBe('Thesis');
     expect(d.tasks).toEqual([]);
     expect(d.comments).toEqual([]);
@@ -76,8 +78,8 @@ describe('desktops table + CRUD', () => {
       title: 'Timer', lane: 'timer',
       tasks: [{ id: 't1', text: 'build grid', done: false }],
       comments: [{ id: 'c1', text: 'collapse like GNOME', at: 1000 }],
-    }))).json();
-    const list = await (await api.request('/desktops', get(cookie))).json();
+    }))).json().then((value) => value as DesktopRow);
+    const list = await (await api.request('/desktops', get(cookie))).json().then((value) => value as DesktopRow[]);
     expect(list[0].tasks).toEqual([{ id: 't1', text: 'build grid', done: false }]);
     expect(list[0].comments).toEqual([{ id: 'c1', text: 'collapse like GNOME', at: 1000 }]);
     expect(created.id).toBe(list[0].id);
@@ -92,13 +94,13 @@ describe('desktops table + CRUD', () => {
       ] },
       { id: 't2', text: 'draft intro', done: true },
     ];
-    const d = await (await api.request('/desktops', send('POST', cookie, { title: 'Thesis', tasks }))).json();
+    const d = await (await api.request('/desktops', send('POST', cookie, { title: 'Thesis', tasks }))).json().then((value) => value as DesktopRow);
     expect(d.tasks).toEqual(tasks);
 
     const patched = await (await api.request(`/desktops/${d.id}`, send('PATCH', cookie, {
-      tasks: [{ ...tasks[0], subtasks: [...tasks[0].subtasks, { id: 's3', text: 'recheck the stats', done: false }] }],
-    }))).json();
-    expect(patched.tasks[0].subtasks.map((s: { id: string }) => s.id)).toEqual(['s1', 's2', 's3']);
+      tasks: [{ ...tasks[0], subtasks: [...(tasks[0].subtasks ?? []), { id: 's3', text: 'recheck the stats', done: false }] }],
+    }))).json().then((value) => value as DesktopRow);
+    expect(patched.tasks[0].subtasks?.map((s: { id: string }) => s.id)).toEqual(['s1', 's2', 's3']);
   });
 
   it('still accepts a task with no subtasks field (rows written before subtasks existed)', async () => {
@@ -107,17 +109,17 @@ describe('desktops table + CRUD', () => {
       title: 'Old', tasks: [{ id: 't1', text: 'build grid', done: false }],
     }));
     expect(res.status).toBe(201);
-    expect((await res.json()).tasks[0].subtasks).toBeUndefined();
+    expect((await res.json().then((value) => value as DesktopRow)).tasks[0].subtasks).toBeUndefined();
   });
 
   it('focusing a desktop demotes the previously focused one', async () => {
     const cookie = await makeUser('bob');
-    const a = await (await api.request('/desktops', send('POST', cookie, { title: 'A', focused: true }))).json();
-    const b = await (await api.request('/desktops', send('POST', cookie, { title: 'B' }))).json();
+    const a = await (await api.request('/desktops', send('POST', cookie, { title: 'A', focused: true }))).json().then((value) => value as DesktopRow);
+    const b = await (await api.request('/desktops', send('POST', cookie, { title: 'B' }))).json().then((value) => value as DesktopRow);
 
     await api.request(`/desktops/${b.id}`, send('PATCH', cookie, { focused: true }));
 
-    const list = await (await api.request('/desktops', get(cookie))).json();
+    const list = await (await api.request('/desktops', get(cookie))).json().then((value) => value as DesktopRow[]);
     const byId = Object.fromEntries(list.map((d: any) => [d.id, d]));
     expect(byId[b.id].focused).toBe(true);
     expect(byId[a.id].focused).toBe(false);
@@ -126,31 +128,31 @@ describe('desktops table + CRUD', () => {
   it('scopes desktops per user', async () => {
     const cookieC = await makeUser('cleo');
     await api.request('/desktops', send('POST', cookieC, { title: 'cleo only' }));
-    const mine = await (await api.request('/desktops', get(cookieC))).json();
+    const mine = await (await api.request('/desktops', get(cookieC))).json().then((value) => value as DesktopRow[]);
     expect(mine).toHaveLength(1);
     expect(mine[0].title).toBe('cleo only');
   });
 
   it('archiving hides a desktop from GET (the journal survives in the row)', async () => {
     const cookie = await makeUser('dee');
-    const d = await (await api.request('/desktops', send('POST', cookie, { title: 'done soon' }))).json();
+    const d = await (await api.request('/desktops', send('POST', cookie, { title: 'done soon' }))).json().then((value) => value as DesktopRow);
     await api.request(`/desktops/${d.id}`, send('PATCH', cookie, { archivedAt: Date.now() }));
-    expect(await (await api.request('/desktops', get(cookie))).json()).toHaveLength(0);
+    expect(await (await api.request('/desktops', get(cookie))).json().then((value) => value as DesktopRow[])).toHaveLength(0);
   });
 
   it('lists in sortOrder order (the displayed number is index+1)', async () => {
     const cookie = await makeUser('eve');
     await api.request('/desktops', send('POST', cookie, { title: 'second', sortOrder: 20 }));
     await api.request('/desktops', send('POST', cookie, { title: 'first', sortOrder: 10 }));
-    const titles = (await (await api.request('/desktops', get(cookie))).json()).map((d: any) => d.title);
+    const titles = (await (await api.request('/desktops', get(cookie))).json().then((value) => value as DesktopRow[])).map((d) => d.title);
     expect(titles).toEqual(['first', 'second']);
   });
 
   it('deletes a desktop', async () => {
     const cookie = await makeUser('fay');
-    const d = await (await api.request('/desktops', send('POST', cookie, { title: 'gone' }))).json();
+    const d = await (await api.request('/desktops', send('POST', cookie, { title: 'gone' }))).json().then((value) => value as DesktopRow);
     expect((await api.request(`/desktops/${d.id}`, { method: 'DELETE', headers: { cookie } })).status).toBe(200);
-    expect(await (await api.request('/desktops', get(cookie))).json()).toHaveLength(0);
+    expect(await (await api.request('/desktops', get(cookie))).json().then((value) => value as DesktopRow[])).toHaveLength(0);
   });
 
   it('round-trips desktops through /export and /import', async () => {
@@ -158,13 +160,13 @@ describe('desktops table + CRUD', () => {
     await api.request('/desktops', send('POST', cookie, {
       title: 'exported', lane: 'thesis', tasks: [{ id: 't1', text: 'x', done: true }],
     }));
-    const dump = await (await api.request('/export', get(cookie))).json();
+    const dump = await (await api.request('/export', get(cookie))).json().then((value) => value as { desktops: DesktopRow[] });
     expect(dump.desktops).toHaveLength(1);
     expect(dump.desktops[0].tasks[0].done).toBe(true);
 
     const cookieH = await makeUser('han');
     await api.request('/import', send('POST', cookieH, { desktops: dump.desktops.map((d: any) => ({ ...d, id: `h_${d.id}` })) }));
-    const hans = await (await api.request('/desktops', get(cookieH))).json();
+    const hans = await (await api.request('/desktops', get(cookieH))).json().then((value) => value as DesktopRow[]);
     expect(hans.map((d: any) => d.title)).toEqual(['exported']);
   });
 });

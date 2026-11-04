@@ -9,6 +9,8 @@ export type RunSlot = 'foreground';
  * wall-clock gap since then (when running) to resume exactly where we'd be.
  */
 export interface PersistedRun {
+  /** Absent on legacy snapshots: retain as unowned, never infer from login. */
+  ownerId?: string | null;
   spec: RunSpec;
   /** Wall-clock the run originally started — becomes the logged session's startedAt. */
   startedAtEpoch: number;

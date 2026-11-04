@@ -1,97 +1,89 @@
 # Deployment
 
-`timer` runs in production at **https://timer.musel.dev** — an Oracle Cloud VM (ARM64), in Docker,
-behind nginx. Same pattern as `math.musel.dev`.
+Production: https://timer.musel.dev. The Oracle VPS uses the SSH alias `my-vps`.
+nginx terminates TLS and sends requests to 127.0.0.1:8002. One container serves
+the React app and Hono API on port 8080. SQLite is stored in the persistent
+`timer_timer-data` Docker volume at `/data/timer.db`.
 
-## Architecture
+## Requirements
 
-```
-browser → timer.musel.dev   (DNS A record → 145.241.168.188)
-        → nginx :443         TLS termination (Let's Encrypt) + HSTS
-        → 127.0.0.1:8002
-        → Docker container "timer"   (Hono on :8080, serves SPA + /api)
-        → SQLite at /data/timer.db   (Docker named volume "timer_timer-data")
-```
+- Local Node 22 and dependencies installed with `npm run install:all`.
+- SSH access to `my-vps` and Docker Compose on the VPS.
+- Repository cloned at `~/timer` on the VPS with access to origin.
+- nginx configured from `deploy/nginx-timer.musel.dev.conf` and a valid TLS
+  certificate. Enable the vhost after `nginx -t` passes.
+- A VPS `.env` created from `.env.example` with admin credentials. Compose sets
+  `NODE_ENV=production` and the persistent database path.
 
-- **Container** — built from `Dockerfile` (multi-stage: builds the React SPA + the server bundle,
-  runs on `node:24-bookworm-slim`). Declared in `compose.yaml`, bound to `127.0.0.1:8002`,
-  `restart: unless-stopped`.
-- **Data** — SQLite lives in the named volume `timer_timer-data` (mounted at `/data`), so it
-  survives image rebuilds. The app reads `TIMER_DB=/data/timer.db`.
-- **Auth** — the app has its own login (closed signup). On first boot it creates a single account
-  from `ADMIN_EMAIL` / `ADMIN_PASSWORD` and seeds the default habits.
-- **Reverse proxy** — nginx vhost `deploy/nginx-timer.musel.dev.conf` terminates TLS.
-- **TLS** — Let's Encrypt via certbot (webroot mode), auto-renewed by the certbot systemd timer.
+The image uses `node:22-bookworm-slim`. Keep Node, better-sqlite3, esbuild, and
+CI versions consistent. See [AGENTS.md](AGENTS.md).
 
-## Server layout
-
-- Host: `ubuntu@145.241.168.188` (ssh alias `my-vps`)
-- Repo checked out at `~/timer` (tracks `main`)
-- Ports 80/443 already open (host iptables + Oracle VCN Security List)
-
-## First-time setup
+## Deploy
 
 ```bash
-# 0. DNS: add an A record  timer.musel.dev → 145.241.168.188  (or a *.musel.dev wildcard)
-
-# 1. Clone
-ssh my-vps
-git clone https://github.com/musel25/timer.git ~/timer
-cd ~/timer
-
-# 2. Secrets
-cp .env.example .env
-# edit .env: set a random SESSION_SECRET and your ADMIN_EMAIL / ADMIN_PASSWORD
-#   node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-
-# 3. TLS certificate (DNS must resolve first). Open a temporary :80 vhost for the
-#    ACME challenge, then request the cert:
-sudo cp deploy/nginx-timer.musel.dev.conf /etc/nginx/sites-available/timer.musel.dev
-# (comment out the 443 server block on first run, or run certbot --nginx)
-sudo certbot certonly --webroot -w /var/www/html -d timer.musel.dev
-
-# 4. Enable the full vhost
-sudo ln -sf /etc/nginx/sites-available/timer.musel.dev /etc/nginx/sites-enabled/timer.musel.dev
-sudo nginx -t && sudo systemctl reload nginx
-
-# 5. Build + run
-docker compose up -d --build
+npm run verify
+git add <changed-files>
+git commit -m "fix: describe the change"
+git push -u origin <branch>
+./deploy.sh
 ```
 
-Visit https://timer.musel.dev and log in.
+Use `./deploy.sh` for first deployment and updates. Do not build and replace
+production with `docker compose up -d --build`.
 
-## Deploy an update
+The script requires a clean checkout and a commit on origin. It runs the full
+verification command. It fetches and checks out that exact commit on the VPS.
+The VPS checkout uses detached HEAD so a pushed branch can be tested without
+selecting a different commit from a moving branch.
+
+The script locks concurrent deployments and tags the running image as
+`timer:prev`. It builds the candidate while the old container serves. It then
+swaps containers and checks the exact Docker health state. Finally, it checks
+HTTPS `/api/health` and requires its `revision` to equal the deployed commit.
+Startup, health, edge, and revision failures restore the previous image. A
+failed first deployment has no previous image to restore. A rollback restores
+the image; it does not reverse database migrations.
+
+CI also builds the actual image and runs `scripts/image-smoke.sh` across
+several health probes to catch delayed process exits.
+
+## Roll back manually
 
 ```bash
-ssh my-vps
-cd ~/timer
-git pull
-docker compose up -d --build   # the named volume preserves the database
+ssh my-vps 'cd ~/timer && docker tag timer:prev timer:latest && docker compose up -d --no-build'
+curl --fail https://timer.musel.dev/api/health
 ```
+
+Check the returned revision and container health before reporting recovery.
 
 ## Operations
 
 ```bash
-docker compose ps          # status / health
-docker compose logs -f     # follow logs
-docker compose restart
-docker compose down        # stop (data kept in the volume)
+ssh my-vps
+cd ~/timer
+docker compose ps
+docker compose logs -f
 ```
 
 ## Back up the database
 
+Use SQLite's online backup API. A file copy of a live WAL database can omit
+recent transactions. Back up before a database change.
+
 ```bash
-docker run --rm \
-  -v timer_timer-data:/data \
-  -v "$PWD":/backup \
-  busybox cp /data/timer.db /backup/timer-backup.db
+ssh my-vps
+cd ~/timer
+docker exec timer node --input-type=module -e 'import Database from "better-sqlite3"; const db = new Database(process.env.TIMER_DB); await db.backup("/data/timer-backup.db"); db.close();'
+docker cp timer:/data/timer-backup.db ./timer-backup.db
 ```
 
-You can also export all data as JSON from the in-app **Settings → Export**.
+Store a copy outside the VPS. The app's Settings export is a separate JSON
+backup of Planner data. It excludes account credentials and integration
+secrets. A database backup also includes Grind account progress.
 
-## TLS certificate
+## TLS
 
-certbot auto-renews via a systemd timer.
+certbot renews certificates with its systemd timer.
 
 ```bash
 sudo certbot certificates

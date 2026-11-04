@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { announceAccountChange, clearAccountState } from '../../lib/accountState';
 import { api } from '../../lib/api';
 import { CalendarIntegration } from './CalendarIntegration';
 import { Moon, Sun, Plus } from 'lucide-react';
@@ -23,9 +24,13 @@ export function SettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function signOut() {
-    await api.post('/auth/logout');
-    qc.setQueryData(['me'], { user: null });
-    qc.clear();
+    await clearAccountState(qc);
+    try {
+      await api.post('/auth/logout');
+      announceAccountChange();
+    } finally {
+      void qc.invalidateQueries({ queryKey: ['me'] });
+    }
   }
 
   async function exportData() {

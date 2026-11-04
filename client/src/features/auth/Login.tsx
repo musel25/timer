@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { announceAccountChange, clearAccountState } from '../../lib/accountState';
 import { Brand } from '../../components/Brand';
 
 export function Login() {
@@ -9,8 +10,14 @@ export function Login() {
   const [password, setPassword] = useState('');
 
   const m = useMutation({
-    mutationFn: () => api.post('/auth/login', { email, password }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
+    mutationFn: async () => {
+      await clearAccountState(qc);
+      return api.post('/auth/login', { email, password });
+    },
+    onSuccess: () => {
+      announceAccountChange();
+      return qc.invalidateQueries({ queryKey: ['me'] });
+    },
   });
 
   return (
