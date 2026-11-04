@@ -9,3 +9,9 @@
 data/
 *.md
 !DEPLOY.md
+
+**/.env
+**/.env.*
+.superpowers
+.claude
+.worktrees
