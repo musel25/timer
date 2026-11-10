@@ -101,7 +101,7 @@ export function TimerEditor() {
         {type === 'pomodoro' ? (
           <>
             <Stepper label="Prep countdown" value={pomo.prepSeconds ?? DEFAULT_POMODORO_PREP} onChange={(v) => updatePomo({ prepSeconds: v })} min={0} max={60} suffix="s" />
-            <Stepper label="Focus block" value={pomo.work} onChange={(v) => updatePomo({ work: v })} min={1} max={120} suffix="min" presets={MINUTE_PRESETS} />
+            <Stepper label="Focus block" value={pomo.work} onChange={(v) => updatePomo({ work: v })} min={1} max={120} suffix="min" />
             <Stepper label="Short break" value={pomo.short} onChange={(v) => updatePomo({ short: v })} min={1} max={60} suffix="min" />
             <Stepper label="Long break" value={pomo.long} onChange={(v) => updatePomo({ long: v })} min={1} max={120} suffix="min" />
             <Stepper label="Long break every" value={pomo.longEvery} onChange={(v) => updatePomo({ longEvery: v })} min={1} max={12} suffix="blocks" />
