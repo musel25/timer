@@ -15,7 +15,7 @@ export interface Settings {
 }
 
 export interface PomodoroConfig {
-  work: number; // minutes
+  work: number; // minutes; fractional values preserve seconds
   short: number; // minutes
   long: number; // minutes
   longEvery: number; // long break after this many pomodoros

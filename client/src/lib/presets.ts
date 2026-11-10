@@ -83,7 +83,7 @@ function presetPhases(p: TimerPreset): Phase[] {
 /** A span at the scale it was written: seconds stay seconds, whole minutes read as minutes. */
 function shortSpan(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
-  return seconds % 60 === 0 ? `${minutes(seconds)} min` : `${minutes(seconds)} min ${seconds % 60}s`;
+  return seconds % 60 === 0 ? `${minutes(seconds)} min` : `${Math.floor(seconds / 60)} min ${seconds % 60}s`;
 }
 
 /** The headline pair — how many sets, and how long one is — plus whatever else
@@ -98,7 +98,7 @@ function blockShape(p: TimerPreset): Pick<BlockShape, 'sets' | 'setLabel' | 'det
     // every 4, the long one would land after the last set, so it never runs.
     const every = Math.max(1, c.longEvery);
     if (sets > every) detail.push(`${c.long} min long break every ${every}`);
-    return { sets, setLabel: `${c.work} min`, detail };
+    return { sets, setLabel: shortSpan(Math.round(c.work * 60)), detail };
   }
   if (p.type === 'simple') {
     const c = p.config as SimpleConfig;

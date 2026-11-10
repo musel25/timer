@@ -12,6 +12,8 @@ with a cached app shell and queued run logs. Account data syncs across devices b
   full-width as the focused stage where everything edits in place.
 - **Timers** — build and run a *Focus block* (multi-round work/break Pomodoro) or a plain
   countdown *Timer*, with prep countdown, chimes, and reusable saved presets.
+  Set each focus block in minutes and seconds. For 30 seconds, use 0 minutes and 30 seconds.
+  Saved timers keep their duration when reopened.
 - **One shared timer with habit tagging** — there's always at most one running timer. It keeps
   going as you navigate between pages. Start a Focus block, then on the **Habits** page tap a
   habit to count that block toward it (tap another to switch the tag). No nested second timer.
