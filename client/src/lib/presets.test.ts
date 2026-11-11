@@ -43,6 +43,18 @@ describe('presetSeconds — pomodoro total', () => {
 });
 
 describe('describeBlock — what the saved-timer card says out loud', () => {
+  it.each([
+    { work: 0.5, label: '30s', focus: 60, total: 365 },
+    { work: 1.5, label: '1 min 30s', focus: 180, total: 485 },
+  ])('shows and runs a $label focus block with seconds', ({ work, label, focus, total }) => {
+    const preset = pomo({ work, rounds: 2 });
+    const block = describeBlock(preset);
+    expect(block.setLabel).toBe(label);
+    expect(block.focusSeconds).toBe(focus);
+    expect(block.totalSeconds).toBe(total);
+    expect(runSpecFromPreset(preset).plannedSeconds).toBe(focus);
+  });
+
   it('leads with the set count and the length of one set, not the total', () => {
     const b = describeBlock(pomo({ rounds: 4, work: 25, short: 5 }));
     expect(b.sets).toBe(4);

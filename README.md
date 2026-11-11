@@ -14,7 +14,9 @@ with a cached app shell and queued run logs. Account data syncs across devices b
   countdown *Timer*, with prep countdown, chimes, and reusable saved presets. The Timer page
   sums completed study sets and work time by day. Breaks do not add to study time. Old timer
   records remain in history but lack a reliable work/break split, so the study record starts
-  with newly tracked runs.
+  with newly tracked runs. Set each focus block in minutes and seconds. For 30 seconds, use
+  0 minutes and 30 seconds.
+  Saved timers keep their duration when reopened.
 - **One shared timer with habit tagging** — there's always at most one running timer. It keeps
   going as you navigate between pages. Start a Focus block, then on the **Habits** page tap a
   habit to count that block toward it (tap another to switch the tag). No nested second timer.

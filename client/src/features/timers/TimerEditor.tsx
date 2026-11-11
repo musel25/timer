@@ -6,6 +6,7 @@ import { useDeleteTimer, useSaveTimer, useTimers } from '../../lib/hooks';
 import { PHASE_COLORS } from '../../engine/buildPhases';
 import { timerTypeLabel } from '../../lib/timerMeta';
 import { DEFAULT_POMODORO_PREP } from '../../lib/presets';
+import { humanDuration } from '../../lib/time';
 import type { Interval, IntervalConfig, PomodoroConfig, PresetType, SimpleConfig } from '../../lib/types';
 
 const SWATCHES = ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#f43f5e', '#14b8a6'];
@@ -27,6 +28,10 @@ export function TimerEditor() {
   const [cooldown, setCooldown] = useState(0);
   const [voice, setVoice] = useState(false);
   const [pomo, setPomo] = useState<PomodoroConfig>(POMO_DEFAULTS);
+  const focusSeconds = Math.round(pomo.work * 60);
+  const focusMinutes = Math.floor(focusSeconds / 60);
+  const focusRemainder = focusSeconds % 60;
+  const invalidFocus = type === 'pomodoro' && focusSeconds < 1;
   const [intervals, setIntervals] = useState<Interval[]>([
     { label: 'Work', seconds: 40, kind: 'work', color: PHASE_COLORS.work },
     { label: 'Rest', seconds: 20, kind: 'rest', color: PHASE_COLORS.rest },
@@ -69,6 +74,7 @@ export function TimerEditor() {
   }
 
   async function onSave() {
+    if (invalidFocus) return;
     let config: SimpleConfig | IntervalConfig | PomodoroConfig;
     if (type === 'simple') {
       config = { totalSeconds: minutes * 60, prepSeconds: prep };
@@ -77,8 +83,9 @@ export function TimerEditor() {
     } else {
       config = { prepSeconds: prep, sets, cooldownSeconds: cooldown, intervals, sounds: { countdownBeeps: true, voice } };
     }
+    const focusName = focusRemainder ? `${humanDuration(focusSeconds)}/${pomo.short}m × ${pomo.rounds}` : `${pomo.work}/${pomo.short} × ${pomo.rounds}`;
     const fallbackName =
-      type === 'simple' ? 'Focus timer' : type === 'pomodoro' ? `${pomo.work}/${pomo.short} × ${pomo.rounds}` : 'Interval timer';
+      type === 'simple' ? 'Focus timer' : type === 'pomodoro' ? focusName : 'Interval timer';
     await save.mutateAsync({ id, name: name.trim() || fallbackName, type, config });
     navigate('/timer');
   }
@@ -101,7 +108,9 @@ export function TimerEditor() {
         {type === 'pomodoro' ? (
           <>
             <Stepper label="Prep countdown" value={pomo.prepSeconds ?? DEFAULT_POMODORO_PREP} onChange={(v) => updatePomo({ prepSeconds: v })} min={0} max={60} suffix="s" />
-            <Stepper label="Focus block" value={pomo.work} onChange={(v) => updatePomo({ work: v })} min={1} max={120} suffix="min" />
+            <Stepper label="Focus block" value={focusMinutes} onChange={(v) => updatePomo({ work: (v * 60 + focusRemainder) / 60 })} min={0} max={120} suffix="min" />
+            <Stepper label="Focus block seconds" value={focusRemainder} onChange={(v) => updatePomo({ work: (focusMinutes * 60 + v) / 60 })} min={0} max={59} suffix="s" />
+            {invalidFocus && <p role="alert" className="text-sm text-rose-400">Set the focus block to at least 1 second.</p>}
             <Stepper label="Short break" value={pomo.short} onChange={(v) => updatePomo({ short: v })} min={1} max={60} suffix="min" />
             <Stepper label="Long break" value={pomo.long} onChange={(v) => updatePomo({ long: v })} min={1} max={120} suffix="min" />
             <Stepper label="Long break every" value={pomo.longEvery} onChange={(v) => updatePomo({ longEvery: v })} min={1} max={12} suffix="blocks" />
@@ -170,7 +179,7 @@ export function TimerEditor() {
       )}
 
       <div className="flex gap-3">
-        <button className="btn-accent flex-1" onClick={onSave} disabled={save.isPending}>Save</button>
+        <button className="btn-accent flex-1" onClick={onSave} disabled={save.isPending || invalidFocus}>Save</button>
         {existing && (
           <button className="btn-outline text-rose-400" onClick={() => { del.mutate(existing.id); navigate('/timer'); }}>Delete</button>
         )}
