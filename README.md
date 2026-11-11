@@ -6,10 +6,6 @@ with a cached app shell and queued run logs. Account data syncs across devices b
 
 ## Features
 
-- **Desktops board** — one card per Ubuntu virtual workspace, numbered in swipe order (archiving
-  one collapses the numbering, exactly like GNOME dynamic workspaces). Each card holds a
-  description, a task checklist with progress, and a timestamped journal; clicking a card pins it
-  full-width as the focused stage where everything edits in place.
 - **Timers** — build and run a *Focus block* (multi-round work/break Pomodoro) or a plain
   countdown *Timer*, with prep countdown, chimes, and reusable saved presets. The Timer page
   sums completed study sets and work time by day. Breaks do not add to study time. Old timer
@@ -20,7 +16,7 @@ with a cached app shell and queued run logs. Account data syncs across devices b
 - **One shared timer with habit tagging** — there's always at most one running timer. It keeps
   going as you navigate between pages. Start a Focus block, then on the **Habits** page tap a
   habit to count that block toward it (tap another to switch the tag). No nested second timer.
-- **Navigation** — a slim left bar: **Week · Habits · Desktops · Timer · Progress · Notes · Settings**. The
+- **Navigation** — a slim left bar: **Week · Habits · Timer · Progress · Notes · Settings**. The
   Week planner is the home view. It shows per-day tasks and Google Calendar events, with today
   highlighted.
 - **Habit dashboard** — your daily habits grouped by time of day, each with duration presets.

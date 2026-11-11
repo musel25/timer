@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  CalendarDays, Code2, Timer, Repeat, BarChart3, StickyNote, Settings, Bot, Monitor, MoreHorizontal, type LucideIcon,
+  CalendarDays, Code2, Timer, Repeat, BarChart3, StickyNote, Settings, Bot, MoreHorizontal, type LucideIcon,
 } from 'lucide-react';
 import { isTypingTarget } from '../lib/dom';
 import { useAgentsOptional } from './agents/AgentsContext';
@@ -16,7 +16,6 @@ const groups: { title: string; tabs: { to: string; label: string; icon: LucideIc
     tabs: [
       { to: '/week', label: 'Week', icon: CalendarDays },
       { to: '/habits', label: 'Habits', icon: Repeat },
-      { to: '/desktops', label: 'Desktops', icon: Monitor },
     ],
   },
   {
@@ -47,7 +46,7 @@ const shortcutKeyOf = (to: string) => {
 };
 
 // Four frequent destinations plus More keep every page reachable on a phone.
-const mobileTabs = shortcutTabs.filter((t) => ["/week", "/habits", "/desktops", "/timer"].includes(t.to));
+const mobileTabs = shortcutTabs.filter((t) => ['/week', '/habits', '/timer', '/stats'].includes(t.to));
 const moreTabs = shortcutTabs.filter((t) => !mobileTabs.includes(t));
 
 export function Layout() {

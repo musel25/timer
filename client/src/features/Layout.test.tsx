@@ -8,7 +8,6 @@ function renderApp() {
     <MemoryRouter initialEntries={['/week']}>
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/desktops" element={<div>desktops page</div>} />
           <Route path="/week" element={<div>week page</div>} />
           <Route path="/timer" element={<div>timer page</div>} />
           <Route path="/habits" element={<div>habits page</div>} />
@@ -24,12 +23,13 @@ function renderApp() {
 describe('Layout number shortcuts', () => {
   it('jumps to the tab at that position in the sidebar', () => {
     renderApp();
+    expect(screen.queryAllByRole('link', { name: /Desktops/ })).toHaveLength(0);
     fireEvent.keyDown(window, { key: '2' });
     expect(screen.getByText('habits page')).toBeDefined();
-    fireEvent.keyDown(window, { key: '4' });
-    expect(screen.getByText('timer page')).toBeDefined();
     fireEvent.keyDown(window, { key: '3' });
-    expect(screen.getByText('desktops page')).toBeDefined();
+    expect(screen.getByText('timer page')).toBeDefined();
+    fireEvent.keyDown(window, { key: '4' });
+    expect(screen.getByText('progress page')).toBeDefined();
     fireEvent.keyDown(window, { key: '1' });
     expect(screen.getByText('week page')).toBeDefined();
   });
@@ -60,6 +60,13 @@ describe('Layout number shortcuts', () => {
 });
 
 describe('mobile navigation', () => {
+  it('shows Progress in place of Desktops', () => {
+    renderApp();
+    const nav = screen.getByRole('navigation', { name: 'Mobile navigation' });
+    expect(nav.querySelectorAll('a')).toHaveLength(4);
+    expect(nav.textContent).toContain('Progress');
+    expect(nav.textContent).not.toContain('Desktops');
+  });
   it('makes Notes reachable through More and closes after navigation', () => {
     renderApp();
     const more = screen.getByRole('button', { name: 'More' });

@@ -24,7 +24,6 @@ const HabitEditor = lazy(() => import('./features/habits/HabitEditor').then((m) 
 const HabitDetail = lazy(() => import('./features/habits/HabitDetail').then((m) => ({ default: m.HabitDetail })));
 const Progress = lazy(() => import('./features/stats/Progress').then((m) => ({ default: m.Progress })));
 const Notes = lazy(() => import('./features/notes/Notes').then((m) => ({ default: m.Notes })));
-const DesktopsBoard = lazy(() => import('./features/desktops/DesktopsBoard').then((m) => ({ default: m.DesktopsBoard })));
 const SettingsPage = lazy(() => import('./features/settings/Settings').then((m) => ({ default: m.SettingsPage })));
 const AgentsDashboard = lazy(() => import('./features/agents/AgentsDashboard').then((m) => ({ default: m.AgentsDashboard })));
 
@@ -52,8 +51,8 @@ function AuthedApp() {
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<Navigate to="/week" replace />} />
-        <Route path="/desktops" element={<DesktopsBoard />} />
-        <Route path="/now" element={<Navigate to="/desktops" replace />} />
+        <Route path="/desktops" element={<Navigate to="/week" replace />} />
+        <Route path="/now" element={<Navigate to="/week" replace />} />
         <Route path="/week" element={<WeekBoard />} />
         <Route path="/timer" element={<Timer />} />
         <Route path="/focus" element={<Navigate to="/timer" replace />} />
