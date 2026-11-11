@@ -71,6 +71,18 @@ describe('desktop navigation', () => {
     expect(screen.getByText('habits page')).toBeDefined();
     expect(screen.queryByRole('complementary')).toBeNull();
   });
+
+  it('moves keyboard focus into the sidebar and restores it on Escape', () => {
+    renderApp();
+    const menu = screen.getByRole('button', { name: 'Open navigation' });
+    menu.focus();
+    fireEvent.click(menu);
+    const firstLink = screen.getByRole('complementary').querySelector('.sidebar-link');
+    expect(document.activeElement).toBe(firstLink);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('complementary')).toBeNull();
+    expect(document.activeElement).toBe(menu);
+  });
 });
 
 describe('mobile navigation', () => {

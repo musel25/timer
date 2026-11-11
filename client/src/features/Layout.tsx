@@ -52,6 +52,8 @@ const moreTabs = shortcutTabs.filter((t) => !mobileTabs.includes(t));
 export function Layout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const sidebarButton = useRef<HTMLButtonElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
   const moreButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -67,7 +69,8 @@ export function Layout() {
   const waiting = agents ? askingCount(agents.cards) : 0;
   useEffect(() => {
     if (!sidebarOpen) return;
-    const close = (e: KeyboardEvent) => { if (e.key === 'Escape') setSidebarOpen(false); };
+    sidebarRef.current?.querySelector<HTMLElement>('.sidebar-link')?.focus();
+    const close = (e: KeyboardEvent) => { if (e.key === 'Escape') { setSidebarOpen(false); sidebarButton.current?.focus(); } };
     window.addEventListener('keydown', close);
     return () => window.removeEventListener('keydown', close);
   }, [sidebarOpen]);
@@ -92,7 +95,7 @@ export function Layout() {
 
   return (
     <div className="app-shell">
-      {sidebarOpen && <aside className="app-sidebar">
+      {sidebarOpen && <aside ref={sidebarRef} className="app-sidebar">
         <NavLink to="/week" className="sidebar-brand" aria-label="Planner home" onClick={() => setSidebarOpen(false)}><Brand /></NavLink>
         {navGroups.map((g) => (
           <div key={g.title} className={`nav-group${g.title === 'Workspace' ? ' nav-group-bottom' : ''}`}>
@@ -123,7 +126,7 @@ export function Layout() {
 
       <main className="app-main">
         <div className="desktop-toolbar">
-          <button type="button" aria-label={sidebarOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(!sidebarOpen)}><PanelLeft size={19} /></button>
+          <button ref={sidebarButton} type="button" aria-label={sidebarOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(!sidebarOpen)}><PanelLeft size={19} /></button>
           <NavLink to="/week" aria-label="Planner home"><Brand compact /></NavLink>
         </div>
         <div className="mobile-brand"><NavLink to="/week" aria-label="Planner home"><Brand compact /></NavLink></div>
