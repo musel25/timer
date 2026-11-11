@@ -59,6 +59,20 @@ describe('Layout number shortcuts', () => {
   });
 });
 
+describe('desktop navigation', () => {
+  it('starts closed and can be opened to reach another page', () => {
+    renderApp();
+    expect(screen.queryByRole('complementary')).toBeNull();
+    const menu = screen.getByRole('button', { name: 'Open navigation' });
+    expect(menu.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(menu);
+    expect(screen.getByRole('complementary')).toBeDefined();
+    fireEvent.click(screen.getByRole('complementary').querySelector('a[href="/habits"]')!);
+    expect(screen.getByText('habits page')).toBeDefined();
+    expect(screen.queryByRole('complementary')).toBeNull();
+  });
+});
+
 describe('mobile navigation', () => {
   it('shows Progress in place of Desktops', () => {
     renderApp();
@@ -96,6 +110,7 @@ describe('mobile navigation', () => {
 describe('Grind Recall navigation', () => {
   it('links to the separate app from sidebar and mobile More menu', () => {
     renderApp();
+    fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
     expect(screen.getByRole('link', { name: 'Grind Recall' }).getAttribute('href')).toBe('/grind/');
     fireEvent.click(screen.getByRole('button', { name: 'More' }));
     const links = screen.getAllByRole('link', { name: 'Grind Recall' });

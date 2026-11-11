@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  CalendarDays, Code2, Timer, Repeat, BarChart3, StickyNote, Settings, Bot, MoreHorizontal, type LucideIcon,
+  CalendarDays, Code2, Timer, Repeat, BarChart3, StickyNote, Settings, Bot, MoreHorizontal, PanelLeft, type LucideIcon,
 } from 'lucide-react';
 import { isTypingTarget } from '../lib/dom';
 import { useAgentsOptional } from './agents/AgentsContext';
@@ -51,6 +51,7 @@ const moreTabs = shortcutTabs.filter((t) => !mobileTabs.includes(t));
 
 export function Layout() {
   const [moreOpen, setMoreOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
   const moreButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -64,6 +65,12 @@ export function Layout() {
   const agents = useAgentsOptional();
   const navigate = useNavigate();
   const waiting = agents ? askingCount(agents.cards) : 0;
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const close = (e: KeyboardEvent) => { if (e.key === 'Escape') setSidebarOpen(false); };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [sidebarOpen]);
 
   // 1-9 jump straight to the tab at that position in the sidebar.
   useEffect(() => {
@@ -76,6 +83,7 @@ export function Layout() {
       const tab = shortcutTabs[Number(e.key) - 1];
       if (!tab) return;
       e.preventDefault();
+      setSidebarOpen(false);
       navigate(tab.to);
     };
     window.addEventListener('keydown', onKey);
@@ -84,8 +92,8 @@ export function Layout() {
 
   return (
     <div className="app-shell">
-      <aside className="app-sidebar">
-        <NavLink to="/week" className="sidebar-brand" aria-label="Planner home"><Brand /></NavLink>
+      {sidebarOpen && <aside className="app-sidebar">
+        <NavLink to="/week" className="sidebar-brand" aria-label="Planner home" onClick={() => setSidebarOpen(false)}><Brand /></NavLink>
         {navGroups.map((g) => (
           <div key={g.title} className={`nav-group${g.title === 'Workspace' ? ' nav-group-bottom' : ''}`}>
             <div className="nav-group-label">{g.title}</div>
@@ -94,6 +102,7 @@ export function Layout() {
                 key={t.to}
                 to={t.to}
                 end={t.end}
+                onClick={() => setSidebarOpen(false)}
                 className={({ isActive }) =>
                   `group sidebar-link${isActive ? ' is-active' : ''}`
                 }
@@ -110,9 +119,13 @@ export function Layout() {
             {g.title === 'Tools' && <a href="/grind/" className="group sidebar-link"><Code2 size={19} strokeWidth={1.7} className="shrink-0" />Grind Recall</a>}
           </div>
         ))}
-      </aside>
+      </aside>}
 
       <main className="app-main">
+        <div className="desktop-toolbar">
+          <button type="button" aria-label={sidebarOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(!sidebarOpen)}><PanelLeft size={19} /></button>
+          <NavLink to="/week" aria-label="Planner home"><Brand compact /></NavLink>
+        </div>
         <div className="mobile-brand"><NavLink to="/week" aria-label="Planner home"><Brand compact /></NavLink></div>
         <div className="app-content">
           <RouteContent><Outlet /></RouteContent>

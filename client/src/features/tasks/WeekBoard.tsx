@@ -306,7 +306,6 @@ export function WeekBoard() {
             )}
           </div>
           <section className="habit-glance"><div className="mb-5 flex items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-sm font-bold"><Repeat2 size={16} className="text-accent" />Habits today</h2><a href="/habits" className="text-xs font-semibold text-accent hover:underline">View habits</a></div><HabitPulse /></section>
-          <p className="px-1 text-xs leading-relaxed text-slate-500">Open a task to choose its date. On a larger screen, you can also drag it into your week.</p>
           </aside>
         </div>
       </DndContext>}

@@ -16,9 +16,9 @@ with a cached app shell and queued run logs. Account data syncs across devices b
 - **One shared timer with habit tagging** — there's always at most one running timer. It keeps
   going as you navigate between pages. Start a Focus block, then on the **Habits** page tap a
   habit to count that block toward it (tap another to switch the tag). No nested second timer.
-- **Navigation** — a slim left bar: **Week · Habits · Timer · Progress · Notes · Settings**. The
-  Week planner is the home view. It shows per-day tasks and Google Calendar events, with today
-  highlighted.
+- **Navigation** — the left bar starts closed. Use the menu button to open
+  **Week · Habits · Timer · Progress · Notes · Settings**. The Week planner is
+  the home view. It shows per-day tasks and Google Calendar events, with today highlighted.
 - **Habit dashboard** — your daily habits grouped by time of day, each with duration presets.
   Tap a duration to start; click a habit to open its **drill-down** (Overview + Month).
 - **Three habit layers — daily · weekly · monthly** — kept visually separate, because they answer

@@ -152,6 +152,10 @@ describe('WeekBoard mouse clicks', () => {
 describe('WeekBoard planning controls', () => {
   // Let dnd-kit's post-drag click-capture listener from the sensor tests expire.
   beforeEach(async () => { await new Promise((resolve) => setTimeout(resolve, 60)); });
+  it('does not repeat task scheduling instructions below the inbox', () => {
+    render(<WeekBoard />);
+    expect(screen.queryByText(/On a larger screen, you can also drag it into your week/)).toBeNull();
+  });
   it('changes the displayed week and task summary, then returns to this week', () => {
     render(<WeekBoard />);
     expect(screen.getByText('1 tasks left')).toBeDefined();
