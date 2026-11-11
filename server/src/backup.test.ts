@@ -41,6 +41,17 @@ it('accepts legacy backups without optional collections and fills old defaults',
   expect((await post({ habits: [{ id: 'legacy-habit', userId: 'source', name: 'Legacy', durations: [5], createdAt: 0 }] })).status).toBe(200);
   expect(sqlite.prepare('SELECT user_id, cadence FROM habits WHERE id = ?').get('legacy-habit')).toEqual({ user_id: 'a', cadence: 'daily' });
 });
+it('preserves study totals in exported and imported timer sessions', async () => {
+  const row = { id: 'study-backup', type: 'simple', plannedSeconds: 600, actualSeconds: 600,
+    completed: true, startedAt: 100, endedAt: 600100, focusSeconds: 600, completedSets: 1, createdAt: 100 };
+  expect((await post({ sessions: [row] })).status).toBe(200);
+  const dump = await (await api.request('/export', { headers: { cookie: 'sid=a' } })).json() as { sessions: Array<{ id: string; focusSeconds: number | null; completedSets: number | null }> };
+  expect(dump.sessions.find((session) => session.id === row.id)).toMatchObject({ focusSeconds: 600, completedSets: 1 });
+  sqlite.prepare('DELETE FROM sessions WHERE id = ?').run(row.id);
+  expect((await post(dump)).status).toBe(200);
+  expect(sqlite.prepare('SELECT focus_seconds, completed_sets FROM sessions WHERE id = ?').get(row.id))
+    .toEqual({ focus_seconds: 600, completed_sets: 1 });
+});
 it('rejects invalid collections before writing any data', async () => {
   const response = await post({ restDays: [{ id: 'should-not-insert', date: '2026-11-06', createdAt: 0 }], notes: [{ id: 'bad', text: 42 }] });
   expect(response.status).toBe(400);

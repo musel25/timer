@@ -17,6 +17,8 @@ export const sessionInput = z.object({
   type: z.enum(['simple', 'interval']),
   plannedSeconds: z.number().int().nonnegative(),
   actualSeconds: z.number().int().nonnegative(),
+  focusSeconds: z.number().int().nonnegative().nullable().optional(),
+  completedSets: z.number().int().nonnegative().nullable().optional(),
   completed: z.boolean().optional(),
   startedAt: z.number().int(),
   endedAt: z.number().int(),
@@ -48,6 +50,7 @@ routes.post('/sessions', async (c) => {
   const rows = list.map((s) => ({
     id: s.id ?? newId(), userId: uid(c), habitId: s.habitId ?? null, timerId: s.timerId ?? null,
     label: s.label ?? null, type: s.type, plannedSeconds: s.plannedSeconds, actualSeconds: s.actualSeconds,
+    focusSeconds: s.focusSeconds ?? null, completedSets: s.completedSets ?? null,
     completed: s.completed ?? true, startedAt: s.startedAt, endedAt: s.endedAt, note: s.note ?? null,
     category: s.category ?? 'habit', periodKey: s.periodKey ?? null, entry: s.entry ?? null, createdAt: now,
   }));

@@ -9,6 +9,7 @@ import { useTimerEngine } from '../../engine/useTimerEngine';
 import { unlockAudio } from '../../engine/audio';
 import { releaseWakeLock, reacquireWakeLock, requestWakeLock } from '../../engine/wakeLock';
 import { saveRun } from './activeRunStore';
+import { completedSetCount } from '../../lib/studyTracking';
 import { RunScreen } from './RunScreen';
 import { MiniPlayer } from './MiniPlayer';
 
@@ -46,9 +47,11 @@ export function ActiveRun({
   const startedAt = useRef(startedAtEpoch ?? Date.now());
   // On resume, seed work-done with the work phases already completed (the engine
   // re-adds the current partial work phase in full when it finishes).
-  const workDoneRef = useRef(
-    resumeElapsed > 0 && focusMode ? completedWorkSeconds(phases, seekToElapsed(phases, resumeElapsed).index) : 0,
-  );
+  const resumeIndex = resumeElapsed > 0 ? seekToElapsed(phases, resumeElapsed).index : 0;
+  const workDoneRef = useRef(completedWorkSeconds(phases, resumeIndex));
+  const completedSetIndexesRef = useRef(new Set(phases
+    .map((phase, index) => phase.kind === 'work' && index < resumeIndex ? index : -1)
+    .filter((index) => index >= 0)));
   const logged = useRef(false);
   const [muted, setMuted] = useState(false);
   // Start minimized so the rest of the app stays usable while a timer runs.
@@ -66,6 +69,8 @@ export function ActiveRun({
       type: spec.type,
       plannedSeconds: focusMode ? plannedWork : planned,
       actualSeconds: focusMode ? workDoneRef.current : totalElapsed,
+      focusSeconds: workDoneRef.current,
+      completedSets: completedSetCount(phases, completedSetIndexesRef.current),
       completed,
       startedAt: startedAt.current,
       endedAt: Date.now(),
@@ -80,8 +85,11 @@ export function ActiveRun({
     beeps: !muted && (settings?.beeps ?? true),
     voice: visible && !muted && (settings?.voice ?? false),
     resumeElapsedSeconds: resumeElapsed,
-    onPhaseComplete: (p) => {
-      if (focusMode && p.kind === 'work') workDoneRef.current += p.seconds;
+    onPhaseComplete: (p, index) => {
+      if (p.kind === 'work' && !completedSetIndexesRef.current.has(index)) {
+        completedSetIndexesRef.current.add(index);
+        workDoneRef.current += p.seconds;
+      }
     },
     onFinish: (elapsed, completed) => logRun(completed, elapsed),
   });
@@ -172,7 +180,6 @@ export function ActiveRun({
       engine={engine}
       muted={muted}
       onToggleMute={() => setMuted((m) => !m)}
-      focusMode={focusMode}
       workDone={workDoneRef.current}
       onMinimize={() => setMinimized(true)}
       onStop={stop}

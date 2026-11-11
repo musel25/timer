@@ -117,8 +117,9 @@ describe('useTimerEngine in a hidden tab (rAF frozen)', () => {
 
   it('the worker finish alarm still fires as a backstop', () => {
     const onFinish = vi.fn();
+    const onPhaseComplete = vi.fn();
     const { result } = renderHook(() =>
-      useTimerEngine(phases, { beeps: true, voice: false, onFinish }),
+      useTimerEngine(phases, { beeps: true, voice: false, onFinish, onPhaseComplete }),
     );
     act(() => result.current.start());
     now = 25_000;
@@ -127,6 +128,18 @@ describe('useTimerEngine in a hidden tab (rAF frozen)', () => {
     });
     expect(audio.finish).toHaveBeenCalledTimes(1);
     expect(onFinish).toHaveBeenCalledWith(25, true);
+    expect(onPhaseComplete).toHaveBeenCalledWith(phases[1], 1);
     expect(result.current.status).toBe('done');
+  });
+
+  it('does not count a skipped work phase as a completed set', () => {
+    const onPhaseComplete = vi.fn();
+    const { result } = renderHook(() =>
+      useTimerEngine(phases, { beeps: false, voice: false, onFinish: vi.fn(), onPhaseComplete }),
+    );
+    act(() => result.current.start());
+    act(() => result.current.skipNext());
+    act(() => result.current.skipNext());
+    expect(onPhaseComplete).not.toHaveBeenCalled();
   });
 });

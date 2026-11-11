@@ -6,6 +6,7 @@ import { cadenceOf, isPeriodSatisfied, periodStreak } from './cadence';
  *  habit runs inside it, so any such historical row must stay excluded from
  *  "time spent" totals to avoid double-counting. New sessions are never 'focus'. */
 const isFocusUmbrella = (s: Session) => s.category === 'focus';
+const trackedSeconds = (s: Session) => s.habitId ? s.actualSeconds : (s.focusSeconds ?? s.actualSeconds);
 
 /** Minutes per local day, keyed "YYYY-MM-DD" (uses actual time spent). */
 export function minutesByDay(sessions: Session[]): Record<string, number> {
@@ -13,7 +14,7 @@ export function minutesByDay(sessions: Session[]): Record<string, number> {
   for (const s of sessions) {
     if (isFocusUmbrella(s)) continue;
     const k = dayKey(s.startedAt);
-    out[k] = (out[k] ?? 0) + s.actualSeconds / 60;
+    out[k] = (out[k] ?? 0) + trackedSeconds(s) / 60;
   }
   return out;
 }
@@ -67,18 +68,19 @@ export interface TodaySummary {
 export function todaySummary(sessions: Session[]): TodaySummary {
   const t0 = startOfToday();
   const t1 = addDays(t0, 1);
-  const s = sessions.filter((x) => x.startedAt >= t0 && x.startedAt < t1 && x.completed && !isFocusUmbrella(x));
+  const s = sessions.filter((x) => x.startedAt >= t0 && x.startedAt < t1 && !isFocusUmbrella(x));
   const doneHabitIds = new Set<string>();
   const minutesByHabit: Record<string, number> = {};
   let minutes = 0;
   for (const x of s) {
-    minutes += x.actualSeconds / 60;
-    if (x.habitId) {
+    if (!x.completed && x.habitId) continue;
+    minutes += trackedSeconds(x) / 60;
+    if (x.completed && x.habitId) {
       doneHabitIds.add(x.habitId);
       minutesByHabit[x.habitId] = (minutesByHabit[x.habitId] ?? 0) + x.actualSeconds / 60;
     }
   }
-  return { count: s.length, minutes: Math.round(minutes), doneHabitIds, minutesByHabit };
+  return { count: s.filter((x) => x.completed).length, minutes: Math.round(minutes), doneHabitIds, minutesByHabit };
 }
 
 /** Today's most recent completed session for a habit, or null. Used to toggle an
@@ -91,7 +93,7 @@ export function todaysHabitSession(sessions: Session[], habitId: string): Sessio
 
 export function minutesInRange(sessions: Session[], fromTs: number, toTs = Date.now()): number {
   let m = 0;
-  for (const s of sessions) if (!isFocusUmbrella(s) && s.startedAt >= fromTs && s.startedAt <= toTs) m += s.actualSeconds / 60;
+  for (const s of sessions) if (!isFocusUmbrella(s) && s.startedAt >= fromTs && s.startedAt <= toTs) m += trackedSeconds(s) / 60;
   return Math.round(m);
 }
 
@@ -208,7 +210,7 @@ export function focusMinutes(sessions: Session[], fromTs: number): number {
   let m = 0;
   for (const s of sessions) {
     if (s.habitId || s.startedAt < fromTs) continue;
-    m += s.actualSeconds / 60;
+    m += (s.focusSeconds ?? s.actualSeconds) / 60;
   }
   return m;
 }

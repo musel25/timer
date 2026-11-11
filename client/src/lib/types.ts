@@ -128,6 +128,10 @@ export interface Session {
   type: TimerType;
   plannedSeconds: number;
   actualSeconds: number;
+  /** Seconds in completed work phases; absent on older timer records. */
+  focusSeconds?: number | null;
+  /** Number of completed work sets; absent on older timer records. */
+  completedSets?: number | null;
   completed: boolean;
   startedAt: number;
   endedAt: number;

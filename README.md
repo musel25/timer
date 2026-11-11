@@ -11,7 +11,10 @@ with a cached app shell and queued run logs. Account data syncs across devices b
   description, a task checklist with progress, and a timestamped journal; clicking a card pins it
   full-width as the focused stage where everything edits in place.
 - **Timers** — build and run a *Focus block* (multi-round work/break Pomodoro) or a plain
-  countdown *Timer*, with prep countdown, chimes, and reusable saved presets.
+  countdown *Timer*, with prep countdown, chimes, and reusable saved presets. The Timer page
+  sums completed study sets and work time by day. Breaks do not add to study time. Old timer
+  records remain in history but lack a reliable work/break split, so the study record starts
+  with newly tracked runs.
 - **One shared timer with habit tagging** — there's always at most one running timer. It keeps
   going as you navigate between pages. Start a Focus block, then on the **Habits** page tap a
   habit to count that block toward it (tap another to switch the tag). No nested second timer.
@@ -36,7 +39,8 @@ with a cached app shell and queued run logs. Account data syncs across devices b
   **Month** calendar where you paint **vacation** (lighter goal) and **rest** (streak-skip) days
   as ranges — tap a start day then an end day. (Vacation/rest dates are global across habits.)
 - **Progress tracking** — every run logs a session, powering streaks, a GitHub-style minutes
-  heatmap, weekly/monthly totals, and per-habit goals (lighter on weekends/vacation).
+  heatmap, weekly/monthly totals, and per-habit goals (lighter on weekends/vacation). New timer
+  sessions count completed work time in these totals, even when the whole run stops early.
 - **Audio & voice** — countdown beeps, distinct work/rest/finish tones (Web Audio, no asset files),
   optional spoken cues.
 - **PWA** — installable, with a cached app shell and offline run logging. Private account data

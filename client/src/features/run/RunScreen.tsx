@@ -12,7 +12,6 @@ interface RunScreenProps {
   engine: EngineState;
   muted: boolean;
   onToggleMute: () => void;
-  focusMode: boolean;
   workDone: number;
   onMinimize: () => void;
   onStop: () => void;
@@ -20,7 +19,7 @@ interface RunScreenProps {
   onClose: () => void;
 }
 
-export function RunScreen({ spec, engine, muted, onToggleMute, focusMode, workDone, onMinimize, onStop, onAgain, onClose }: RunScreenProps) {
+export function RunScreen({ spec, engine, muted, onToggleMute, workDone, onMinimize, onStop, onAgain, onClose }: RunScreenProps) {
   const phase = engine.phase;
   const done = engine.status === 'done';
   const bg = done ? '#14b8a6' : phase.color;
@@ -46,7 +45,7 @@ export function RunScreen({ spec, engine, muted, onToggleMute, focusMode, workDo
           <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/15"><Check size={56} strokeWidth={2.5} /></div>
           <div>
             <div className="text-2xl font-bold">Done</div>
-            <div className="mt-1 text-white/70">{clock(focusMode ? workDone : engine.elapsed)} of focused time logged</div>
+            <div className="mt-1 text-white/70">{clock(workDone)} of study time logged</div>
           </div>
           <div className="flex gap-3">
             {spec.habitId ? (

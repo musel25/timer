@@ -102,6 +102,8 @@ export function migrate(): void {
       type TEXT NOT NULL,
       planned_seconds INTEGER NOT NULL,
       actual_seconds INTEGER NOT NULL,
+      focus_seconds INTEGER,
+      completed_sets INTEGER,
       completed INTEGER NOT NULL DEFAULT 1,
       started_at INTEGER NOT NULL,
       ended_at INTEGER NOT NULL,
@@ -219,6 +221,8 @@ export function migrate(): void {
   addColumnIfMissing('habits', 'template', 'TEXT');
   addColumnIfMissing('sessions', 'period_key', 'TEXT');
   addColumnIfMissing('sessions', 'entry', 'TEXT');
+  addColumnIfMissing('sessions', 'focus_seconds', 'INTEGER');
+  addColumnIfMissing('sessions', 'completed_sets', 'INTEGER');
 
   addColumnIfMissing('habits', 'cadence', "TEXT NOT NULL DEFAULT 'daily'");
 

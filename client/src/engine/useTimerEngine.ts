@@ -11,7 +11,7 @@ export interface EngineOptions {
   voice: boolean;
   onFinish: (elapsedSeconds: number, completed: boolean) => void;
   /** Fired for each phase that finishes by counting down naturally (not via skip). */
-  onPhaseComplete?: (phase: Phase) => void;
+  onPhaseComplete?: (phase: Phase, index: number) => void;
   /** Resume a persisted run: seek to this many elapsed seconds on start instead of 0. */
   resumeElapsedSeconds?: number;
 }
@@ -102,6 +102,13 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
       cancelAnimationFrame(rafRef.current);
       setStatus('done');
       if (completed) {
+        // The finish alarm can fire before the worker heartbeat advances the
+        // last phase. Report each remaining completed phase before logging.
+        for (let i = idxRef.current; i < phasesRef.current.length; i++) {
+          const phase = phasesRef.current[i];
+          if (phase.kind !== 'finish') optsRef.current.onPhaseComplete?.(phase, i);
+        }
+        idxRef.current = phasesRef.current.length - 1;
         // A completed run lasted its full planned duration; a backgrounded tab froze the
         // tick loop, so trust the larger of accumulated time and the planned total.
         const plannedMs = phasesRef.current.reduce((a, p) => a + (p.kind === 'finish' ? 0 : p.seconds * 1000), 0);
@@ -141,7 +148,7 @@ export function useTimerEngine(phases: Phase[], opts: EngineOptions): EngineStat
     const ph = phasesRef.current;
     while (remRef.current <= 0 && idxRef.current < ph.length - 1) {
       const carry = -remRef.current;
-      optsRef.current.onPhaseComplete?.(ph[idxRef.current]);
+      optsRef.current.onPhaseComplete?.(ph[idxRef.current], idxRef.current);
       idxRef.current += 1;
       beepSecRef.current = -1;
       const next = ph[idxRef.current];

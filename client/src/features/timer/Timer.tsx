@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Play } from 'lucide-react';
 import { Stepper } from '../../components/Stepper';
-import { useDeleteTimer, useSaveTimer, useTimers } from '../../lib/hooks';
+import { useDeleteTimer, useSaveTimer, useSessions, useTimers } from '../../lib/hooks';
 import { describeBlock, runSpecFromPreset, type BlockShape } from '../../lib/presets';
+import { studyByDay } from '../../lib/studyTracking';
 import { timerTypeLabel } from '../../lib/timerMeta';
-import { humanDuration } from '../../lib/time';
+import { addDays, dayKey, humanDuration, startOfToday } from '../../lib/time';
 import { useRun } from '../run/RunContext';
 import type { TimerPreset } from '../../lib/types';
 
@@ -15,6 +16,7 @@ const DEFAULT_QUICK_MINUTES = 10;
 /** Unified Timer page: a compact quick-start, then the saved-timers grid (tap to launch). */
 export function Timer() {
   const { data: timers = [] } = useTimers();
+  const { data: sessions = [] } = useSessions();
   const del = useDeleteTimer();
   const save = useSaveTimer();
   const { startRun } = useRun();
@@ -27,6 +29,8 @@ export function Timer() {
       </header>
 
       <QuickStart />
+
+      <StudyRecord days={studyByDay(sessions)} />
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -53,6 +57,46 @@ export function Timer() {
         )}
       </div>
     </div>
+  );
+}
+
+function StudyRecord({ days }: { days: ReturnType<typeof studyByDay> }) {
+  const today = startOfToday();
+  const current = days[dayKey(today)] ?? { focusSeconds: 0, sets: 0 };
+  const recent = Array.from({ length: 6 }, (_, offset) => {
+    const date = addDays(today, -offset - 1);
+    return { key: dayKey(date), date, total: days[dayKey(date)] };
+  }).filter((day) => day.total && (day.total.focusSeconds > 0 || day.total.sets > 0));
+
+  return (
+    <section className="card p-5" aria-label="Study record">
+      <h2 className="font-semibold">Study record</h2>
+      <div className="mt-4 flex flex-wrap items-end gap-x-10 gap-y-4">
+        <div>
+          <div className="text-sm text-slate-400">Today</div>
+          <div className="text-4xl font-bold tabular-nums tracking-tight">{current.focusSeconds ? humanDuration(current.focusSeconds) : '0m'}</div>
+          <div className="mt-1 text-sm text-slate-400">Study time</div>
+        </div>
+        <div>
+          <div className="text-2xl font-semibold tabular-nums">{current.sets} {current.sets === 1 ? 'set' : 'sets'}</div>
+          <div className="mt-1 text-sm text-slate-400">Completed today</div>
+        </div>
+      </div>
+      <p className="mt-4 text-sm text-slate-400">Breaks do not count as study time.</p>
+      {recent.length > 0 && (
+        <div className="mt-5 border-t border-white/10 pt-4">
+          <h3 className="mb-2 text-sm font-semibold">Previous days</h3>
+          <div className="space-y-2">
+            {recent.map(({ key, date, total }) => (
+              <div key={key} className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="text-slate-400">{new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(date)}</span>
+                <span className="tabular-nums">{humanDuration(total!.focusSeconds)} · {total!.sets} {total!.sets === 1 ? 'set' : 'sets'}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

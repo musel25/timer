@@ -89,6 +89,9 @@ export const sessions = sqliteTable('sessions', {
   type: text('type').notNull(), // 'simple' | 'interval'
   plannedSeconds: integer('planned_seconds').notNull(),
   actualSeconds: integer('actual_seconds').notNull(),
+  // Null on legacy rows: their focus and rest time cannot be split reliably.
+  focusSeconds: integer('focus_seconds'),
+  completedSets: integer('completed_sets'),
   completed: integer('completed', { mode: 'boolean' }).notNull().default(true),
   startedAt: integer('started_at').notNull(),
   endedAt: integer('ended_at').notNull(),

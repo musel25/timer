@@ -90,6 +90,21 @@ describe('todaySummary', () => {
     expect(t.minutesByHabit['h1']).toBe(20);
     expect(t.minutesByHabit['h2']).toBe(25);
   });
+
+  it('excludes breaks from tracked timer time in daily and range totals', () => {
+    const noon = startOfToday() + 12 * 3600_000;
+    const s = [session(noon, { actualSeconds: 1800, focusSeconds: 1500, completedSets: 1 })];
+    expect(todaySummary(s).minutes).toBe(25);
+    expect(minutesByDay(s)[dayKey(noon)]).toBe(25);
+    expect(minutesInRange(s, startOfToday(), noon + 1)).toBe(25);
+  });
+
+  it('keeps study time from completed sets when a timer stops early', () => {
+    const noon = startOfToday() + 12 * 3600_000;
+    const s = [session(noon, { completed: false, actualSeconds: 2100, focusSeconds: 1500, completedSets: 1 })];
+    expect(todaySummary(s).minutes).toBe(25);
+    expect(todaySummary(s).count).toBe(0);
+  });
 });
 
 describe('todaysHabitSession', () => {
@@ -187,6 +202,13 @@ describe('focusMinutes', () => {
       session(addDays(noon, -10), { actualSeconds: 600 }), // out of range
     ];
     expect(Math.round(focusMinutes(s, startOfToday()))).toBe(35);
+  });
+
+  it('uses tracked study seconds instead of timer time that includes rest', () => {
+    expect(focusMinutes([
+      session(noon, { actualSeconds: 1800, focusSeconds: 1500 }),
+      session(noon, { actualSeconds: 600, focusSeconds: 0 }),
+    ], startOfToday())).toBe(25);
   });
 });
 

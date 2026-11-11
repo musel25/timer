@@ -41,7 +41,7 @@ describe('SQLite schema matches Drizzle metadata', () => {
     sqlite.prepare("INSERT INTO habits (id,user_id,name,durations,created_at) VALUES ('existing','u','Keep me','[5]',0)").run();
     for (const [table, columns] of [
       ['habits', ['cadence', 'anchor', 'anchor_week', 'target_count', 'template', 'weekend_goal_min', 'vacation_goal_min', 'hidden_on']],
-      ['sessions', ['category', 'parent_session_id', 'period_key', 'entry']],
+      ['sessions', ['category', 'parent_session_id', 'period_key', 'entry', 'focus_seconds', 'completed_sets']],
       ['tasks', ['hidden_on', 'archived_at', 'gcal_event_id']],
       ['notes', ['archived_at']],
     ] as const) for (const column of columns) sqlite.exec(`ALTER TABLE ${table} DROP COLUMN ${column}`);
