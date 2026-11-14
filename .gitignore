@@ -13,4 +13,8 @@ data/
 .vite/
 .playwright-mcp/
 .superpowers/
+android-widget/.gradle/
+android-widget/local.properties
+android-widget/.idea/
+*.apk
 client/tsconfig.tsbuildinfo

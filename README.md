@@ -43,6 +43,8 @@ with a cached app shell and queued run logs. Account data syncs across devices b
   optional spoken cues.
 - **PWA** — installable, with a cached app shell and offline run logging. Private account data
   requires a connection. **Wake Lock** keeps the screen on during a workout.
+- **Android today widget** — an optional companion app shows the signed-in account's pending tasks
+  for the current day on the home screen. See [Android widget](#android-widget).
 - **Accounts** — single private account (closed signup), cross-device cloud sync, JSON export/import.
 - **Google Calendar** — events show up in the Week planner; dated tasks mirror to a dedicated
   Planner calendar (service-account setup: see [docs/gcal-setup.md](docs/gcal-setup.md)).
@@ -56,6 +58,7 @@ with a cached app shell and queued run logs. Account data syncs across devices b
 | Database | SQLite via Drizzle ORM + better-sqlite3 |
 | Auth | scrypt password hashing (`node:crypto`), server-side sessions, httpOnly cookies |
 | Deploy | Docker + nginx + certbot on the Oracle Cloud VPS (`timer.musel.dev`) |
+| Android widget | Java + Android SDK 35, separate companion APK |
 
 ## Local development
 
@@ -86,11 +89,48 @@ health, or edge verification fails. See [DEPLOY.md](DEPLOY.md).
 Project rules for coding agents are in [AGENTS.md](AGENTS.md). GitHub Actions runs the verification
 command and tests the actual production image.
 
+## Android widget
+
+The installed PWA adds a home screen icon. A live task widget needs the Android companion APK.
+It uses the existing Planner account and API. The widget reads only tasks owned by the account
+that signs in to the companion app. Sign in as `musel` to see that account's tasks. The companion
+app and your browser use separate sign-in sessions.
+
+On your phone, tap [Download Planner Widget](https://github.com/musel25/timer/releases/latest/download/PlannerWidget.apk)
+in a browser. Open the downloaded APK and approve installation.
+Android may ask you to allow installs from your browser. The APK is signed with the same local key
+for each release, so later releases can install over it. A GitHub Actions artifact uses a different
+key. If you installed an Actions artifact, uninstall it once before you install the release APK.
+
+To build the APK locally on Android 8.0 or newer:
+
+```bash
+cd android-widget
+./gradlew lintDebug testDebugUnitTest assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+Set `ANDROID_HOME` to your Android SDK path if Gradle cannot find it. You can also copy the APK to
+your phone and open it there. Open **Planner Widget** and sign in with your Planner username and
+password. Long-press an empty part of the home screen, open **Widgets**, and add **Planner Widget**.
+Tap the refresh symbol to load tasks now. Android requests periodic updates about every 30 minutes.
+The widget shows only tasks dated today. It hides completed, archived, and Inbox tasks. A widget tap opens the website. If the
+account expires or a request fails, the widget hides the old task list. Sign out in the companion
+app to remove its account session.
+
+The companion app checks the latest GitHub release each time it opens. When a newer APK exists,
+tap **Download update** in the app. Android requires you to approve the installation. It does not
+install updates silently. Keep the local signing key to publish future APKs that install over this
+one. The published APK is a release build signed with the local Android key used for the first
+debug APK. GitHub Actions also offers a debug APK artifact for each run, but its signing key changes
+between runs. The APK and signing key are not committed. The Android project is in `android-widget/`.
+
 ## Project layout
 
 ```
 client/   React + Vite SPA (timer engine, dashboard, stats, settings)
 server/   Hono API + Drizzle/SQLite + auth + seeding
+android-widget/   optional Android home screen widget
 deploy/   nginx vhost
 Dockerfile, compose.yaml, DEPLOY.md
 ```
