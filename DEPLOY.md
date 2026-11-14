@@ -18,6 +18,11 @@ the React app and Hono API on port 8080. SQLite is stored in the persistent
 The image uses `node:22-bookworm-slim`. Keep Node, better-sqlite3, esbuild, and
 CI versions consistent. See [AGENTS.md](AGENTS.md).
 
+The optional Android widget in `android-widget/` is built separately from the
+Docker image. Run `cd android-widget && ./gradlew lintDebug testDebugUnitTest assembleDebug`
+with an Android SDK to check it. The website deployment does not install an APK
+on a phone. See [README.md](README.md#android-widget) for installation steps.
+
 ## Deploy
 
 ```bash
