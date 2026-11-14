@@ -1,15 +1,16 @@
 <resources>
     <string name="app_name">Planner Widget</string>
-    <string name="widget_description">Pending tasks for this week</string>
+    <string name="widget_description">Pending tasks for today</string>
     <string name="app_heading">Planner widget</string>
-    <string name="app_intro">Sign in to show your pending week tasks on the home screen.</string>
+    <string name="app_intro">Sign in to show today’s pending tasks on the home screen.</string>
     <string name="checking_account">Checking account…</string>
     <string name="username">Username</string>
     <string name="password">Password</string>
     <string name="sign_in">Sign in</string>
     <string name="sign_out">Sign out</string>
     <string name="open_planner">Open Planner</string>
-    <string name="this_week">This week</string>
+    <string name="update_available">Download update %1$s</string>
+    <string name="today">TODAY</string>
     <string name="refresh_tasks">Refresh tasks</string>
     <string name="refresh_symbol">↻</string>
     <string name="open_app_to_sign_in">Open the app to sign in</string>

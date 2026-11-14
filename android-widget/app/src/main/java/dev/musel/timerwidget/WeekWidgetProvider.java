@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.widget.RemoteViews;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
@@ -26,7 +27,7 @@ public final class WeekWidgetProvider extends AppWidgetProvider {
     static void clearAll(Context context) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         int[] ids = manager.getAppWidgetIds(new ComponentName(context, WeekWidgetProvider.class));
-        for (int id : ids) show(context, manager, id, "This week", "Open the app to sign in", "Planner", false);
+        for (int id : ids) show(context, manager, id, "", "", "Open the app to sign in", "Planner", false);
     }
 
     @Override public void onReceive(Context context, Intent intent) {
@@ -39,7 +40,7 @@ public final class WeekWidgetProvider extends AppWidgetProvider {
         AppWidgetManager manager = AppWidgetManager.getInstance(app);
         int[] ids = manager.getAppWidgetIds(new ComponentName(app, WeekWidgetProvider.class));
         if (ids.length == 0) return;
-        for (int id : ids) show(app, manager, id, "This week", "Refreshing…", "Planner", false);
+        for (int id : ids) show(app, manager, id, "", "", "Refreshing…", "Planner", false);
         PendingResult result = goAsync();
         WORKER.execute(() -> {
             try {
@@ -48,16 +49,18 @@ public final class WeekWidgetProvider extends AppWidgetProvider {
                 synchronized (SESSION_LOCK) {
                     if (!api.isCurrent(snapshot)) return;
                     if (snapshot.account == null) {
-                        for (int id : ids) show(app, manager, id, "This week", "Open the app to sign in", "Planner", false);
+                        for (int id : ids) show(app, manager, id, "", "", "Open the app to sign in", "Planner", false);
                         return;
                     }
-                    List<WeekTasks.Task> tasks = WeekTasks.pending(snapshot.tasks, LocalDate.now());
-                    String heading = "This week · " + tasks.size() + " pending";
-                    String lines = WidgetText.lines(tasks, Locale.getDefault());
-                    for (int id : ids) show(app, manager, id, heading, lines, snapshot.account + " · tap to open", true);
+                    LocalDate today = LocalDate.now();
+                    List<WeekTasks.Task> tasks = WeekTasks.pending(snapshot.tasks, today);
+                    String date = today.format(DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault()));
+                    String count = tasks.size() + " pending";
+                    String lines = WidgetText.lines(tasks);
+                    for (int id : ids) show(app, manager, id, date, count, lines, snapshot.account + " · tap to open", true);
                 }
             } catch (Exception ignored) {
-                for (int id : ids) show(app, manager, id, "This week", "Could not load tasks. Tap refresh.", "Planner", false);
+                for (int id : ids) show(app, manager, id, "", "", "Could not load tasks. Tap refresh.", "Planner", false);
             } finally {
                 result.finish();
             }
@@ -65,9 +68,10 @@ public final class WeekWidgetProvider extends AppWidgetProvider {
     }
 
     private static void show(Context context, AppWidgetManager manager, int id,
-                             String heading, String body, String account, boolean signedIn) {
+                             String date, String count, String body, String account, boolean signedIn) {
         RemoteViews view = new RemoteViews(context.getPackageName(), R.layout.week_widget);
-        view.setTextViewText(R.id.widget_heading, heading);
+        view.setTextViewText(R.id.widget_date, date);
+        view.setTextViewText(R.id.widget_count, count);
         view.setTextViewText(R.id.widget_tasks, body);
         view.setTextViewText(R.id.widget_account, account);
         int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;

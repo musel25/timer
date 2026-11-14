@@ -2,7 +2,7 @@
     android:description="@string/widget_description"
     android:initialLayout="@layout/week_widget"
     android:minWidth="250dp"
-    android:minHeight="180dp"
+    android:minHeight="250dp"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="1800000"
     android:widgetCategory="home_screen" />

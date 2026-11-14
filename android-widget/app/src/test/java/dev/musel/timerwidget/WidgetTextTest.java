@@ -4,21 +4,20 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import org.junit.Test;
 
 public class WidgetTextTest {
-    @Test public void showsFiveTasksAndCountsTheRest() {
+    @Test public void showsTodaysTasksAndCountsTheRest() {
         List<WeekTasks.Task> tasks = Arrays.asList(
             task("A", "2026-11-09"), task("B", "2026-11-10"), task("C", "2026-11-11"),
             task("D", "2026-11-12"), task("E", "2026-11-13"), task("F", "2026-11-14"),
             task("G", "2026-11-15"));
 
-        assertEquals("Mon  A\nTue  B\nWed  C\nThu  D\nFri  E\n+2 more", WidgetText.lines(tasks, Locale.ENGLISH));
+        assertEquals("○  A\n○  B\n○  C\n○  D\n+3 more", WidgetText.lines(tasks));
     }
 
-    @Test public void showsClearMessageForAnEmptyWeek() {
-        assertEquals("No pending tasks this week", WidgetText.lines(Arrays.asList(), Locale.ENGLISH));
+    @Test public void showsClearMessageForAnEmptyDay() {
+        assertEquals("No pending tasks today", WidgetText.lines(Arrays.asList()));
     }
 
     private static WeekTasks.Task task(String title, String date) {

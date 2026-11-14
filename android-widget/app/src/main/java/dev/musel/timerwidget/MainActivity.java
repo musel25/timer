@@ -8,6 +8,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import java.net.URL;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -19,6 +20,7 @@ public final class MainActivity extends Activity {
     private EditText password;
     private Button signIn;
     private Button openPlanner;
+    private Button updateApp;
     private Button signOut;
 
     @Override protected void onCreate(Bundle state) {
@@ -30,6 +32,7 @@ public final class MainActivity extends Activity {
         password = findViewById(R.id.password);
         signIn = findViewById(R.id.sign_in);
         openPlanner = findViewById(R.id.open_planner);
+        updateApp = findViewById(R.id.update_app);
         signOut = findViewById(R.id.sign_out);
 
         signIn.setOnClickListener(view -> signIn());
@@ -37,6 +40,23 @@ public final class MainActivity extends Activity {
             new Intent(Intent.ACTION_VIEW, Uri.parse(PlannerApi.SITE))));
         signOut.setOnClickListener(view -> signOut());
         checkAccount();
+        checkForUpdate();
+    }
+
+    private void checkForUpdate() {
+        worker.execute(() -> {
+            try {
+                String version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+                ReleaseUpdate.Available update = ReleaseUpdate.check(new URL(ReleaseUpdate.API), version);
+                if (update == null) return;
+                runOnUiThread(() -> {
+                    updateApp.setText(getString(R.string.update_available, update.version));
+                    updateApp.setOnClickListener(view -> startActivity(
+                        new Intent(Intent.ACTION_VIEW, Uri.parse(update.downloadUrl))));
+                    updateApp.setVisibility(View.VISIBLE);
+                });
+            } catch (Exception ignored) { /* Updates can wait until the next app launch. */ }
+        });
     }
 
     private void checkAccount() {
