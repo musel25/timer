@@ -120,8 +120,10 @@ account expires or a request fails, the widget hides the old task list. Sign out
 app to remove its account session.
 
 The companion app checks the latest GitHub release each time it opens. When a newer APK exists,
-tap **Download update** in the app. Android requires you to approve the installation. It does not
-install updates silently. Keep the local signing key to publish future APKs that install over this
+tap **Install update** in the app. The app downloads the APK and opens Android's install screen.
+The first time, Android may ask you to allow installs from Planner Widget. Return to the app after
+you allow it. Android still requires you to approve the installation. It does not install updates
+silently. Keep the local signing key to publish future APKs that install over this
 one. The published APK is a release build signed with the local Android key used for the first
 debug APK. GitHub Actions also offers a debug APK artifact for each run, but its signing key changes
 between runs. The APK and signing key are not committed. The Android project is in `android-widget/`.
