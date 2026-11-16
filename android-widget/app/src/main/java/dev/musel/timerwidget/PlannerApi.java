@@ -109,8 +109,8 @@ final class PlannerApi {
         try {
             connection.setRequestMethod(method);
             connection.setInstanceFollowRedirects(false);
-            connection.setConnectTimeout(4000);
-            connection.setReadTimeout(4000);
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(10000);
             connection.setRequestProperty("Accept", "application/json");
             connection.setRequestProperty("Cache-Control", "no-store");
             if (cookie != null && !cookie.isEmpty()) connection.setRequestProperty("Cookie", cookie);

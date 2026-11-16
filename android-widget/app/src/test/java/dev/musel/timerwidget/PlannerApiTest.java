@@ -11,6 +11,7 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import java.util.concurrent.TimeUnit;
 
 public class PlannerApiTest {
     private MockWebServer server;
@@ -55,6 +56,20 @@ public class PlannerApiTest {
         assertEquals("my-task", snapshot.tasks.get(0).id);
         assertEquals("sid=musel-session", server.takeRequest().getHeader("Cookie"));
         assertEquals("sid=musel-session", server.takeRequest().getHeader("Cookie"));
+    }
+
+    @Test public void aWidgetRefreshCompletesOverAWorkingSlowConnection() throws Exception {
+        cookies.cookie = "sid=musel-session";
+        server.enqueue(new MockResponse()
+            .setHeadersDelay(5, TimeUnit.SECONDS)
+            .setBody("{\"user\":{\"email\":\"musel\"}}"));
+        server.enqueue(new MockResponse()
+            .setHeadersDelay(5, TimeUnit.SECONDS)
+            .setBody("[]"));
+
+        PlannerApi.WeekSnapshot snapshot = api.weekSnapshot();
+        assertEquals("musel", snapshot.account);
+        assertEquals(0, snapshot.tasks.size());
     }
 
     @Test public void rejectsTasksWhenTheAccountChangesDuringRefresh() throws Exception {

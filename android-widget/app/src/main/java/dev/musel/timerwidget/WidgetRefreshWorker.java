@@ -1,0 +1,48 @@
+package dev.musel.timerwidget;
+
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
+import android.content.Context;
+import android.util.Log;
+import androidx.annotation.NonNull;
+import androidx.work.Worker;
+import androidx.work.WorkerParameters;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Locale;
+
+public final class WidgetRefreshWorker extends Worker {
+    public WidgetRefreshWorker(@NonNull Context context, @NonNull WorkerParameters params) {
+        super(context, params);
+    }
+
+    @NonNull @Override public Result doWork() {
+        Context app = getApplicationContext();
+        AppWidgetManager manager = AppWidgetManager.getInstance(app);
+        int[] ids = manager.getAppWidgetIds(new ComponentName(app, WeekWidgetProvider.class));
+        if (ids.length == 0) return Result.success();
+        try {
+            PlannerApi api = PlannerApi.forAndroid();
+            PlannerApi.WeekSnapshot snapshot = api.weekSnapshot();
+            synchronized (WeekWidgetProvider.SESSION_LOCK) {
+                if (!api.isCurrent(snapshot)) return Result.success();
+                if (snapshot.account == null) {
+                    for (int id : ids) WeekWidgetProvider.show(app, manager, id, "", "", "Open the app to sign in", "Planner", false);
+                    return Result.success();
+                }
+                LocalDate today = LocalDate.now();
+                List<WeekTasks.Task> tasks = WeekTasks.pending(snapshot.tasks, today);
+                String date = today.format(DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault()));
+                String count = tasks.size() + " pending";
+                String lines = WidgetText.lines(tasks);
+                for (int id : ids) WeekWidgetProvider.show(app, manager, id, date, count, lines, snapshot.account + " · tap to open", true);
+            }
+            return Result.success();
+        } catch (Exception error) {
+            Log.w("PlannerWidget", "Task refresh failed", error);
+            for (int id : ids) WeekWidgetProvider.show(app, manager, id, "", "", "Could not load tasks. Tap refresh.", "Planner", false);
+            return Result.failure();
+        }
+    }
+}
