@@ -114,6 +114,7 @@ Set `ANDROID_HOME` to your Android SDK path if Gradle cannot find it. You can al
 your phone and open it there. Open **Planner Widget** and sign in with your Planner username and
 password. Long-press an empty part of the home screen, open **Widgets**, and add **Planner Widget**.
 Tap the refresh symbol to load tasks now. Android requests periodic updates about every 30 minutes.
+The widget waits for a network connection when the phone is offline. It can refresh over Wi-Fi or mobile data.
 The widget shows only tasks dated today. It hides completed, archived, and Inbox tasks. A widget tap opens the website. If the
 account expires or a request fails, the widget hides the old task list. Sign out in the companion
 app to remove its account session.
