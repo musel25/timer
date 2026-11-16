@@ -9,7 +9,12 @@
     <string name="sign_in">Sign in</string>
     <string name="sign_out">Sign out</string>
     <string name="open_planner">Open Planner</string>
-    <string name="update_available">Download update %1$s</string>
+    <string name="update_available">Install update %1$s</string>
+    <string name="downloading_update">Downloading update…</string>
+    <string name="allow_update_installs">Allow installs from Planner Widget, then return to the app.</string>
+    <string name="approve_update">Approve the update in Android’s install screen.</string>
+    <string name="update_download_failed">Could not download the update. Check the connection and try again.</string>
+    <string name="update_install_failed">Could not open Android’s install screen. Try again.</string>
     <string name="today">TODAY</string>
     <string name="refresh_tasks">Refresh tasks</string>
     <string name="refresh_symbol">↻</string>
