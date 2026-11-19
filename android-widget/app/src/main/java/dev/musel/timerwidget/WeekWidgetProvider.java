@@ -14,10 +14,21 @@ import androidx.work.ExistingWorkPolicy;
 import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public final class WeekWidgetProvider extends AppWidgetProvider {
     static final Object SESSION_LOCK = new Object();
     private static final String REFRESH = "dev.musel.timerwidget.REFRESH";
+    private static final Map<Integer, List<String>> displayed = new HashMap<>();
+
+    @Override public void onDeleted(Context context, int[] ids) {
+        synchronized (WeekWidgetProvider.class) {
+            for (int id : ids) displayed.remove(id);
+        }
+    }
 
     static void refreshAll(Context context) {
         context.sendBroadcast(new Intent(context, WeekWidgetProvider.class).setAction(REFRESH));
@@ -61,7 +72,7 @@ public final class WeekWidgetProvider extends AppWidgetProvider {
         SharedPreferences saved = savedTasks(context);
         if (saved.contains("body")) {
             render(context, manager, id, saved.getString("date", ""), saved.getString("count", ""),
-                saved.getString("body", ""), "Saved tasks · " + saved.getString("account", "Planner"), true);
+                saved.getString("body", ""), saved.getString("account", "Planner"), true);
         } else {
             render(context, manager, id, "", "", fallback, "Planner", false);
         }
@@ -73,6 +84,9 @@ public final class WeekWidgetProvider extends AppWidgetProvider {
 
     private static void render(Context context, AppWidgetManager manager, int id,
                                String date, String count, String body, String account, boolean signedIn) {
+        List<String> content = Arrays.asList(date, count, body, account, Boolean.toString(signedIn));
+        // Leave the launcher view alone unless its content or tap action has changed.
+        if (content.equals(displayed.get(id))) return;
         RemoteViews view = new RemoteViews(context.getPackageName(), R.layout.week_widget);
         view.setTextViewText(R.id.widget_date, date);
         view.setTextViewText(R.id.widget_count, count);
@@ -86,5 +100,6 @@ public final class WeekWidgetProvider extends AppWidgetProvider {
         Intent refresh = new Intent(context, WeekWidgetProvider.class).setAction(REFRESH);
         view.setOnClickPendingIntent(R.id.widget_refresh, PendingIntent.getBroadcast(context, 2, refresh, flags));
         manager.updateAppWidget(id, view);
+        displayed.put(id, content);
     }
 }
