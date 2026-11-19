@@ -18,17 +18,21 @@ public final class WidgetRefreshWorker extends Worker {
     }
 
     @NonNull @Override public Result doWork() {
+        return refresh(PlannerApi.forAndroid());
+    }
+
+    Result refresh(PlannerApi api) {
         Context app = getApplicationContext();
         AppWidgetManager manager = AppWidgetManager.getInstance(app);
         int[] ids = manager.getAppWidgetIds(new ComponentName(app, WeekWidgetProvider.class));
         if (ids.length == 0) return Result.success();
+        String session = api.currentSession();
         try {
-            PlannerApi api = PlannerApi.forAndroid();
             PlannerApi.WeekSnapshot snapshot = api.weekSnapshot();
             synchronized (WeekWidgetProvider.SESSION_LOCK) {
                 if (!api.isCurrent(snapshot)) return Result.success();
                 if (snapshot.account == null) {
-                    for (int id : ids) WeekWidgetProvider.show(app, manager, id, "", "", "Open the app to sign in", "Planner", false);
+                    WeekWidgetProvider.clearAll(app);
                     return Result.success();
                 }
                 LocalDate today = LocalDate.now();
@@ -41,7 +45,14 @@ public final class WidgetRefreshWorker extends Worker {
             return Result.success();
         } catch (Exception error) {
             Log.w("PlannerWidget", "Task refresh failed", error);
-            for (int id : ids) WeekWidgetProvider.show(app, manager, id, "", "", "Could not load tasks. Tap refresh.", "Planner", false);
+            synchronized (WeekWidgetProvider.SESSION_LOCK) {
+                if (!api.isCurrentSession(session)) return Result.success();
+                if (error instanceof PlannerApi.AuthenticationException) {
+                    WeekWidgetProvider.clearAll(app);
+                } else {
+                    for (int id : ids) WeekWidgetProvider.showSaved(app, manager, id, "Could not load tasks. Tap refresh.");
+                }
+            }
             return Result.failure();
         }
     }
