@@ -143,11 +143,9 @@ public final class MainActivity extends Activity {
     private void checkAccount() {
         worker.execute(() -> {
             try {
-                String account = PlannerApi.forAndroid().currentAccount();
-                if (account == null) hideWidget();
+                String account = widgetAccount().checkAccount();
                 runOnUiThread(() -> showAccount(account));
             } catch (Exception error) {
-                if (error instanceof PlannerApi.AuthenticationException) hideWidget();
                 runOnUiThread(() -> {
                     showAccount(null);
                     status.setText(R.string.account_check_failed);
@@ -197,10 +195,6 @@ public final class MainActivity extends Activity {
             @Override public void clear() { WeekWidgetProvider.clearAll(MainActivity.this); }
             @Override public void refresh() { WeekWidgetProvider.refreshAll(MainActivity.this); }
         }, WeekWidgetProvider.SESSION_LOCK);
-    }
-
-    private void hideWidget() {
-        synchronized (WeekWidgetProvider.SESSION_LOCK) { WeekWidgetProvider.clearAll(this); }
     }
 
     private void showAccount(String account) {

@@ -95,6 +95,8 @@ The installed PWA adds a home screen icon. A live task widget needs the Android 
 It uses the existing Planner account and API. The widget reads only tasks owned by the account
 that signs in to the companion app. Sign in as `musel` to see that account's tasks. The companion
 app and your browser use separate sign-in sessions.
+Opening the companion app with a valid session requests a fresh widget update. Account updates
+replace any older pending refresh so the widget can recover from the sign-in message.
 
 On your phone, tap [Download Planner Widget](https://github.com/musel25/timer/releases/latest/download/PlannerWidget.apk)
 in a browser. Open the downloaded APK and approve installation.

@@ -2,6 +2,7 @@ package dev.musel.timerwidget;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import okhttp3.mockwebserver.MockResponse;
@@ -9,6 +10,52 @@ import okhttp3.mockwebserver.MockWebServer;
 import org.junit.Test;
 
 public class WidgetAccountTest {
+    @Test public void checkingASignedInAccountRequestsAFreshWidgetUpdate() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.start();
+            server.enqueue(new MockResponse().setBody("{\"user\":{\"email\":\"musel\"}}"));
+            MemoryCookies cookies = new MemoryCookies();
+            cookies.value = "sid=musel";
+            VisibleWidget widget = new VisibleWidget();
+            WidgetAccount account = new WidgetAccount(
+                new PlannerApi(server.url("/").toString().replaceAll("/$", ""), cookies), widget, new Object());
+
+            assertEquals("musel", account.checkAccount());
+            assertEquals(1, widget.refreshes);
+            assertEquals(0, widget.clears);
+        }
+    }
+
+    @Test public void checkingAnExpiredAccountClearsPrivateTasks() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.start();
+            server.enqueue(new MockResponse().setBody("{\"user\":null}"));
+            VisibleWidget widget = new VisibleWidget();
+            widget.tasks = "Private tasks";
+            WidgetAccount account = new WidgetAccount(
+                new PlannerApi(server.url("/").toString().replaceAll("/$", ""), new MemoryCookies()), widget, new Object());
+
+            assertNull(account.checkAccount());
+            assertNull(widget.tasks);
+            assertEquals(0, widget.refreshes);
+        }
+    }
+
+    @Test public void anAccountCheckConnectionFailureKeepsTheTaskList() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.start();
+            server.enqueue(new MockResponse().setResponseCode(503));
+            VisibleWidget widget = new VisibleWidget();
+            widget.tasks = "Saved tasks";
+            WidgetAccount account = new WidgetAccount(
+                new PlannerApi(server.url("/").toString().replaceAll("/$", ""), new MemoryCookies()), widget, new Object());
+
+            assertThrows(IOException.class, account::checkAccount);
+            assertEquals("Saved tasks", widget.tasks);
+            assertEquals(0, widget.refreshes);
+        }
+    }
+
     @Test public void failedSignInRemovesThePreviousAccountsVisibleTasks() throws Exception {
         try (MockWebServer server = new MockWebServer()) {
             server.start();
@@ -35,7 +82,9 @@ public class WidgetAccountTest {
 
     private static class VisibleWidget implements WidgetAccount.Display {
         String tasks;
-        @Override public void clear() { tasks = null; }
-        @Override public void refresh() { /* A later update can show the new account. */ }
+        int refreshes;
+        int clears;
+        @Override public void clear() { tasks = null; clears++; }
+        @Override public void refresh() { refreshes++; }
     }
 }
