@@ -115,8 +115,8 @@ your phone and open it there. Open **Planner Widget** and sign in with your Plan
 password. Long-press an empty part of the home screen, open **Widgets**, and add **Planner Widget**.
 Tap the refresh symbol to load tasks now. Android requests periodic updates about every 30 minutes.
 The widget keeps its last successful task list visible while it waits for a connection or fetches
-updates. It also keeps the list if a refresh fails. Saved tasks keep their original date and show
-a **Saved tasks** label until a refresh succeeds. A widget with no saved list shows the connection
+updates. It also keeps the list if a refresh fails. Saved tasks keep their original date.
+Refreshes run without changing labels or redrawing unchanged content. A widget with no saved list shows the connection
 message. It can refresh over Wi-Fi or mobile data.
 Each successful refresh shows only tasks dated today. It hides completed, archived, and Inbox
 tasks. A widget tap opens the website. An expired account, sign-out, or sign-in attempt clears the

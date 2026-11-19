@@ -8,6 +8,7 @@ import android.appwidget.AppWidgetManager;
 import android.content.Context;
 import android.content.Intent;
 import android.widget.TextView;
+import android.widget.RemoteViews;
 import androidx.work.ListenableWorker;
 import androidx.work.testing.TestWorkerBuilder;
 import androidx.work.testing.WorkManagerTestInitHelper;
@@ -21,6 +22,8 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.Implementation;
+import org.robolectric.annotation.Implements;
 import org.robolectric.shadows.ShadowAppWidgetManager;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -28,12 +31,22 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 34)
+@Config(sdk = 34, shadows = WeekWidgetProviderTest.CountingWidgetManager.class)
 public class WeekWidgetProviderTest {
     private Context context;
     private AppWidgetManager manager;
     private ShadowAppWidgetManager widgets;
     private int id;
+
+    @Implements(AppWidgetManager.class)
+    public static class CountingWidgetManager extends ShadowAppWidgetManager {
+        int updates;
+
+        @Implementation @Override protected void updateAppWidget(int widgetId, RemoteViews views) {
+            updates++;
+            super.updateAppWidget(widgetId, views);
+        }
+    }
 
     @Before public void setUp() {
         context = RuntimeEnvironment.getApplication();
@@ -41,6 +54,7 @@ public class WeekWidgetProviderTest {
         manager = AppWidgetManager.getInstance(context);
         widgets = shadowOf(manager);
         id = widgets.createWidget(WeekWidgetProvider.class, R.layout.week_widget);
+        new WeekWidgetProvider().onDeleted(context, new int[] { id });
     }
 
     @Test public void refreshKeepsThePreviousTasksAndTheirDateVisible() {
@@ -52,6 +66,44 @@ public class WeekWidgetProviderTest {
         assertEquals("○  Read", text(R.id.widget_tasks));
         assertEquals("Thursday, Nov 19", text(R.id.widget_date));
         assertEquals("1 pending", text(R.id.widget_count));
+    }
+
+    @Test public void repeatedRefreshesDoNotRedrawTheSameTasks() {
+        WeekWidgetProvider.show(context, manager, id,
+            "Thursday, Nov 19", "1 pending", "○  Read", "musel · tap to open", true);
+        int before = ((CountingWidgetManager) widgets).updates;
+
+        refresh();
+        refresh();
+        WeekWidgetProvider.show(context, manager, id,
+            "Thursday, Nov 19", "1 pending", "○  Read", "musel · tap to open", true);
+
+        assertEquals("musel · tap to open", text(R.id.widget_account));
+        assertEquals(before, ((CountingWidgetManager) widgets).updates);
+    }
+
+    @Test public void changedTasksStillUpdateTheWidget() {
+        WeekWidgetProvider.show(context, manager, id,
+            "Thursday, Nov 19", "1 pending", "○  Read", "musel · tap to open", true);
+        int before = ((CountingWidgetManager) widgets).updates;
+
+        WeekWidgetProvider.show(context, manager, id,
+            "Thursday, Nov 19", "1 pending", "○  Write", "musel · tap to open", true);
+
+        assertEquals("○  Write", text(R.id.widget_tasks));
+        assertEquals(before + 1, ((CountingWidgetManager) widgets).updates);
+    }
+
+    @Test public void aRecreatedWidgetReceivesItsContentEvenWhenTasksHaveNotChanged() {
+        WeekWidgetProvider.show(context, manager, id,
+            "Thursday, Nov 19", "1 pending", "○  Read", "musel · tap to open", true);
+        int before = ((CountingWidgetManager) widgets).updates;
+
+        new WeekWidgetProvider().onDeleted(context, new int[] { id });
+        refresh();
+
+        assertEquals("○  Read", text(R.id.widget_tasks));
+        assertEquals(before + 1, ((CountingWidgetManager) widgets).updates);
     }
 
     @Test public void refreshWithoutPreviousTasksShowsTheConnectionMessage() {
@@ -102,17 +154,20 @@ public class WeekWidgetProviderTest {
         refresh();
 
         assertEquals("○  Read", text(R.id.widget_tasks));
-        assertEquals("Saved tasks · musel · tap to open", text(R.id.widget_account));
+        assertEquals("musel · tap to open", text(R.id.widget_account));
     }
 
     @Test public void aFailedRequestKeepsTheLastSuccessfulTaskList() throws Exception {
         WeekWidgetProvider.show(context, manager, id,
             "Thursday, Nov 19", "1 pending", "○  Read", "musel · tap to open", true);
 
+        int before = ((CountingWidgetManager) widgets).updates;
+
         assertEquals(ListenableWorker.Result.failure(), fetch(new MockResponse().setResponseCode(503)));
 
         assertEquals("○  Read", text(R.id.widget_tasks));
-        assertEquals("Saved tasks · musel · tap to open", text(R.id.widget_account));
+        assertEquals("musel · tap to open", text(R.id.widget_account));
+        assertEquals(before, ((CountingWidgetManager) widgets).updates);
     }
 
     @Test public void anExpiredSessionClearsSavedTasksBeforeAnotherRefresh() throws Exception {
