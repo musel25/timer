@@ -10,6 +10,8 @@ import android.content.Intent;
 import android.widget.TextView;
 import android.widget.RemoteViews;
 import androidx.work.ListenableWorker;
+import androidx.work.WorkManager;
+import androidx.work.WorkInfo;
 import androidx.work.testing.TestWorkerBuilder;
 import androidx.work.testing.WorkManagerTestInitHelper;
 import okhttp3.mockwebserver.MockResponse;
@@ -109,6 +111,25 @@ public class WeekWidgetProviderTest {
     @Test public void refreshWithoutPreviousTasksShowsTheConnectionMessage() {
         refresh();
         assertEquals("Waiting for connection…", text(R.id.widget_tasks));
+    }
+
+    @Test public void anAccountRefreshReplacesWorkThatMayUseTheOldSession() throws Exception {
+        refresh();
+        WorkManager work = WorkManager.getInstance(context);
+        java.util.List<WorkInfo> before = work.getWorkInfosForUniqueWork("widget-refresh").get();
+        java.util.UUID oldId = before.stream().filter(info -> !info.getState().isFinished())
+            .findFirst().get().getId();
+
+        WeekWidgetProvider.refreshAll(context);
+        Intent request = shadowOf((android.app.Application) context).getBroadcastIntents().stream()
+            .filter(intent -> intent.getComponent() != null
+                && intent.getComponent().getClassName().equals(WeekWidgetProvider.class.getName()))
+            .reduce((first, second) -> second).get();
+        new WeekWidgetProvider().onReceive(context, request);
+
+        java.util.List<WorkInfo> after = work.getWorkInfosForUniqueWork("widget-refresh").get();
+        assertTrue(after.stream().anyMatch(info -> !info.getId().equals(oldId) && !info.getState().isFinished()));
+        assertTrue(after.stream().noneMatch(info -> info.getId().equals(oldId) && !info.getState().isFinished()));
     }
 
     @Test public void refreshDoesNotWaitForAnAccountNetworkRequest() throws Exception {

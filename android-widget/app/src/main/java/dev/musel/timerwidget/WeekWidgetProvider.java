@@ -22,6 +22,7 @@ import java.util.Map;
 public final class WeekWidgetProvider extends AppWidgetProvider {
     static final Object SESSION_LOCK = new Object();
     private static final String REFRESH = "dev.musel.timerwidget.REFRESH";
+    private static final String ACCOUNT_REFRESH = "dev.musel.timerwidget.ACCOUNT_REFRESH";
     private static final Map<Integer, List<String>> displayed = new HashMap<>();
 
     @Override public void onDeleted(Context context, int[] ids) {
@@ -31,7 +32,7 @@ public final class WeekWidgetProvider extends AppWidgetProvider {
     }
 
     static void refreshAll(Context context) {
-        context.sendBroadcast(new Intent(context, WeekWidgetProvider.class).setAction(REFRESH));
+        context.sendBroadcast(new Intent(context, WeekWidgetProvider.class).setAction(ACCOUNT_REFRESH));
     }
 
     // Display updates must not wait for account network requests under SESSION_LOCK.
@@ -44,7 +45,8 @@ public final class WeekWidgetProvider extends AppWidgetProvider {
 
     @Override public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
-        if (!AppWidgetManager.ACTION_APPWIDGET_UPDATE.equals(action) && !REFRESH.equals(action)) {
+        boolean accountRefresh = ACCOUNT_REFRESH.equals(action);
+        if (!AppWidgetManager.ACTION_APPWIDGET_UPDATE.equals(action) && !REFRESH.equals(action) && !accountRefresh) {
             super.onReceive(context, intent);
             return;
         }
@@ -56,7 +58,8 @@ public final class WeekWidgetProvider extends AppWidgetProvider {
         OneTimeWorkRequest work = new OneTimeWorkRequest.Builder(WidgetRefreshWorker.class)
             .setConstraints(new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .build();
-        WorkManager.getInstance(app).enqueueUniqueWork("widget-refresh", ExistingWorkPolicy.KEEP, work);
+        WorkManager.getInstance(app).enqueueUniqueWork("widget-refresh",
+            accountRefresh ? ExistingWorkPolicy.REPLACE : ExistingWorkPolicy.KEEP, work);
     }
 
     static synchronized void show(Context context, AppWidgetManager manager, int id,

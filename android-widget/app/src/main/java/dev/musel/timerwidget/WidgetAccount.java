@@ -16,6 +16,20 @@ final class WidgetAccount {
         this.lock = lock;
     }
 
+    String checkAccount() throws Exception {
+        synchronized (lock) {
+            try {
+                String account = api.currentAccount();
+                if (account == null) display.clear();
+                else display.refresh();
+                return account;
+            } catch (PlannerApi.AuthenticationException error) {
+                display.clear();
+                throw error;
+            }
+        }
+    }
+
     String signIn(String username, String password) throws Exception {
         synchronized (lock) {
             display.clear();
