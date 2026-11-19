@@ -147,7 +147,7 @@ public final class MainActivity extends Activity {
                 if (account == null) hideWidget();
                 runOnUiThread(() -> showAccount(account));
             } catch (Exception error) {
-                hideWidget();
+                if (error instanceof PlannerApi.AuthenticationException) hideWidget();
                 runOnUiThread(() -> {
                     showAccount(null);
                     status.setText(R.string.account_check_failed);

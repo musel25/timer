@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.widget.RemoteViews;
 import androidx.work.Constraints;
@@ -22,7 +23,9 @@ public final class WeekWidgetProvider extends AppWidgetProvider {
         context.sendBroadcast(new Intent(context, WeekWidgetProvider.class).setAction(REFRESH));
     }
 
-    static void clearAll(Context context) {
+    // Display updates must not wait for account network requests under SESSION_LOCK.
+    static synchronized void clearAll(Context context) {
+        savedTasks(context).edit().clear().apply();
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         int[] ids = manager.getAppWidgetIds(new ComponentName(context, WeekWidgetProvider.class));
         for (int id : ids) show(context, manager, id, "", "", "Open the app to sign in", "Planner", false);
@@ -38,15 +41,38 @@ public final class WeekWidgetProvider extends AppWidgetProvider {
         AppWidgetManager manager = AppWidgetManager.getInstance(app);
         int[] ids = manager.getAppWidgetIds(new ComponentName(app, WeekWidgetProvider.class));
         if (ids.length == 0) return;
-        for (int id : ids) show(app, manager, id, "", "", "Waiting for connection…", "Planner", false);
+        for (int id : ids) showSaved(app, manager, id, "Waiting for connection…");
         OneTimeWorkRequest work = new OneTimeWorkRequest.Builder(WidgetRefreshWorker.class)
             .setConstraints(new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .build();
         WorkManager.getInstance(app).enqueueUniqueWork("widget-refresh", ExistingWorkPolicy.KEEP, work);
     }
 
-    static void show(Context context, AppWidgetManager manager, int id,
+    static synchronized void show(Context context, AppWidgetManager manager, int id,
                              String date, String count, String body, String account, boolean signedIn) {
+        if (signedIn) {
+            savedTasks(context).edit().putString("date", date).putString("count", count)
+                .putString("body", body).putString("account", account).apply();
+        }
+        render(context, manager, id, date, count, body, account, signedIn);
+    }
+
+    static synchronized void showSaved(Context context, AppWidgetManager manager, int id, String fallback) {
+        SharedPreferences saved = savedTasks(context);
+        if (saved.contains("body")) {
+            render(context, manager, id, saved.getString("date", ""), saved.getString("count", ""),
+                saved.getString("body", ""), "Saved tasks · " + saved.getString("account", "Planner"), true);
+        } else {
+            render(context, manager, id, "", "", fallback, "Planner", false);
+        }
+    }
+
+    private static SharedPreferences savedTasks(Context context) {
+        return context.getSharedPreferences("widget_snapshot", Context.MODE_PRIVATE);
+    }
+
+    private static void render(Context context, AppWidgetManager manager, int id,
+                               String date, String count, String body, String account, boolean signedIn) {
         RemoteViews view = new RemoteViews(context.getPackageName(), R.layout.week_widget);
         view.setTextViewText(R.id.widget_date, date);
         view.setTextViewText(R.id.widget_count, count);

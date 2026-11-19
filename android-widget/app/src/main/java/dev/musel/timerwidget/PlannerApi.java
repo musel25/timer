@@ -15,6 +15,10 @@ import org.json.JSONObject;
 final class PlannerApi {
     static final String SITE = "https://timer.musel.dev";
 
+    static final class AuthenticationException extends IOException {
+        AuthenticationException(int status) { super("HTTP " + status); }
+    }
+
     interface SessionCookies {
         String get();
         void set(String header);
@@ -91,7 +95,13 @@ final class PlannerApi {
     }
 
     boolean isCurrent(WeekSnapshot snapshot) {
-        return Objects.equals(snapshot.cookie, cookies.get());
+        return isCurrentSession(snapshot.cookie);
+    }
+
+    String currentSession() { return cookies.get(); }
+
+    boolean isCurrentSession(String session) {
+        return Objects.equals(session, cookies.get());
     }
 
     void signOut() {
@@ -122,6 +132,7 @@ final class PlannerApi {
                 }
             }
             int status = connection.getResponseCode();
+            if (status == 401 || status == 403) throw new AuthenticationException(status);
             if (status < 200 || status >= 300) throw new IOException("HTTP " + status);
             try (InputStream stream = connection.getInputStream()) {
                 ByteArrayOutputStream buffer = new ByteArrayOutputStream();
