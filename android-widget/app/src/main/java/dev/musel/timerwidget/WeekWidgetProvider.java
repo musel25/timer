@@ -40,13 +40,15 @@ public final class WeekWidgetProvider extends AppWidgetProvider {
         savedTasks(context).edit().clear().apply();
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         int[] ids = manager.getAppWidgetIds(new ComponentName(context, WeekWidgetProvider.class));
-        for (int id : ids) show(context, manager, id, "", "", "Open the app to sign in", "Planner", false);
+        for (int id : ids) show(context, manager, id, "", "",
+            context.getString(R.string.open_app_to_sign_in), "Planner", false);
     }
 
     @Override public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
         boolean accountRefresh = ACCOUNT_REFRESH.equals(action);
-        if (!AppWidgetManager.ACTION_APPWIDGET_UPDATE.equals(action) && !REFRESH.equals(action) && !accountRefresh) {
+        boolean systemUpdate = AppWidgetManager.ACTION_APPWIDGET_UPDATE.equals(action);
+        if (!systemUpdate && !REFRESH.equals(action) && !accountRefresh) {
             super.onReceive(context, intent);
             return;
         }
@@ -54,7 +56,14 @@ public final class WeekWidgetProvider extends AppWidgetProvider {
         AppWidgetManager manager = AppWidgetManager.getInstance(app);
         int[] ids = manager.getAppWidgetIds(new ComponentName(app, WeekWidgetProvider.class));
         if (ids.length == 0) return;
-        for (int id : ids) showSaved(app, manager, id, "Waiting for connection…");
+        int[] updatedIds = systemUpdate ? intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS) : null;
+        synchronized (WeekWidgetProvider.class) {
+            // Android may have recreated these views since the last render.
+            if (updatedIds != null) {
+                for (int id : updatedIds) displayed.remove(id);
+            }
+            for (int id : ids) showSaved(app, manager, id, app.getString(R.string.waiting_for_connection));
+        }
         OneTimeWorkRequest work = new OneTimeWorkRequest.Builder(WidgetRefreshWorker.class)
             .setConstraints(new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .build();

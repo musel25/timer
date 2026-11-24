@@ -18,6 +18,7 @@
     <string name="today">TODAY</string>
     <string name="refresh_tasks">Refresh tasks</string>
     <string name="refresh_symbol">↻</string>
+    <string name="waiting_for_connection">Waiting for connection…</string>
     <string name="open_app_to_sign_in">Open the app to sign in</string>
     <string name="planner">Planner</string>
     <string name="enter_credentials">Enter your username and password.</string>

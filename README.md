@@ -118,8 +118,9 @@ password. Long-press an empty part of the home screen, open **Widgets**, and add
 Tap the refresh symbol to load tasks now. Android requests periodic updates about every 30 minutes.
 The widget keeps its last successful task list visible while it waits for a connection or fetches
 updates. It also keeps the list if a refresh fails. Saved tasks keep their original date.
-Refreshes run without changing labels or redrawing unchanged content. A widget with no saved list shows the connection
-message. It can refresh over Wi-Fi or mobile data.
+Regular refreshes skip unchanged content. When Android requests a widget update, the widget restores
+its saved list. A widget with no saved list shows the connection message until the refresh checks
+its session. It can refresh over Wi-Fi or mobile data.
 Each successful refresh shows only tasks dated today. It hides completed, archived, and Inbox
 tasks. A widget tap opens the website. An expired account, sign-out, or sign-in attempt clears the
 saved list. Sign out in the companion app to remove its account session.

@@ -7,6 +7,7 @@ import static org.robolectric.Shadows.shadowOf;
 import android.appwidget.AppWidgetManager;
 import android.content.Context;
 import android.content.Intent;
+import android.view.LayoutInflater;
 import android.widget.TextView;
 import android.widget.RemoteViews;
 import androidx.work.ListenableWorker;
@@ -106,6 +107,25 @@ public class WeekWidgetProviderTest {
 
         assertEquals("○  Read", text(R.id.widget_tasks));
         assertEquals(before + 1, ((CountingWidgetManager) widgets).updates);
+    }
+
+    @Test public void theInitialViewDoesNotClaimTheAccountIsSignedOut() {
+        TextView body = LayoutInflater.from(context).inflate(R.layout.week_widget, null)
+            .findViewById(R.id.widget_tasks);
+        assertEquals("Waiting for connection…", body.getText().toString());
+    }
+
+    @Test public void aLauncherUpdateRestoresTasksAfterTheViewResets() {
+        WeekWidgetProvider.show(context, manager, id,
+            "Thursday, Nov 19", "1 pending", "○  Read", "musel · tap to open", true);
+        TextView body = widgets.getViewFor(id).findViewById(R.id.widget_tasks);
+        body.setText("Waiting for connection…");
+
+        new WeekWidgetProvider().onReceive(context,
+            new Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
+                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, new int[] { id }));
+
+        assertEquals("○  Read", text(R.id.widget_tasks));
     }
 
     @Test public void refreshWithoutPreviousTasksShowsTheConnectionMessage() {
